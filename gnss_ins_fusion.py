@@ -213,3 +213,30 @@ def fuse_gnss_ins(
             corrected[i] = predicted_position
 
     return corrected
+
+
+if __name__ == "__main__":
+    sample_gnss = np.array([
+        [0.0, 0.0],
+        [np.nan, np.nan],
+        [0.3, 0.0],
+    ])
+    sample_ins_position = np.zeros((3, 2))
+    sample_ins_velocity = np.array([
+        [0.0, 0.0],
+        [1.0, 0.0],
+        [1.0, 0.0],
+    ])
+
+    sample_result = fuse_gnss_ins(
+        gnss_position=sample_gnss,
+        ins_position=sample_ins_position,
+        ins_velocity=sample_ins_velocity,
+        gnss_available=[True, False, True],
+        dt=0.1,
+    )
+
+    print("GNSS/INS fusion module test")
+    print("Input samples:", len(sample_result))
+    print("Fused positions:")
+    print(np.round(sample_result, 3))
