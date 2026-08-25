@@ -474,6 +474,15 @@ else:
     )
 
 
+# ============================================================
+# GPS SPEED UNIT NORMALIZATION
+# ============================================================
+
+if GPS_SPEED_COL is not None:
+    # Dataset GPS speed is in km/h.
+    # Convert to m/s for physics and dead reckoning.
+    gps_speed = gps_speed / 3.6
+
 df["GPS_SPEED_TARGET"] = gps_speed
 
 # Valid ML samples
@@ -773,10 +782,9 @@ if len(outage_error) > 0:
         np.max(outage_error)
     )
 
-if len(outage_error) > 0:
-    outage_final = float(outage_error.iloc[-1])
-else:
-    outage_final = 0.0
+    outage_final = float(
+        outage_error.iloc[-1]
+    )
 
     print(
         "Outage samples      :",
@@ -802,10 +810,14 @@ else:
     )
 
     print(
-        "Drift at recoverey    :",
+        "Drift at recovery   :",
         round(outage_final, 3),
         "m"
     )
+
+else:
+
+    print("No outage samples available.")
 
 # ============================================================
 # OUTAGE TRAVEL DISTANCE
