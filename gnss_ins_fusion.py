@@ -111,9 +111,10 @@ def fuse_gnss_ins(
             dtype=bool
         )
 
-    if len(gnss_available) != n:
+    if gnss_available.ndim != 1 or len(gnss_available) != n:
         raise ValueError(
-            "gnss_available must contain N samples"
+            "gnss_available must be a one-dimensional array "
+            "containing N samples"
         )
 
     # --------------------------------------------------------
@@ -131,10 +132,14 @@ def fuse_gnss_ins(
             dtype=float
         )
 
-        if len(dt_array) != n:
+        if dt_array.ndim != 1 or len(dt_array) != n:
             raise ValueError(
-                "dt must be a scalar or contain N samples"
+                "dt must be a scalar or a one-dimensional array "
+                "containing N samples"
             )
+
+    if not np.all(np.isfinite(dt_array)):
+        raise ValueError("dt must contain only finite values")
 
     dt_array = np.clip(
         dt_array,
@@ -165,17 +170,13 @@ def fuse_gnss_ins(
     )
 
     # Initial position
-    first_gnss = np.where(gnss_available)[0]
+    corrected[0] = ins_position[0]
 
-    if len(first_gnss) > 0:
-
-        idx = first_gnss[0]
-
-        corrected[0] = gnss_position[idx]
-
-    else:
-
-        corrected[0] = ins_position[0]
+    if gnss_available[0] and np.all(np.isfinite(gnss_position[0])):
+        corrected[0] = (
+            gnss_weight * gnss_position[0]
+            + ins_weight * corrected[0]
+        )
 
     # --------------------------------------------------------
     # Fusion loop

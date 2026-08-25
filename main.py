@@ -3,6 +3,8 @@ import warnings
 import numpy as np
 import pandas as pd
 
+from gnss_ins_fusion import fuse_gnss_ins
+
 warnings.filterwarnings("ignore")
 
 # ============================================================
@@ -581,11 +583,9 @@ print("-" * 50)
 
 n = len(df)
 
-dr_x = np.zeros(n)
-dr_y = np.zeros(n)
-
 velocity_x = np.zeros(n)
 velocity_y = np.zeros(n)
+ins_position = np.zeros((n, 2), dtype=float)
 
 
 for i in range(1, n):
@@ -621,60 +621,41 @@ for i in range(1, n):
         predicted_vx *= scale
         predicted_vy *= scale
 
-    # GNSS correction when available
-    if simulated_gnss_available[i]:
+    velocity_x[i] = predicted_vx
+    velocity_y[i] = predicted_vy
 
-        gps_position_x = gps_x[i]
-        gps_position_y = gps_y[i]
-
-        # Soft correction rather than hard replacement.
-        # This makes the trajectory smoother.
-
-        dr_x[i] = (
-            0.85 * gps_position_x +
-            0.15 * (
-                dr_x[i - 1] +
-                predicted_vx * delta_t
-            )
-        )
-
-        dr_y[i] = (
-            0.85 * gps_position_y +
-            0.15 * (
-                dr_y[i - 1] +
-                predicted_vy * delta_t
-            )
-        )
-
-        velocity_x[i] = predicted_vx
-        velocity_y[i] = predicted_vy
-
-    else:
-
-        # GNSS DENIED:
-        # Pure dead reckoning prediction
-
-        velocity_x[i] = predicted_vx
-        velocity_y[i] = predicted_vy
-
-        dr_x[i] = (
-            dr_x[i - 1] +
-            velocity_x[i] * delta_t
-        )
-
-        dr_y[i] = (
-            dr_y[i - 1] +
-            velocity_y[i] * delta_t
-        )
+    # Build the uninterrupted INS trajectory before GNSS correction.
+    ins_position[i] = (
+        ins_position[i - 1] +
+        np.array([predicted_vx, predicted_vy]) * delta_t
+    )
 
 
-df["DR_X"] = dr_x
-df["DR_Y"] = dr_y
+gnss_position = np.column_stack((gps_x, gps_y)).astype(float)
+gnss_position[~simulated_gnss_available] = np.nan
+
+corrected_position = fuse_gnss_ins(
+    gnss_position=gnss_position,
+    ins_position=ins_position,
+    ins_velocity=np.column_stack((velocity_x, velocity_y)),
+    gnss_available=simulated_gnss_available,
+    dt=df["_DT"].to_numpy(dtype=float),
+    gnss_weight=0.85,
+)
+
+df["DR_X"] = corrected_position[:, 0]
+df["DR_Y"] = corrected_position[:, 1]
 
 df["DR_SPEED"] = np.sqrt(
     velocity_x ** 2 +
     velocity_y ** 2
 )
+
+print("Fused trajectory      : generated")
+print("GNSS-corrected samples:", int(simulated_gnss_available.sum()))
+print("INS-only samples      :", int((~simulated_gnss_available).sum()))
+print("First fused position  :", np.round(corrected_position[0], 3))
+print("Last fused position   :", np.round(corrected_position[-1], 3))
 
 
 # ============================================================
