@@ -124,7 +124,7 @@ def apply_nhc(velocity_x, velocity_y, heading_deg, min_speed=0.5):
 
 def save_plots(df, outage_mask):
     try:
-        import matplotlib.pyplot as plt
+        import matplotlib.pyplot as plt # type: ignore[reportMissingModuleSource]
     except ImportError:
         print("matplotlib not available — plots will be skipped")
         return
