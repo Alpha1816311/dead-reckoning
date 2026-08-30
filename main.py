@@ -125,7 +125,11 @@ def apply_nhc(velocity_x, velocity_y, heading_deg, min_speed=0.5):
 def save_plots(df, outage_mask):
     try:
         import matplotlib.pyplot as plt
+    except ImportError:
+        print("matplotlib not available — plots will be skipped")
+        return
 
+    try:
         plt.figure(figsize=(10, 7))
         plt.plot(df["GPS_X"], df["GPS_Y"], label="GNSS reference")
         plt.plot(df["DR_X"], df["DR_Y"], label="Fused DR")
