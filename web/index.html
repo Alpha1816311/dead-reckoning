@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IDR — Intelligent Navigation</title>
+<style>
+:root{
+  --bg:#f5f7fb;
+  --surface:#ffffff;
+  --surface-2:#f8fafc;
+  --line:#e7ebf2;
+  --text:#172033;
+  --muted:#697386;
+  --accent:#1769e0;
+  --accent-soft:#eaf2ff;
+  --green:#14804a;
+  --green-soft:#e8f7ef;
+  --amber:#b56a00;
+  --amber-soft:#fff4df;
+  --red:#c83b4b;
+  --red-soft:#ffeaee;
+  --shadow:0 10px 34px rgba(26,42,68,.07);
+  --radius:18px;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  min-height:100vh;
+  background:linear-gradient(180deg,#f8faff 0,#f4f7fb 55%,#f7f9fc 100%);
+  color:var(--text);
+  font:14px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+button{font:inherit;cursor:pointer}
+.app{max-width:1440px;margin:0 auto;padding:26px 26px 34px}
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;gap:20px;
+  margin-bottom:22px;
+}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{
+  width:44px;height:44px;border-radius:13px;
+  display:grid;place-items:center;
+  background:#163a70;color:#fff;font-size:22px;font-weight:800;
+  box-shadow:0 7px 18px rgba(22,58,112,.16);
+}
+.brand h1{margin:0;font-size:20px;letter-spacing:-.02em;font-weight:780}
+.brand p{margin:2px 0 0;color:var(--muted);font-size:12px}
+.backend{
+  display:flex;align-items:center;gap:9px;padding:9px 13px;
+  border:1px solid var(--line);border-radius:999px;background:var(--surface);
+  color:var(--muted);font-size:12px;font-weight:650;
+}
+.dot{width:8px;height:8px;border-radius:50%;background:#f2ad3d}
+.dot.ok{background:#21a562}.dot.bad{background:#df5563}
+
+.grid{
+  display:grid;
+  grid-template-columns:minmax(0,1.55fr) minmax(330px,.75fr);
+  gap:18px;
+}
+.left,.right{display:flex;flex-direction:column;gap:18px}
+.card{
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+}
+.hero{
+  padding:23px 24px 20px;
+}
+.hero-top{
+  display:flex;justify-content:space-between;gap:20px;align-items:flex-start;
+}
+.kicker{
+  color:var(--accent);font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+}
+.hero h2{margin:6px 0 5px;font-size:34px;letter-spacing:-.04em;line-height:1.08}
+.hero-desc{margin:0;color:var(--muted);max-width:700px}
+.state{
+  flex:0 0 auto;min-width:150px;text-align:right;
+}
+.badge{
+  display:inline-flex;align-items:center;justify-content:center;
+  padding:8px 11px;border-radius:10px;
+  background:var(--green-soft);color:var(--green);
+  font-size:11px;font-weight:800;letter-spacing:.05em;
+}
+.badge.warn{background:var(--amber-soft);color:var(--amber)}
+.badge.lost{background:var(--red-soft);color:var(--red)}
+.source{display:block;margin-top:7px;color:var(--muted);font-size:11px}
+.metrics{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-top:23px
+}
+.metric{
+  padding:14px 14px 12px;border:1px solid var(--line);border-radius:14px;background:var(--surface-2)
+}
+.metric label{display:block;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+.metric strong{display:block;margin-top:5px;font-size:25px;letter-spacing:-.035em}
+.metric span{color:var(--muted);font-size:11px}
+.section{padding:18px}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:13px}
+.section-title{margin:0;font-size:13px;font-weight:780;letter-spacing:.02em}
+.section-sub{color:var(--muted);font-size:11px}
+.map{
+  padding:18px;
+}
+.map-tools{display:flex;gap:8px;align-items:center}
+.chip{padding:6px 9px;border:1px solid var(--line);border-radius:8px;color:var(--muted);background:var(--surface-2);font-size:11px}
+.legend{display:flex;gap:14px;color:var(--muted);font-size:11px}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend i{width:9px;height:9px;border-radius:50%;display:inline-block;background:#3778da}
+.legend i.current{background:#f0a52b}
+#trajectory{
+  display:block;width:100%;height:360px;border:1px solid var(--line);border-radius:14px;
+  background:
+    linear-gradient(rgba(44,66,96,.055) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(44,66,96,.055) 1px,transparent 1px),
+    #fbfcfe;
+  background-size:36px 36px;
+}
+.control-card{padding:18px}
+.control-title{margin:0;font-size:13px;font-weight:780}
+.control-text{margin:6px 0 14px;color:var(--muted);font-size:12px}
+.buttons{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.btn{
+  border:1px solid var(--line);background:var(--surface);color:var(--text);
+  border-radius:10px;padding:10px 12px;font-weight:700;
+}
+.btn:hover{border-color:#cbd6e7;background:#f8fbff}
+.btn.primary{background:#163a70;color:#fff;border-color:#163a70}
+.btn.danger{color:#a42c3b;background:#fff5f6;border-color:#f5d8dc}
+.btn.full{grid-column:1/-1}
+.tip{
+  margin-top:12px;padding:10px 11px;border-radius:10px;
+  background:var(--accent-soft);color:#4c6384;font-size:11px;border:1px solid #d8e7ff
+}
+.status-card{padding:18px}
+.status-list{margin-top:8px}
+.row{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:10px 0;border-bottom:1px solid var(--line)
+}
+.row:last-child{border-bottom:0}
+.row label{color:var(--muted)}
+.row b{font-size:12px}
+.green{color:var(--green)}.amber{color:var(--amber)}.red{color:var(--red)}.blue{color:var(--accent)}
+.log-card{padding:18px}
+#log{
+  height:150px;overflow:auto;margin-top:12px;padding:11px;
+  border:1px solid var(--line);border-radius:10px;background:#fafbfd;color:#56647b;
+  font:11px/1.65 ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+.log-line{white-space:pre-wrap}
+.footer{margin-top:18px;text-align:center;color:#8b95a7;font-size:10px;letter-spacing:.08em}
+@media (max-width:980px){
+  .grid{grid-template-columns:1fr}
+  .metrics{grid-template-columns:repeat(2,1fr)}
+}
+@media (max-width:560px){
+  .app{padding:16px 12px 24px}
+  .topbar{align-items:flex-start}
+  .hero-top{display:block}
+  .state{text-align:left;margin-top:16px}
+  .hero h2{font-size:28px}
+  .metrics{grid-template-columns:1fr 1fr}
+  #trajectory{height:300px}
+}
+</style>
+</head>
+<body>
+<main class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">ID</div>
+      <div>
+        <h1>Intelligent Dead Reckoning</h1>
+        <p>Continuous navigation when GNSS becomes unavailable</p>
+      </div>
+    </div>
+    <div class="backend"><i id="healthDot" class="dot"></i><span id="healthText">Checking system</span></div>
+  </header>
+
+  <div class="grid">
+    <div class="left">
+      <section class="card hero">
+        <div class="hero-top">
+          <div>
+            <div class="kicker">Navigation status</div>
+            <h2 id="mode">Waiting for GNSS</h2>
+            <p id="description" class="hero-desc">Start the sensor stream or run the built-in demonstration to see the navigation engine operate.</p>
+          </div>
+          <div class="state">
+            <span id="stateBadge" class="badge warn">WAITING FOR FIX</span>
+            <span id="source" class="source">SOURCE: —</span>
+          </div>
+        </div>
+
+        <div class="metrics">
+          <div class="metric"><label>Speed</label><strong id="speed">0.0</strong><span>km/h</span></div>
+          <div class="metric"><label>Heading</label><strong id="heading">—</strong><span>degrees</span></div>
+          <div class="metric"><label>Position confidence</label><strong id="uncertainty">—</strong><span>metres</span></div>
+          <div class="metric"><label>Sensor samples</label><strong id="samples">0 / 0</strong><span>IMU / GNSS</span></div>
+        </div>
+      </section>
+
+      <section class="card map">
+        <div class="section-head">
+          <div>
+            <h3 class="section-title">Live trajectory</h3>
+            <div class="section-sub">Local estimated path from the navigation engine</div>
+          </div>
+          <div class="legend">
+            <span><i></i> Estimated path</span>
+            <span><i class="current"></i> Current</span>
+          </div>
+        </div>
+        <svg id="trajectory" viewBox="0 0 800 360" preserveAspectRatio="none" aria-label="Live local trajectory">
+          <line x1="0" y1="180" x2="800" y2="180" stroke="#d8dee8" stroke-dasharray="4 6"/>
+          <line x1="400" y1="0" x2="400" y2="360" stroke="#d8dee8" stroke-dasharray="4 6"/>
+          <polyline id="path" points="" fill="none" stroke="#3778da" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle id="start" cx="400" cy="180" r="4" fill="#3778da" opacity=".7"/>
+          <circle id="current" cx="400" cy="180" r="6" fill="#f0a52b" stroke="#fff" stroke-width="2"/>
+          <text id="mapLabel" x="16" y="26" fill="#7d8899" font-size="11">Waiting for position</text>
+        </svg>
+      </section>
+    </div>
+
+    <aside class="right">
+      <section class="card control-card">
+        <h3 class="control-title">Live demonstration</h3>
+        <p class="control-text">Test the same navigation flow used by the live sensor endpoints.</p>
+        <div class="buttons">
+          <button class="btn primary full" id="runDemo">▶ Run full navigation demo</button>
+          <button class="btn" id="forceOutage">Simulate GNSS loss</button>
+          <button class="btn" id="restore">Restore GNSS</button>
+          <button class="btn danger full" id="reset">Reset navigation</button>
+        </div>
+        <div class="tip"><strong>Phone:</strong> connect the Android sensor stream to this backend; the dashboard updates automatically.</div>
+      </section>
+
+      <section class="card status-card">
+        <div class="section-head">
+          <h3 class="section-title">System health</h3>
+          <span class="chip">LIVE</span>
+        </div>
+        <div class="status-list">
+          <div class="row"><label>GNSS signal</label><b id="gnss" class="amber">WAITING</b></div>
+          <div class="row"><label>IMU stream</label><b id="imu" class="amber">WAITING</b></div>
+          <div class="row"><label>Vehicle constraint</label><b id="nhc" class="green">ACTIVE</b></div>
+          <div class="row"><label>Road matching</label><b id="map" class="amber">UNAVAILABLE</b></div>
+          <div class="row"><label>Speed source</label><b id="speedSource" class="blue">INERTIAL</b></div>
+          <div class="row"><label>Rejected packets</label><b id="rejected">0</b></div>
+        </div>
+      </section>
+
+      <section class="card log-card">
+        <h3 class="section-title">Activity</h3>
+        <div id="log"><div class="log-line">[ready] dashboard connected</div></div>
+      </section>
+    </aside>
+  </div>
+
+  <div class="footer">IDR LIVE DEMO · SENSOR-SOURCE INDEPENDENT · PROTOTYPE BUILD</div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+let demoTimer=null,demoPhase="idle",demoTick=0,demoTime=1000,demoLat=12.9716,demoLon=77.5946,fullDemo=false,lastState=null;
+
+function log(message){
+  const line=document.createElement("div");
+  line.className="log-line";
+  line.textContent=`[${new Date().toLocaleTimeString()}] ${message}`;
+  $("log").prepend(line);
+  while($("log").children.length>35) $("log").lastChild.remove();
+}
+async function api(path,options={}){
+  const response=await fetch(path,{headers:{"Content-Type":"application/json"},...options});
+  if(!response.ok) throw new Error(`${response.status} ${await response.text()}`);
+  return response.json();
+}
+function setText(id,v){$(id).textContent=v}
+function statusClass(v){
+  const s=String(v||"").toLowerCase();
+  if(s.includes("lost")||s.includes("dead")) return "red";
+  if(s.includes("degrad")||s.includes("wait")||s.includes("reacq")) return "amber";
+  return "green";
+}
+function render(state){
+  lastState=state;
+  const stateName=state.gnss_state||"WAITING_FOR_FIX";
+  setText("mode",state.mode||"Waiting for GNSS");
+  setText("source",`SOURCE: ${(state.source||"—").toUpperCase()}`);
+  setText("speed",Number(state.speed_kmh||0).toFixed(1));
+  setText("heading",state.heading_deg==null?"—":`${Math.round(state.heading_deg)}°`);
+  setText("uncertainty",state.uncertainty_m==null?"—":Number(state.uncertainty_m).toFixed(1));
+  setText("samples",`${state.accepted_imu||0} / ${state.accepted_gnss||0}`);
+  setText("gnss",state.gnss_status||"WAITING");
+  setText("imu",state.imu_status||"WAITING");
+  setText("nhc",state.nhc_status||"—");
+  setText("map",state.map_status||"—");
+  setText("speedSource",String(state.speed_source||"inertial").toUpperCase());
+  setText("rejected",state.rejected_samples||0);
+  ["gnss","imu","nhc","map"].forEach(id=>$(id).className=statusClass($(id).textContent));
+  const cls=statusClass(stateName);
+  $("stateBadge").textContent=stateName.replaceAll("_"," ");
+  $("stateBadge").className=`badge ${cls==="red"?"lost":cls==="amber"?"warn":""}`;
+  const track=state.track||[];
+  if(track.length) drawTrack(track);
+}
+function drawTrack(track){
+  const width=800,height=360,pad=38;
+  let minX=Math.min(...track.map(p=>p.east)),maxX=Math.max(...track.map(p=>p.east));
+  let minY=Math.min(...track.map(p=>p.north)),maxY=Math.max(...track.map(p=>p.north));
+  if(maxX-minX<18){minX-=9;maxX+=9}
+  if(maxY-minY<18){minY-=9;maxY+=9}
+  const sx=x=>pad+(x-minX)/(maxX-minX)*(width-2*pad);
+  const sy=y=>height-pad-(y-minY)/(maxY-minY)*(height-2*pad);
+  $("path").setAttribute("points",track.map(p=>`${sx(p.east).toFixed(1)},${sy(p.north).toFixed(1)}`).join(" "));
+  const first=track[0],last=track[track.length-1];
+  $("start").setAttribute("cx",sx(first.east));$("start").setAttribute("cy",sy(first.north));
+  $("current").setAttribute("cx",sx(last.east));$("current").setAttribute("cy",sy(last.north));
+  $("mapLabel").textContent=`${last.east.toFixed(1)} m E  ·  ${last.north.toFixed(1)} m N`;
+}
+async function refresh(){
+  try{
+    const state=await api("/navigation/state");
+    render(state);
+    $("healthDot").className="dot ok";
+    setText("healthText","System online");
+  }catch{
+    $("healthDot").className="dot bad";
+    setText("healthText","Backend offline");
+  }
+}
+async function resetEngine(){
+  stopDemo();
+  await api("/demo/reset",{method:"POST"});
+  demoTick=0;demoTime=1000;demoLat=12.9716;demoLon=77.5946;
+  log("navigation reset");
+  refresh();
+}
+function stopDemo(){
+  if(demoTimer){clearInterval(demoTimer);demoTimer=null}
+  demoPhase="idle";fullDemo=false;
+}
+async function sendDemoPacket(){
+  demoTime+=.1;demoTick++;
+  await api("/sensor/imu",{method:"POST",body:JSON.stringify({
+    timestamp:demoTime,ax:0,ay:0,az:9.80665,gx:0,gy:0,gz:0
+  })});
+  if(demoPhase!=="outage"&&demoTick%10===0){
+    demoLon+=(8*1.0)/(111320*Math.cos(demoLat*Math.PI/180));
+    await api("/sensor/gnss",{method:"POST",body:JSON.stringify({
+      timestamp:demoTime,latitude:demoLat,longitude:demoLon,speed:8,accuracy:5
+    }));
+  }
+  if(fullDemo&&demoTick===50){demoPhase="outage";log("GNSS signal lost — dead reckoning active")}
+  if(fullDemo&&demoTick===130){demoPhase="recovery";log("GNSS restored — reacquisition active")}
+  if(fullDemo&&demoTick>=175){stopDemo();log("navigation demo complete")}
+  if(demoPhase==="recovery"&&demoTick%10===0){
+    demoLon+=(8*1.0)/(111320*Math.cos(demoLat*Math.PI/180));
+    await api("/sensor/gnss",{method:"POST",body:JSON.stringify({
+      timestamp:demoTime,latitude:demoLat,longitude:demoLon,speed:8,accuracy:5
+    }));
+  }
+}
+function startDemo(phase){
+  stopDemo();demoPhase=phase;fullDemo=phase==="full";demoTick=0;
+  log(phase==="full"?"full navigation scenario started":"manual GNSS-loss test started");
+  if(phase==="full"){
+    resetEngine().then(()=>{
+      demoPhase="full";fullDemo=true;
+      api("/sensor/gnss",{method:"POST",body:JSON.stringify({
+        timestamp:demoTime,latitude:demoLat,longitude:demoLon,speed:8,accuracy:5
+      }));
+      demoTimer=setInterval(()=>sendDemoPacket().catch(e=>log(`packet error: ${e.message}`)),100);
+    });
+  }else{
+    demoTimer=setInterval(()=>sendDemoPacket().catch(e=>log(`packet error: ${e.message}`)),100);
+  }
+}
+$("runDemo").onclick=()=>startDemo("full");
+$("forceOutage").onclick=()=>{
+  if(!lastState||!lastState.accepted_gnss){log("starting a full demo so a GNSS fix is available");startDemo("full");return}
+  startDemo("outage");
+};
+$("restore").onclick=async()=>{
+  demoPhase="recovery";fullDemo=false;demoTime+=.1;
+  try{
+    const state=await api("/sensor/gnss",{method:"POST",body:JSON.stringify({
+      timestamp:demoTime,latitude:demoLat,longitude:demoLon,speed:8,accuracy:5
+    }));
+    render(state);log("GNSS restored — recovery packet accepted");
+    if(!demoTimer) demoTimer=setInterval(()=>sendDemoPacket().catch(e=>log(`packet error: ${e.message}`)),100);
+  }catch(e){log(`restore failed: ${e.message}`)}
+};
+$("reset").onclick=()=>resetEngine().catch(e=>log(`reset failed: ${e.message}`));
+refresh();setInterval(refresh,600);
+</script>
+</body>
+</html>

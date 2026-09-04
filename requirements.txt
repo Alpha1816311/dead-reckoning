@@ -1,0 +1,11 @@
+numpy
+pandas
+scikit-learn
+joblib
+shapely
+pyproj
+fastapi
+uvicorn[standard]
+httpx
+pytest
+matplotlib

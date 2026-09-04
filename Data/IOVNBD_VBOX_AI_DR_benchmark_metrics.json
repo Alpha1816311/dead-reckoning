@@ -1,0 +1,19 @@
+{
+  "dataset": "IO-VNBD S-S1 + V-S1",
+  "model": "models\\speed_model_vbox.joblib",
+  "model_type": "AI longitudinal acceleration",
+  "outage_start_s": 120.0,
+  "outage_duration_s": 30.0,
+  "samples": 300,
+  "reference_straight_line_distance_m": 484.59599850235,
+  "reference_path_distance_m": 552.8203451043103,
+  "MAE_m": 220.0987848007894,
+  "RMSE_m": 253.1198413647525,
+  "max_error_m": 424.6433653599885,
+  "final_error_m": 424.6433653599885,
+  "DR_drift_percent": 76.81399013631881,
+  "speed_MAE_kmh": 47.85409838569765,
+  "initial_speed_kmh": 56.844,
+  "map_matching": false,
+  "gnss_disabled_during_outage": true
+}

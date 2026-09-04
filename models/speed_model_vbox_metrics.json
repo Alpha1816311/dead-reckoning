@@ -1,0 +1,17 @@
+{
+  "model_type": "AI longitudinal acceleration",
+  "input_s": "Data/S-S1.csv",
+  "input_v": "Data/V-S1.csv",
+  "training_samples": 51446,
+  "benchmark_samples": 300,
+  "benchmark_start_s": 120.0,
+  "benchmark_end_s": 150.0,
+  "initial_speed_kmh": 56.812,
+  "acceleration_mae_mps2": 1.4804446617567875,
+  "acceleration_rmse_mps2": 2.794822580484522,
+  "speed_mae_kmh": 12.320798372181875,
+  "speed_rmse_kmh": 14.48701147390998,
+  "prediction_file": "models\\ai_acceleration_benchmark.csv",
+  "feature_count": 93,
+  "note": "Controlled IO-VNBD experiment. VBOX velocity is used only as supervised training/reference data. During the simulated GNSS outage, the AI estimates acceleration from smartphone IMU and speed is propagated from the pre-outage GNSS/VBOX speed."
+}
