@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<style>
+html,body{width:100%;margin:0;padding:0;background:#0f131d;color:#dee2f0}body{overscroll-behavior:none;min-height:100dvh;font-family:Inter,Arial,sans-serif}::-webkit-scrollbar{display:none}.mono{font-family:'JetBrains Mono',monospace}.caps{font-family:'JetBrains Mono',monospace;font-size:11px;line-height:14px;letter-spacing:.08em;font-weight:700}.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24}
+</style>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={darkMode:'class',theme:{extend:{colors:{surface:'#0f131d','on-surface':'#dee2f0','on-surface-variant':'#bbcabf',primary:'#4edea3',secondary:'#4cd7f6',tertiary:'#ffb95f','error':'#ffb4ab','surface-container':'#1b2029','surface-container-low':'#171c25','surface-container-high':'#252a34','surface-container-highest':'#30353f','surface-container-lowest':'#090e17','outline':'#86948a'},borderRadius:{lg:'.5rem',xl:'.75rem'},spacing:{'gutter-mobile':'.75rem','card-padding-md':'1rem','touch-target-min':'3rem'}}}};</script>
+</head>
+<body class="bg-surface text-on-surface flex flex-col min-h-screen">
+<header class="fixed top-0 inset-x-0 z-50 bg-surface-container-lowest/90 backdrop-blur-xl pt-safe shadow-[0_1px_8px_rgba(0,0,0,0.4)]">
+<div class="h-16 px-gutter-mobile flex items-center justify-between"><div class="flex items-center gap-2">
+<img alt="IDR Fusion Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1XaUzhLvDQZ7jrLWXl8gv9oV-4OnMNZVklefwzvFGqQdsbW1GcOQoT2JQ48AuQBYyLFMa0cw7AlRVMotQXj-kCiivQU4IUytFMpGHGw1TDSD5L7kWxAEEVJbb0V_CXMV6me8UXmhzjVDav1JDFA9PEOyFvZEjN2UjmdVCXE2ol-otCRHsbTdtZpJMpWVJ3ZxjC4enbGoK-ndNdQHJJJVboWNjgXmvzk5Opf6NdIzhaTsxKGvsFuLdkD_0J6">
+<div><div class="flex items-center gap-1.5"><span class="caps text-primary">IDR FUSION</span><span class="caps text-on-surface-variant">|</span><span class="text-lg font-semibold">Outage Mode</span></div><div class="flex items-center gap-2 mt-0.5"><span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span><span class="caps text-primary">100HZ INS</span><span class="caps text-outline">•</span><span id="headerGnssStatus" class="caps text-secondary">GNSS STATUS —</span></div></div>
+</div><div class="flex items-center gap-2"><div class="hidden sm:flex flex-col items-end mr-1"><span id="telemetryTime" class="mono text-xs">LIVE</span><span class="caps text-on-surface-variant">UTC TELEMETRY</span></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-[18px] text-[#003824]">person</span></div></div></div></header>
+<main class="flex-1 w-full pt-16 pb-20 bg-surface"><div class="flex flex-col w-full gap-4 px-gutter-mobile py-4">
+<section class="flex flex-col bg-surface-container-high rounded-xl p-card-padding-md overflow-hidden relative shadow-lg"><div class="absolute top-0 left-0 right-0 h-1 bg-tertiary animate-pulse"></div><div class="flex items-center justify-between gap-2"><div class="flex items-center gap-2"><span id="bannerIcon" class="material-symbols-outlined text-tertiary text-[20px]">warning</span><span id="outageBannerState" class="caps text-tertiary uppercase">GNSS STATUS —</span></div><div class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-tertiary/20"><span id="failoverDot" class="w-2 h-2 rounded-full bg-tertiary animate-ping"></span><span id="outageFailover" class="caps text-tertiary uppercase">STATUS —</span></div></div><div class="mt-2"><h2 id="outageModeTitle" class="text-lg font-semibold leading-tight">WAITING FOR GNSS</h2><p id="outageModeDescription" class="text-xs text-on-surface-variant mt-0.5">Waiting for navigation engine...</p></div><div class="grid grid-cols-2 gap-2 mt-3 pt-3 bg-surface-container-lowest/60 -mx-4 -mb-4 p-3"><div class="flex flex-col px-2"><span class="caps text-outline uppercase">Outage Duration</span><div class="flex items-baseline gap-1 mt-0.5"><span id="outage-stopwatch" class="mono text-2xl text-tertiary font-semibold">—</span><span class="caps text-tertiary">s</span></div></div><div class="flex flex-col px-2"><span class="caps text-outline uppercase">Outage Distance</span><div class="flex items-baseline gap-1 mt-0.5"><span id="outage-distance" class="mono text-2xl text-secondary font-semibold">—</span><span class="caps text-secondary">m</span></div></div></div></section>
+<section class="relative w-full bg-surface-container-lowest rounded-xl overflow-hidden shadow-xl"><div class="absolute top-3 left-3 right-3 z-20 flex items-center justify-between pointer-events-none"><div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-high/90"><span class="material-symbols-outlined text-secondary text-[16px]">tune</span><span id="mapStatusBadge" class="caps text-secondary uppercase">NHC + AI MAP —</span></div><div class="flex items-center gap-1 px-2 py-0.5 rounded bg-error/15 text-error"><span class="material-symbols-outlined text-[14px]">satellite_alt</span><span id="satelliteStatus" class="caps">GNSS —</span></div></div><div class="relative w-full h-80 bg-surface-container-lowest flex items-center justify-center overflow-hidden"><svg class="absolute inset-0 w-full h-full" fill="none" preserveAspectRatio="none" viewBox="0 0 380 320"><defs><linearGradient id="solidTrail" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#4cd7f6" stop-opacity=".1"/><stop offset="70%" stop-color="#4cd7f6" stop-opacity="1"/></linearGradient><radialGradient id="vehicleGlow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#4cd7f6" stop-opacity=".6"/><stop offset="100%" stop-color="#4cd7f6" stop-opacity="0"/></radialGradient></defs><g stroke="#ffb95f" stroke-opacity=".18" stroke-width="1.5"><line stroke-dasharray="4 6" x1="20" x2="70" y1="20" y2="300"/><line stroke-dasharray="4 6" x1="360" x2="310" y1="20" y2="300"/><circle cx="190" cy="40" fill="#ffb95f" fill-opacity=".4" r="3"/><circle cx="190" cy="110" fill="#ffb95f" fill-opacity=".45" r="3.5"/><circle cx="190" cy="190" fill="#ffb95f" fill-opacity=".5" r="4"/><circle cx="190" cy="270" fill="#ffb95f" fill-opacity=".55" r="4.5"/></g><path d="M120 0 L190 320" stroke="#30353f" stroke-opacity=".5" stroke-width="64"/><path d="M120 0 L190 320" stroke="#bbcabf" stroke-dasharray="14 16" stroke-opacity=".25" stroke-width="2"/><path d="M124 20 Q150 140 285 240" fill="none" stroke="#ffb4ab" stroke-dasharray="5 5" stroke-width="2.5"/><g transform="translate(285,240)"><circle r="7" fill="#690005" stroke="#ffb4ab" stroke-width="1.5"/><circle r="14" fill="none" stroke="#ffb4ab" stroke-dasharray="2 2"/><text fill="#ffb4ab" font-size="9" x="12" y="4">RAW DRIFT</text></g><path d="M120 0 Q145 130 185 245" fill="none" stroke="url(#solidTrail)" stroke-linecap="round" stroke-width="5"/><polygon fill="#4cd7f6" fill-opacity=".12" points="185,245 155,140 215,140"/><g transform="translate(185,245)"><circle class="animate-pulse" r="24" fill="url(#vehicleGlow)"/><rect x="-8" y="-14" width="16" height="28" rx="4" fill="#003640" stroke="#4cd7f6" stroke-width="2"/><rect x="-5" y="-10" width="10" height="5" rx="1" fill="#4cd7f6"/></g></svg><div class="absolute bottom-2 left-2 right-2 flex flex-col gap-1.5 p-2 rounded-lg bg-surface-container/90"><div class="flex items-center justify-between"><div class="flex items-center gap-2"><span class="w-3 h-1 bg-secondary rounded-full"></span><span class="text-xs font-medium">AI + NHC Kinematic Solution</span></div><span id="aiNHCUncertainty" class="mono text-xs text-secondary">UNCERTAINTY —</span></div><div class="flex items-center justify-between"><div class="flex items-center gap-2"><span class="w-3 h-0.5 bg-error"></span><span class="text-xs text-on-surface-variant">Raw Unconstrained Gyro/Accel</span></div><span class="mono text-xs text-error">REFERENCE ONLY</span></div></div></div></section>
+<section class="flex items-center justify-between bg-surface-container rounded-xl p-card-padding-md shadow-md"><div class="flex flex-col"><span class="caps text-outline uppercase">Estimated Forward Velocity</span><div class="flex items-baseline gap-1 mt-0.5"><span id="outageSpeed" class="mono text-3xl font-bold">—</span><span class="mono text-base text-secondary uppercase">km/h</span></div><span class="text-xs text-primary flex items-center gap-1 mt-0.5"><span class="material-symbols-outlined text-[14px]">auto_fix_high</span><span id="filterStatus">IMU PROCESSING ACTIVE</span></span></div><div class="flex flex-col items-end text-right"><span class="caps text-outline uppercase">Pipeline Status</span><span id="imuSampleRate" class="mono text-xs mt-1">IMU SAMPLES —</span><span id="nhcStatus" class="mono text-xs text-secondary">NHC —</span><span id="aiStatus" class="caps text-primary uppercase mt-0.5">AI —</span></div></section>
+<section class="flex flex-col bg-surface-container rounded-xl p-card-padding-md shadow-md"><div class="flex items-center justify-between pb-2"><div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-primary text-[18px]">verified</span><span class="caps text-on-surface uppercase">IDR Runtime Diagnostics</span></div><span id="diagnosticState" class="px-2 py-0.5 rounded bg-primary/20 text-primary caps uppercase">LIVE</span></div><div class="flex flex-col gap-2 mt-1"><div class="flex items-center justify-between bg-surface-container-low p-2.5 rounded-lg"><div class="flex flex-col"><span class="text-xs">Position Uncertainty</span><span class="caps text-outline">Reported by navigation engine</span></div><div class="flex flex-col items-end"><span id="outageUncertainty" class="mono text-2xl text-primary">—</span><span class="caps text-primary">REAL-TIME</span></div></div><div class="flex items-center justify-between bg-surface-container-low p-2.5 rounded-lg"><div class="flex flex-col"><span class="text-xs">Sensor Samples</span><span id="sampleBreakdown" class="caps text-outline">IMU — • GNSS —</span></div><div class="flex flex-col items-end"><span id="rejectedSamples" class="mono text-base text-primary font-bold">Rejected —</span><span class="caps text-primary">ENGINE COUNTERS</span></div></div><div class="flex flex-col bg-surface-container-low p-2.5 rounded-lg gap-1.5"><div class="flex items-center justify-between"><span class="text-xs">Navigation State</span><span id="navigationState" class="mono text-base text-secondary">—</span></div><div class="w-full bg-surface-container-highest h-1.5 rounded-full overflow-hidden"><div id="stateProgress" class="bg-secondary h-full rounded-full" style="width:15%"></div></div><span id="navigationDescription" class="caps text-on-surface-variant">Waiting for navigation engine...</span></div><div class="flex items-center justify-between bg-surface-container-low p-2.5 rounded-lg"><div class="flex flex-col"><span class="caps text-outline uppercase">Active Inference Pipeline</span><span id="pipelineDescription" class="text-xs mt-0.5">IMU → AI speed → DR → NHC → map/fusion</span></div><span class="material-symbols-outlined text-outline text-[20px]">timeline</span></div></div></section>
+<section class="flex flex-col bg-surface-container-low p-card-padding-md rounded-xl gap-3 shadow-lg"><div class="flex items-center justify-between"><div class="flex items-center gap-2"><span id="receiverDot" class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span><span class="caps text-on-surface-variant uppercase">Receiver Status</span></div><span id="receiverStatus" class="caps text-secondary uppercase">—</span></div><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-lg bg-surface-container-highest flex items-center justify-center flex-shrink-0"><span class="material-symbols-outlined text-secondary text-[22px]">wifi_tethering</span></div><div class="flex flex-col flex-1 min-w-0"><span id="receiverTitle" class="text-xs font-medium truncate">Navigation engine status —</span><span id="receiverDescription" class="caps text-on-surface-variant truncate">Live backend state</span></div></div><div class="grid grid-cols-2 gap-2 mt-1">
+<button id="startOutageBtn" class="flex items-center justify-center h-touch-target-min px-3 rounded-lg bg-tertiary-container hover:bg-tertiary text-on-tertiary-container active:scale-95 transition-all gap-1.5 font-semibold" type="button">
+<span class="material-symbols-outlined text-[18px]">satellite_alt</span>
+<span class="caps uppercase">Start Outage Demo</span>
+</button>
+<button id="resetDemoBtn" class="flex items-center justify-center h-touch-target-min px-3 rounded-lg bg-surface-container-high hover:bg-surface-bright active:scale-95 text-on-surface transition-all gap-1.5" type="button">
+<span class="material-symbols-outlined text-[18px]">restart_alt</span>
+<span class="caps uppercase">Reset Demo</span>
+</button>
+</div>
+<div class="mt-2">
+<button id="navigateBtn" class="w-full flex items-center justify-center h-touch-target-min px-3 rounded-lg bg-secondary-container hover:bg-secondary text-on-secondary-container active:scale-95 transition-all gap-1.5 font-semibold" type="button">
+<span class="material-symbols-outlined text-[18px]">navigation</span>
+<span class="caps uppercase">Navigate Screen</span>
+</button>
+</div></section>
+</div></main>
+<nav class="fixed bottom-0 inset-x-0 z-50 pb-safe bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_-1px_12px_rgba(0,0,0,0.5)]"><div class="flex justify-around items-center h-20 px-2"><a class="flex flex-col items-center justify-center flex-1 h-12 rounded-lg text-on-surface-variant" href="/navigate"><span class="material-symbols-outlined text-[22px]">navigation</span><span class="caps uppercase mt-1">NAVIGATE</span></a><a aria-current="page" class="flex flex-col items-center justify-center flex-1 h-12 rounded-lg text-primary bg-surface-container-high/60" href="/outage"><span class="material-symbols-outlined text-[22px]">warning</span><span class="caps uppercase mt-1">OUTAGE</span></a><a class="flex flex-col items-center justify-center flex-1 h-12 rounded-lg text-on-surface-variant" href="#"><span class="material-symbols-outlined text-[22px]">explore</span><span class="caps uppercase mt-1">CALIBRATE</span></a><a class="flex flex-col items-center justify-center flex-1 h-12 rounded-lg text-on-surface-variant" href="#"><span class="material-symbols-outlined text-[22px]">memory</span><span class="caps uppercase mt-1">PIPELINE</span></a><a class="flex flex-col items-center justify-center flex-1 h-12 rounded-lg text-on-surface-variant" href="#"><span class="material-symbols-outlined text-[22px]">settings</span><span class="caps uppercase mt-1">SETTINGS</span></a></div></nav>
+<script>
+(function(){
+  let outageStart=null, outageStartPosition=null, previousOutage=false;
+  const $=id=>document.getElementById(id);
+  const set=(id,v)=>{const e=$(id);if(e)e.textContent=v;};
+  function outage(s){const g=String(s.gnss_state||''),m=String(s.mode||'');return g.includes('LOST')||m.includes('DEAD RECKONING');}
+  function progress(m){m=String(m||'');if(m.includes('FUSED'))return 100;if(m.includes('REACQUISITION'))return 85;if(m.includes('DEAD RECKONING'))return 65;if(m.includes('GNSS DEGRADED'))return 40;if(m.includes('GNSS + INS'))return 30;return 15;}
+  function duration(sec){if(!Number.isFinite(sec))return '—';const t=Math.max(0,sec),w=Math.floor(t),d=Math.floor((t%1)*10),mi=String(Math.floor(w/60)).padStart(2,'0'),se=String(w%60).padStart(2,'0');return `${mi}:${se}.${d}`;}
+  function distance(p){if(!p||!outageStartPosition)return null;const e=Number(p.east||0)-Number(outageStartPosition.east||0),n=Number(p.north||0)-Number(outageStartPosition.north||0);return Math.hypot(e,n);}
+  function update(s){const o=outage(s),m=s.mode||'WAITING FOR GNSS';if(o&&!previousOutage){outageStart=performance.now();outageStartPosition=s.local_position_m||{east:0,north:0};}if(!o&&previousOutage){outageStart=null;outageStartPosition=null;}previousOutage=o;
+    set('headerGnssStatus',s.gnss_status||'GNSS —');set('outageBannerState',o?'GNSS BLACKOUT DETECTED':'GNSS AVAILABLE');set('outageFailover',o?'FAILOVER ACTIVE':'STANDBY');set('outageModeTitle',m);set('outageModeDescription',o?'GNSS unavailable • Inertial dead reckoning active':m.includes('REACQUISITION')?'GNSS signal returning • Reacquisition and fusion active':'GNSS signal available • Navigation engine ready');
+    set('outageSpeed',s.speed_kmh==null?'—':Number(s.speed_kmh).toFixed(0));set('outageUncertainty',s.uncertainty_m==null?'—':`±${Number(s.uncertainty_m).toFixed(1)} m`);set('aiNHCUncertainty',s.uncertainty_m==null?'UNCERTAINTY —':`±${Number(s.uncertainty_m).toFixed(1)} m`);set('nhcStatus',`NHC ${s.nhc_status||'—'}`);set('aiStatus',`AI ${s.ai_model_status||'—'}`);set('imuSampleRate',`IMU ${s.accepted_imu??'—'} SAMPLES`);set('sampleBreakdown',`IMU ${s.accepted_imu??'—'} • GNSS ${s.accepted_gnss??'—'}`);set('rejectedSamples',`Rejected ${s.rejected_samples??'—'}`);set('mapStatusBadge',s.map_status?`MAP ${String(s.map_status).replaceAll('_',' ')}`:'MAP STATUS —');set('satelliteStatus',s.gnss_status==='LOST'?'0 SV / NO LOCK':`GNSS ${s.gnss_status||'—'}`);set('navigationState',m);set('navigationDescription',o?'GNSS denied • DR solution active':m.includes('REACQUISITION')?'GNSS returning • fusion recovery active':'Live navigation engine state');set('stateProgress', '');if($('stateProgress'))$('stateProgress').style.width=progress(m)+'%';set('pipelineDescription',`IMU → ${s.ai_model_status==='READY'?'AI speed':'AI —'} → DR → ${s.nhc_status||'NHC —'} → ${s.map_status||'MAP —'}`);set('diagnosticState',s.ai_model_status==='READY'?'LIVE':'CHECK');set('receiverStatus',s.gnss_status||'—');set('receiverTitle',o?'GNSS unavailable • Dead reckoning active':m.includes('REACQUISITION')?'GNSS reacquisition active':'GNSS receiver available');set('receiverDescription',o?'Position maintained from inertial navigation':'Live backend receiver state');
+    if(o&&outageStart!==null){const el=(performance.now()-outageStart)/1000;set('outage-stopwatch',duration(el));const dist=distance(s.local_position_m);set('outage-distance',dist==null?'—':dist.toFixed(1));}else{set('outage-stopwatch','—');set('outage-distance','—');}
+  }
+  async function refresh(){try{const r=await fetch('/navigation/state',{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);const s=await r.json();update(s);set('telemetryTime',new Date().toISOString().slice(11,23)+' Z');}catch(e){console.error(e);set('headerGnssStatus','BACKEND UNAVAILABLE');set('diagnosticState','OFFLINE');}}
+
+  let demoTimer = null;
+  let demoTick = 0;
+  let demoTime = 1000;
+  let demoLat = 12.9716;
+  let demoLon = 77.5946;
+  let demoPhase = "idle";
+
+  async function postJSON(path, body) {
+    const r = await fetch(path, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) throw new Error(`${path}: HTTP ${r.status}`);
+    return r.json();
+  }
+
+  function stopDemo() {
+    if (demoTimer) {
+      clearInterval(demoTimer);
+      demoTimer = null;
+    }
+    demoPhase = "idle";
+  }
+
+  async function sendDemoPacket() {
+    demoTime += 0.1;
+    demoTick++;
+
+    await postJSON("/sensor/imu", {
+      timestamp: demoTime,
+      ax: 0,
+      ay: 0,
+      az: 9.80665,
+      gx: 0,
+      gy: 0,
+      gz: 0
+    });
+
+    /*
+     * GNSS is deliberately withheld during the outage.
+     * It returns during recovery.
+     */
+    if (demoPhase !== "outage" && demoTick % 10 === 0) {
+      demoLon += (8.0 / (111320 * Math.cos(demoLat * Math.PI / 180)));
+
+      await postJSON("/sensor/gnss", {
+        timestamp: demoTime,
+        latitude: demoLat,
+        longitude: demoLon,
+        speed: 8,
+        accuracy: 5
+      });
+    }
+
+    if (demoTick === 50) {
+      demoPhase = "outage";
+      console.log("GNSS outage started");
+    }
+
+    if (demoTick === 130) {
+      demoPhase = "recovery";
+      console.log("GNSS recovery started");
+    }
+
+    if (demoPhase === "recovery" && demoTick % 10 === 0) {
+      demoLon += (8.0 / (111320 * Math.cos(demoLat * Math.PI / 180)));
+
+      await postJSON("/sensor/gnss", {
+        timestamp: demoTime,
+        latitude: demoLat,
+        longitude: demoLon,
+        speed: 8,
+        accuracy: 5
+      });
+    }
+
+    if (demoTick >= 175) {
+      stopDemo();
+      console.log("Outage demonstration complete");
+    }
+  }
+
+  async function startOutageDemo() {
+    stopDemo();
+
+    const button = $("startOutageBtn");
+    if (button) {
+      button.disabled = true;
+      button.innerHTML = '<span class="material-symbols-outlined text-[18px]">satellite_alt</span><span class="caps uppercase">Starting...</span>';
+    }
+
+    try {
+      await fetch("/demo/reset", {method: "POST"});
+
+      demoTick = 0;
+      demoTime = 1000;
+      demoLat = 12.9716;
+      demoLon = 77.5946;
+      demoPhase = "normal";
+
+      await postJSON("/sensor/gnss", {
+        timestamp: demoTime,
+        latitude: demoLat,
+        longitude: demoLon,
+        speed: 8,
+        accuracy: 5
+      });
+
+      demoTimer = setInterval(() => {
+        sendDemoPacket().catch(error => {
+          console.error("Outage demo packet error:", error);
+          stopDemo();
+        });
+      }, 100);
+
+      await refresh();
+    } catch (error) {
+      console.error("Could not start outage demo:", error);
+    } finally {
+      if (button) {
+        button.disabled = false;
+        button.innerHTML = '<span class="material-symbols-outlined text-[18px]">satellite_alt</span><span class="caps uppercase">Start Outage Demo</span>';
+      }
+    }
+  }
+
+  $('startOutageBtn')?.addEventListener('click', startOutageDemo);
+
+  $('resetDemoBtn')?.addEventListener('click',async()=>{
+    try {
+      stopDemo();
+      await fetch('/demo/reset',{method:'POST'});
+      outageStart=null;
+      outageStartPosition=null;
+      previousOutage=false;
+      await refresh();
+    } catch(e) {
+      console.error(e);
+    }
+  });
+
+  $('navigateBtn')?.addEventListener('click',()=>location.href='/navigate');
+  refresh();setInterval(refresh,500);
+})();
+</script>
+</body></html>

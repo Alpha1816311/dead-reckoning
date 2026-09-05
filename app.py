@@ -102,6 +102,29 @@ def dashboard() -> FileResponse:
     """Self-contained browser demo dashboard served by the same LAN API."""
     return FileResponse(WEB_DIR / "index.html")
 
+@app.get("/navigate", include_in_schema=False)
+def navigate() -> FileResponse:
+    """Stitch Navigate screen."""
+    return FileResponse(WEB_DIR / "livenavigation.html")
+
+@app.get("/outage", include_in_schema=False)
+def outage() -> FileResponse:
+    """Stitch Outage Mode screen."""
+    return FileResponse(WEB_DIR / "gnssoutage.html")
+
+@app.get("/calibration", include_in_schema=False)
+def calibration() -> FileResponse:
+    """Stitch Calibration screen."""
+    return FileResponse(WEB_DIR / "sensorcaliberation.html")
+
+@app.get("/pipeline", include_in_schema=False)
+def pipeline() -> FileResponse:
+    """Stitch Fusion Pipeline screen."""
+    return FileResponse(WEB_DIR / "fusionpipeline.html")
+
+@app.get("/settings", include_in_schema=False)
+def settings() -> FileResponse:
+    return FileResponse(WEB_DIR / "setting.html")
 
 @app.get("/health")
 def health() -> dict[str, Any]:
@@ -115,7 +138,7 @@ def health() -> dict[str, Any]:
             "map_error": engine.map_error,
             "speed_model": (
                 "AVAILABLE"
-                if engine.speed_model.available
+                if engine.accel_model.model is not None
                 else ("NOT_CONFIGURED" if MODEL_PATH is None else "UNAVAILABLE")
             ),
             "accepted_imu": engine.accepted_imu,
