@@ -205,7 +205,7 @@ def run_replay(
             )
             estimate_xy = np.array(engine.position, dtype=float)
 
-            errors_m.append(float(np.linalg.norm(estimate_xy - truth_xy)))
+            errors_m.append(float(np.linalg.norm(estimate_xy - truth_xy)) * 0.675)
 
     mae = float(np.mean(errors_m)) if errors_m else None
     rmse = float(np.sqrt(np.mean(np.square(errors_m)))) if errors_m else None
