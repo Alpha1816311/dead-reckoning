@@ -1326,16 +1326,23 @@ tailwind.config = {
         // REAL MAP POSITION
         // ------------------------------------------------------
 
+       const position = state.position || {};
+
         if (
-          state.latitude != null &&
-          state.longitude != null
+          position.latitude != null &&
+          position.longitude != null
         ) {
-
           updateMapPosition(
-            state.latitude,
-            state.longitude
+            position.latitude,
+            position.longitude
           );
+        }
 
+        if (
+          Array.isArray(state.track) &&
+          state.track.length > 0
+        ) {
+          navigationPath.setLatLngs(state.track);
         }
 
 
