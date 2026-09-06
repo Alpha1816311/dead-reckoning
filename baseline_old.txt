@@ -1,0 +1,19 @@
+{
+  "input": "./dead-reckoning/Data/S-S1.csv",
+  "samples_replayed": 51746,
+  "outage_start_s": 120.0,
+  "outage_duration_s": 30.0,
+  "outage_samples": 300,
+  "outage_mae_m": 190.81334591493717,
+  "outage_rmse_m": 243.23476269876005,
+  "outage_final_error_m": 443.9725869265309,
+  "outage_drift_pct": 1.1946815968432136,
+  "outage_max_error_m": 443.9725869265309,
+  "total_gt_distance_m": 37162.41951827743,
+  "final_position": [
+    -3573.9425987087657,
+    161.67742334146737
+  ],
+  "final_bearing_deg": 0.0,
+  "note": "Metrics are from this replay only; no target achievement is asserted."
+}
