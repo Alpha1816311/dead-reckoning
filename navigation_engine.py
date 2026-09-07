@@ -75,10 +75,22 @@ class NavigationEngine:
         map_path=None,
         model_path=None,
         gnss_timeout_s=1.0,
+        forward_accel_clip=3.0,
+        max_speed_mps=35.0,
+        min_move_distance=0.05,
+        ai_accel_gate_max=6.0,
+        ai_accel_diff_max=2.0,
     ):
         self.map_path = map_path
         self.model_path = model_path
         self.gnss_timeout_s = float(gnss_timeout_s)
+
+        # Drift-control safeguards adapted from Member 1's engine.
+        self.forward_accel_clip = float(forward_accel_clip)
+        self.max_speed_mps = float(max_speed_mps)
+        self.min_move_distance = float(min_move_distance)
+        self.ai_accel_gate_max = float(ai_accel_gate_max)
+        self.ai_accel_diff_max = float(ai_accel_diff_max)
 
         self.timestamp_normalizer = TimestampNormalizer()
         self.imu_preprocessor = RobustIMUPreprocessor()
@@ -357,15 +369,35 @@ class NavigationEngine:
                 processed.filtered_linear_accel_phone[1]
             )
 
+            # Use AI acceleration only when it is physically plausible
+            # and sufficiently close to the sensor-derived acceleration.
             if ai_accel is not None:
-                forward_accel = ai_accel
+                if (
+                    math.isfinite(ai_accel)
+                    and abs(ai_accel) <= self.ai_accel_gate_max
+                    and abs(ai_accel - forward_accel)
+                    <= self.ai_accel_diff_max
+                ):
+                    forward_accel = ai_accel
+
+            # Prevent acceleration spikes from causing DR drift.
+            forward_accel = float(
+                np.clip(
+                    forward_accel,
+                    -self.forward_accel_clip,
+                    self.forward_accel_clip,
+                )
+            )
 
             previous_speed = self.speed_mps
 
             if not processed.is_stationary:
-                self.speed_mps = max(
-                    0.0,
-                    previous_speed + forward_accel * dt,
+                self.speed_mps = float(
+                    np.clip(
+                        previous_speed + forward_accel * dt,
+                        0.0,
+                        self.max_speed_mps,
+                    )
                 )
 
             if self.heading_deg is None:
@@ -378,6 +410,10 @@ class NavigationEngine:
                 * (previous_speed + self.speed_mps)
                 * dt
             )
+
+            # Ignore tiny displacement caused by sensor noise.
+            if abs(distance) < self.min_move_distance:
+                distance = 0.0
 
             displacement = np.array(
                 [
