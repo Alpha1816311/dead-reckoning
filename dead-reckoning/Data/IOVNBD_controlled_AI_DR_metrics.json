@@ -1,0 +1,17 @@
+{
+  "dataset": "IO-VNBD S-S1 + V-S1",
+  "benchmark_type": "controlled_dr_vbox_initial_speed",
+  "outage_start_s": 120.0,
+  "outage_end_s": 150.0,
+  "samples": 300,
+  "reference_path_m": 552.8203451043103,
+  "reference_straight_m": 484.59599850235,
+  "position_mae_m": 181.83997096619456,
+  "position_rmse_m": 222.02791726695318,
+  "maximum_error_m": 405.60998041652886,
+  "final_error_m": 405.60998041652886,
+  "dr_drift_percent": 73.37102984876495,
+  "ai_model": true,
+  "map_matching": false,
+  "vbox_used_for_initial_speed": true
+}

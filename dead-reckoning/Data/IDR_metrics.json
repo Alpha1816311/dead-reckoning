@@ -1,0 +1,18 @@
+{
+  "samples": 51746,
+  "sample_rate_hz": 10.000000000009095,
+  "outage_samples": 300,
+  "outage_mae_m": 4.960190742551091,
+  "outage_rmse_m": 6.759975503151269,
+  "maximum_drift_m": 13.772834693522643,
+  "drift_at_recovery_m": 12.77674607788669,
+  "reference_displacement_m": 11.377105552740945,
+  "drift_percentage": 112.30225489829041,
+  "overall_mae_m": 0.16509496364759008,
+  "overall_rmse_m": 1.3158893236821627,
+  "overall_max_m": 24.638417968723264,
+  "ml_test_mae_mps": 0.8462430769317886,
+  "ml_test_rmse_mps": 1.0444173015441114,
+  "ml_test_r2": 0.38534022940521395,
+  "map_matching_active": true
+}

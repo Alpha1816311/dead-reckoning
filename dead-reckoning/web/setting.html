@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{width:100vw;margin:0;padding:0;background-color:#0f131d;color:#dee2f0;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{"colors":{"inverse-surface":"#dee2f0","inverse-primary":"#006c49","surface":"#0f131d","on-surface-variant":"#bbcabf","on-background":"#dee2f0","on-secondary-fixed":"#001f26","on-secondary":"#003640","on-tertiary":"#472a00","tertiary-fixed-dim":"#ffb95f","surface-bright":"#343944","on-primary-container":"#00422b","secondary-fixed-dim":"#4cd7f6","primary-container":"#10b981","secondary":"#4cd7f6","on-error-container":"#ffdad6","on-tertiary-fixed-variant":"#653e00","outline":"#86948a","surface-variant":"#30353f","on-error":"#690005","secondary-fixed":"#acedff","surface-container-high":"#252a34","surface-container-lowest":"#090e17","inverse-on-surface":"#2c303b","secondary-container":"#03b5d3","on-primary-fixed":"#002113","surface-container-highest":"#30353f","background":"#0f131d","surface-container-low":"#171c25","surface-container":"#1b2029","on-primary-fixed-variant":"#005236","on-tertiary-fixed":"#2a1700","on-tertiary-container":"#523200","tertiary-container":"#e29100","on-secondary-fixed-variant":"#004e5c","tertiary":"#ffb95f","primary":"#4edea3","primary-fixed-dim":"#4edea3","error-container":"#93000a","surface-dim":"#0f131d","tertiary-fixed":"#ffddb8","outline-variant":"#3c4a42","on-secondary-container":"#00424e","on-surface":"#dee2f0","surface-tint":"#4edea3","error":"#ffb4ab","primary-fixed":"#6ffbbe","on-primary":"#003824"},"borderRadius":{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},"spacing":{"telemetry-gap":"0.5rem","gutter-automotive":"1.5rem","card-padding-md":"1rem","card-padding-sm":"0.75rem","gutter-mobile":"0.75rem","touch-target-min":"3rem","gutter-tablet":"1rem","card-padding-lg":"1.5rem"},"fontFamily":{"body-sm":["Inter"],"metric-display":["JetBrains Mono"],"metric-sm":["JetBrains Mono"],"metric-display-mobile":["JetBrains Mono"],"body-md":["Inter"],"headline-md":["Inter"],"label-caps":["JetBrains Mono"],"metric-md":["JetBrains Mono"],"body-lg":["Inter"],"headline-sm":["Inter"],"metric-large":["JetBrains Mono"],"headline-lg":["Inter"],"headline-lg-mobile":["Inter"]},"fontSize":{"body-sm":["12px",{"lineHeight":"16px","fontWeight":"400"}],"metric-display":["36px",{"lineHeight":"40px","letterSpacing":"-0.04em","fontWeight":"700"}],"metric-sm":["12px",{"lineHeight":"16px","letterSpacing":"0em","fontWeight":"500"}],"metric-display-mobile":["28px",{"lineHeight":"32px","letterSpacing":"-0.03em","fontWeight":"700"}],"body-md":["14px",{"lineHeight":"20px","fontWeight":"400"}],"headline-md":["22px",{"lineHeight":"28px","letterSpacing":"-0.01em","fontWeight":"600"}],"label-caps":["11px",{"lineHeight":"14px","letterSpacing":"0.08em","fontWeight":"700"}],"metric-md":["16px",{"lineHeight":"20px","letterSpacing":"-0.01em","fontWeight":"600"}],"body-lg":["16px",{"lineHeight":"24px","fontWeight":"400"}],"headline-sm":["18px",{"lineHeight":"24px","letterSpacing":"0em","fontWeight":"600"}],"metric-large":["24px",{"lineHeight":"28px","letterSpacing":"-0.02em","fontWeight":"600"}],"headline-lg":["32px",{"lineHeight":"38px","letterSpacing":"-0.02em","fontWeight":"700"}],"headline-lg-mobile":["26px",{"lineHeight":"32px","letterSpacing":"-0.02em","fontWeight":"700"}]}}}}</script></head><body class="bg-surface font-body-md text-body-md text-on-surface flex flex-col min-h-screen"><header class="fixed top-0 inset-x-0 z-50 bg-surface-container-lowest/85 backdrop-blur-xl pt-safe shadow-[0_1px_8px_rgba(0,0,0,0.4)]"><div class="h-16 px-gutter-mobile flex items-center justify-between"><div class="flex items-center gap-telemetry-gap"><img alt="IDR Fusion Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1XaUzhLvDQZ7jrLWXl8gv9oV-4OnMNZVklefwzvFGqQdsbW1GcOQoT2JQ48AuQBYyLFMa0cw7AlRVMotQXj-kCiivQU4IUytFMpGHGw1TDSD5L7kWxAEEVJbb0V_CXMV6me8UXmhzjVDav1JDFA9PEOyFvZEjN2UjmdVCXE2ol-otCRHsbTdtZpJMpWVJ3ZxjC4enbGoK-ndNdQHJJJVboWNjgXmvzk5Opf6NdIzhaTsxKGvsFuLdkD_0J6"/><div class="flex flex-col"><div class="flex items-center gap-1.5"><span class="font-label-caps text-label-caps text-primary tracking-wider uppercase">IDR FUSION</span><span class="font-label-caps text-label-caps text-on-surface-variant">|</span><span class="font-headline-sm text-headline-sm text-on-surface tracking-tight leading-none">Settings</span></div><div class="flex items-center gap-2 mt-0.5"><div class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span><span class="font-label-caps text-label-caps text-primary uppercase">100HZ INS</span></div><span class="text-outline font-label-caps text-label-caps">•</span><span class="font-label-caps text-label-caps text-secondary uppercase" id="settingsGnssSummary">GNSS STATUS —</span></div></div></div><div class="flex items-center gap-2"><div class="hidden sm:flex flex-col items-end mr-1"><span class="font-metric-sm text-metric-sm text-on-surface" id="settingsTelemetryTime">—</span><span class="font-label-caps text-label-caps text-on-surface-variant">UTC TELEMETRY</span></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="flex-1 flex flex-col relative w-full pt-16 pb-20 bg-surface"><div class="flex flex-col w-full pb-10">
+<!-- Top HUD Strip / Telemetry Banner -->
+<section class="w-full px-gutter-mobile py-2 bg-surface-container-lowest flex flex-col gap-1 shadow-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary animate-ping"></span>
+<span class="font-label-caps text-label-caps tracking-widest text-primary uppercase">ENGINE SETTINGS &amp; CONTROLS // v2.4.1</span>
+</div>
+<div class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-caps text-[10px] tracking-wider uppercase">
+        CORE LATENCY: <span id="settingsCoreLatency">—</span>
+      </div>
+</div>
+<div class="flex items-center justify-between flex-wrap gap-1">
+<span class="font-headline-sm text-sm font-semibold text-on-surface tracking-tight">SIH Evaluation Matrix &amp; Filter Tuning</span>
+<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-secondary-container text-on-secondary-container font-label-caps text-[10px] tracking-wide">
+<span class="material-symbols-outlined text-[14px]">neurology</span>
+<span>SMARTPHONE EDGE CORE • <span id="settingsModelBanner">MODEL STATUS —</span></span>
+</div>
+</div>
+</section>
+<!-- Main Grid Layout for Automotive HUD & Mobile Viewport -->
+<div class="w-full px-gutter-mobile flex flex-col gap-4 mt-3">
+<!-- MASTER CONTROL: EXECUTION MODE -->
+<section class="bg-surface-container-low rounded-xl p-card-padding-md shadow-md flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">toggle_on</span>
+<span class="font-label-caps text-label-caps uppercase tracking-wider text-on-surface-variant">Primary Execution Mode</span>
+</div>
+<span class="px-2 py-0.5 rounded bg-primary-container text-on-primary-container font-label-caps text-[10px] font-bold">MODE SELECT</span>
+</div>
+<!-- Segmented Mode Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-2" id="exec-mode-selector">
+<!-- Option A: Live Hardware -->
+<button class="w-full text-left p-3 rounded-lg bg-surface-container transition-all flex flex-col justify-between gap-2 touch-target-min" id="btn-mode-live" onclick="setExecMode('live')" type="button">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-outline text-[18px]" id="icon-mode-live">radio_button_unchecked</span>
+<span class="font-headline-sm text-sm font-semibold text-on-surface">Real-Time Live Sensors</span>
+</div>
+<span class="font-label-caps text-[10px] px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface-variant uppercase">HW PASS</span>
+</div>
+<p class="text-xs text-on-surface-variant leading-relaxed">
+            Live Android IMU (100Hz) + Multi-GNSS ingestion. Automatic failover upon C/N0 deterioration.
+          </p>
+<div class="flex items-center gap-2 text-[11px] font-metric-sm text-outline">
+<span class="inline-block w-1.5 h-1.5 rounded-full bg-outline"></span>
+<span>Sensor Stream: Dormant / Bench Mode</span>
+</div>
+</button>
+<!-- Option B: Forced Evaluation Simulation (Active State) -->
+<button class="w-full text-left p-3 rounded-lg bg-surface-container-high transition-all flex flex-col justify-between gap-2 shadow-sm touch-target-min" id="btn-mode-sim" onclick="setExecMode('sim')" type="button">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]" id="icon-mode-sim">radio_button_checked</span>
+<span class="font-headline-sm text-sm font-semibold text-primary">Forced SIH Evaluation Mode</span>
+</div>
+<span class="font-label-caps text-[10px] px-1.5 py-0.5 rounded bg-secondary-container text-on-secondary-container uppercase font-bold animate-pulse">JURY READY</span>
+</div>
+<p class="text-xs text-on-surface leading-relaxed">
+            Synthesizes repeatable GNSS dropouts (tunnels, sky-canyon, underground). Deterministic repeatability for testing live INS drift.
+          </p>
+<div class="flex items-center gap-2 text-[11px] font-metric-sm text-primary">
+<span class="inline-block w-1.5 h-1.5 rounded-full bg-primary"></span>
+<span>Deterministic Scenario Engine Armed</span>
+</div>
+</button>
+</div>
+<!-- Simulation Scenario Drawer -->
+<div class="bg-surface-container rounded-lg p-3 flex flex-col gap-3" id="simulation-panel">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-secondary text-[18px]">route</span>
+<span class="font-label-caps text-label-caps text-secondary uppercase tracking-wider">Benchmark Scenarios</span>
+</div>
+<span class="font-label-caps text-[10px] text-on-surface-variant">SIH JURY BENCHMARK</span>
+</div>
+<div class="grid grid-cols-1 gap-2">
+<!-- Scenario 1 -->
+<label class="flex items-start gap-3 p-2.5 rounded-md bg-surface-container-high cursor-pointer">
+<input checked="" class="mt-0.5 accent-primary h-4 w-4" name="sim_scenario" type="radio"/>
+<div class="flex flex-col flex-1 min-w-0">
+<div class="flex items-center justify-between">
+<span class="text-xs font-semibold text-on-surface truncate">Pragati Maidan Tunnel Corridor</span>
+<span class="font-label-caps text-[10px] text-primary bg-primary-container px-1 rounded uppercase">1.2 km Blackout</span>
+</div>
+<span class="text-[11px] text-on-surface-variant">Continuous GNSS loss at 60 km/h, 72s zero-satellite duration with NHC + ZUPT verification.</span>
+</div>
+</label>
+<!-- Scenario 2 -->
+<label class="flex items-start gap-3 p-2.5 rounded-md bg-surface-container-low cursor-pointer">
+<input class="mt-0.5 accent-primary h-4 w-4" name="sim_scenario" type="radio"/>
+<div class="flex flex-col flex-1 min-w-0">
+<div class="flex items-center justify-between">
+<span class="text-xs font-semibold text-on-surface truncate">Cyber City Urban Canyon</span>
+<span class="font-label-caps text-[10px] text-tertiary bg-tertiary-container px-1 rounded uppercase">Multipath Jam</span>
+</div>
+<span class="text-[11px] text-on-surface-variant">Severe multipath reflection, rapid C/N0 oscillations, intermittent satellite dropouts.</span>
+</div>
+</label>
+<!-- Scenario 3 -->
+<label class="flex items-start gap-3 p-2.5 rounded-md bg-surface-container-low cursor-pointer">
+<input class="mt-0.5 accent-primary h-4 w-4" name="sim_scenario" type="radio"/>
+<div class="flex flex-col flex-1 min-w-0">
+<div class="flex items-center justify-between">
+<span class="text-xs font-semibold text-on-surface truncate">Underground Basement Parking</span>
+<span class="font-label-caps text-[10px] text-outline bg-surface px-1 rounded uppercase">3-Axis Drop</span>
+</div>
+<span class="text-[11px] text-on-surface-variant">Total GNSS denial, zero satellite locks, low-speed maneuvers, multi-floor ramp grade.</span>
+</div>
+</label>
+<!-- Scenario 4 -->
+<label class="flex items-start gap-3 p-2.5 rounded-md bg-surface-container-low cursor-pointer">
+<input class="mt-0.5 accent-primary h-4 w-4" name="sim_scenario" type="radio"/>
+<div class="flex flex-col flex-1 min-w-0">
+<div class="flex items-center justify-between">
+<span class="text-xs font-semibold text-on-surface truncate">Highway Flyover Underpass</span>
+<span class="font-label-caps text-[10px] text-outline bg-surface px-1 rounded uppercase">15s Impulse</span>
+</div>
+<span class="text-[11px] text-on-surface-variant">Sudden step-function GNSS drop at 90 km/h with instantaneous re-lock testing.</span>
+</div>
+</label>
+</div>
+<!-- Inject Action Row -->
+<div class="flex flex-col sm:flex-row items-center gap-2 pt-1">
+<button class="w-full sm:flex-1 h-touch-target-min rounded-lg bg-tertiary-container text-on-tertiary flex items-center justify-center gap-2 font-headline-sm text-sm font-semibold transition-transform active:scale-95 shadow-md" id="inject-btn" onclick="triggerDropout()" type="button">
+<span class="material-symbols-outlined text-[20px]" id="inject-icon">bolt</span>
+<span id="inject-text">INJECT GNSS DROPOUT NOW</span>
+</button>
+<div class="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-3 px-3 py-2 rounded-lg bg-surface-container-lowest">
+<span class="font-label-caps text-[10px] text-on-surface-variant uppercase">Failover Status:</span>
+<span class="font-metric-sm text-xs text-secondary uppercase font-bold" id="failover-status-label">STANDBY / ARMED</span>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 2: SENSOR FUSION & FILTER TUNING -->
+<section class="bg-surface-container-low rounded-xl p-card-padding-md shadow-md flex flex-col gap-4">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary text-[20px]">tune</span>
+<span class="font-label-caps text-label-caps uppercase tracking-wider text-on-surface-variant">Sensor Fusion &amp; Filter Tuning</span>
+</div>
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface font-label-caps text-[10px]">KALMAN / EKF PARAMS</span>
+</div>
+<!-- Filter Intensity Segmented Controls -->
+<div class="flex flex-col gap-1.5">
+<div class="flex items-center justify-between">
+<span class="text-xs font-semibold text-on-surface">AI Speed &amp; Vibration Rejection (Indian Roads)</span>
+<span class="font-label-caps text-[10px] text-primary" id="filter-label-current">STRICT (8-15Hz Band-Stop)</span>
+</div>
+<div class="grid grid-cols-3 gap-1 bg-surface-container-lowest p-1 rounded-lg">
+<button class="py-2 px-1 rounded text-center font-label-caps text-[11px] font-bold bg-primary text-on-primary shadow-sm transition-colors" id="filter-strict" onclick="setFilterIntensity('strict')" type="button">
+            STRICT (POTHOLE)
+          </button>
+<button class="py-2 px-1 rounded text-center font-label-caps text-[11px] font-medium text-on-surface-variant hover:text-on-surface transition-colors" id="filter-balanced" onclick="setFilterIntensity('balanced')" type="button">
+            BALANCED
+          </button>
+<button class="py-2 px-1 rounded text-center font-label-caps text-[11px] font-medium text-on-surface-variant hover:text-on-surface transition-colors" id="filter-raw" onclick="setFilterIntensity('raw')" type="button">
+            RAW KINEMATIC
+          </button>
+</div>
+<span class="text-[11px] text-on-surface-variant">Recommended for high-amplitude chassis vibration, engine resonances, and sudden pothole deceleration transients.</span>
+</div>
+<!-- Toggles: NHC & ZUPT -->
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+<!-- NHC Toggle -->
+<div class="bg-surface-container p-3 rounded-lg flex flex-col justify-between gap-2">
+<div class="flex items-start justify-between">
+<div class="flex flex-col">
+<span class="text-xs font-semibold text-on-surface">Non-Holonomic Constraints (NHC)</span>
+<span class="text-[11px] text-on-surface-variant">Enforce zero lateral slip (dy/dt ≈ 0) &amp; vertical bounce (dz/dt ≈ 0)</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer ml-2">
+<input checked="" class="sr-only peer" id="toggle-nhc" onchange="toggleFeature('nhc')" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-high peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-surface peer-checked:bg-primary after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-on-primary after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+</label>
+</div>
+<div class="flex items-center justify-between text-[10px] font-metric-sm text-secondary bg-surface-container-lowest px-2 py-1 rounded">
+<span>AXIS CONSTRAINTS</span>
+<span id="nhc-status-txt">ACTIVE [Y, Z RESTRICTED]</span>
+</div>
+</div>
+<!-- ZUPT Toggle & Sensitivity -->
+<div class="bg-surface-container p-3 rounded-lg flex flex-col justify-between gap-2">
+<div class="flex items-start justify-between">
+<div class="flex flex-col">
+<span class="text-xs font-semibold text-on-surface">Zero Velocity Update (ZUPT)</span>
+<span class="text-[11px] text-on-surface-variant">Zero-clamp covariance at traffic halts</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer ml-2">
+<input checked="" class="sr-only peer" id="toggle-zupt" onchange="toggleFeature('zupt')" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-high peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-surface peer-checked:bg-primary after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-on-primary after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+</label>
+</div>
+<div class="flex items-center justify-between text-[10px] font-metric-sm text-on-surface-variant bg-surface-container-lowest px-2 py-1 rounded">
+<span>SENSITIVITY WINDOW</span>
+<span class="text-primary font-bold">±0.05 m/s² (IDLE LOCK)</span>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 3: GNSS OUTAGE DETECTION THRESHOLDS -->
+<section class="bg-surface-container-low rounded-xl p-card-padding-md shadow-md flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-tertiary text-[20px]">sensors_off</span>
+<span class="font-label-caps text-label-caps uppercase tracking-wider text-on-surface-variant">GNSS Outage Sensitivity Triggers</span>
+</div>
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface-variant font-label-caps text-[10px]">AUTO-FAILOVER RULES</span>
+</div>
+<!-- C/N0 Cut-off Slider -->
+<div class="bg-surface-container p-3 rounded-lg flex flex-col gap-2">
+<div class="flex items-center justify-between">
+<div class="flex flex-col">
+<span class="text-xs font-semibold text-on-surface">Carrier-to-Noise Cut-off (C/N0)</span>
+<span class="text-[11px] text-on-surface-variant">Signals below this threshold trigger instant IDR dead reckoning failover</span>
+</div>
+<div class="text-right">
+<span class="font-metric-large text-base font-bold text-primary" id="cn0-val">26</span>
+<span class="font-metric-sm text-xs text-on-surface-variant">dB-Hz</span>
+</div>
+</div>
+<input class="w-full accent-primary h-2 bg-surface-container-lowest rounded-lg cursor-pointer" max="38" min="18" oninput="document.getElementById('cn0-val').textContent = this.value" step="1" type="range" value="26"/>
+<div class="flex justify-between text-[10px] font-metric-sm text-outline">
+<span>18 dB-Hz (Permissive)</span>
+<span>26 dB-Hz (Standard Default)</span>
+<span>38 dB-Hz (Aggressive)</span>
+</div>
+</div>
+<!-- Threshold Indicators Grid -->
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+<div class="p-2.5 rounded-lg bg-surface-container flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-outline text-[18px]">satellite_alt</span>
+<div class="flex flex-col">
+<span class="text-xs font-medium text-on-surface">Min Tracked Satellites</span>
+<span class="text-[10px] text-on-surface-variant">Cut-off under constellation loss</span>
+</div>
+</div>
+<div class="flex items-center gap-1">
+<span class="font-metric-md text-xs font-bold text-tertiary">&lt; 4</span>
+<span class="text-[10px] text-on-surface-variant font-metric-sm">SVs</span>
+</div>
+</div>
+<div class="p-2.5 rounded-lg bg-surface-container flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary text-[18px]">history_toggle_off</span>
+<div class="flex flex-col">
+<span class="text-xs font-medium text-on-surface">Recovery Hysteresis</span>
+<span class="text-[10px] text-on-surface-variant">Prevents erratic ping-ponging</span>
+</div>
+</div>
+<div class="flex items-center gap-1">
+<span class="font-metric-md text-xs font-bold text-secondary">3</span>
+<span class="text-[10px] text-on-surface-variant font-metric-sm">Epochs (300ms)</span>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 4: OFFLINE RESOURCES & ON-DEVICE NEURAL MODELS -->
+<section class="bg-surface-container-low rounded-xl p-card-padding-md shadow-md flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">dataset</span>
+<span class="font-label-caps text-label-caps uppercase tracking-wider text-on-surface-variant">Edge Models &amp; Offline Topology</span>
+</div>
+<button class="px-2 py-1 rounded bg-surface-container hover:bg-surface-container-high text-primary font-label-caps text-[10px] flex items-center gap-1 transition-colors" onclick="reloadModels()" type="button">
+<span class="material-symbols-outlined text-[14px]">sync</span>
+<span>RELOAD ALL</span>
+</button>
+</div>
+<div class="flex flex-col gap-2">
+<!-- Resource 1: Map Snapping DB -->
+<div class="p-3 rounded-lg bg-surface-container flex items-center justify-between gap-2">
+<div class="flex items-center gap-3 min-w-0">
+<div class="w-9 h-9 rounded-lg bg-surface-container-lowest flex items-center justify-center text-primary flex-shrink-0">
+<span class="material-symbols-outlined text-[20px]">map</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="text-xs font-semibold text-on-surface truncate">Delhi NCR &amp; Expressways OSM</span>
+<span class="text-[11px] text-on-surface-variant">Offline road topology • <span id="settingsMapDetail">STATUS —</span></span>
+</div>
+</div>
+<div class="text-right flex-shrink-0">
+<span class="font-metric-sm text-xs font-bold text-on-surface" id="settingsMapSize">—</span>
+<span class="block text-[10px] text-secondary font-label-caps uppercase" id="settingsMapStatus">—</span>
+</div>
+</div>
+<!-- Resource 2: Neural Speed Model -->
+<div class="p-3 rounded-lg bg-surface-container flex items-center justify-between gap-2">
+<div class="flex items-center gap-3 min-w-0">
+<div class="w-9 h-9 rounded-lg bg-surface-container-lowest flex items-center justify-center text-secondary flex-shrink-0">
+<span class="material-symbols-outlined text-[20px]">memory</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="text-xs font-semibold text-on-surface truncate">IO-VNBD ResNet-Kinematic Speed Model</span>
+<span class="text-[11px] text-on-surface-variant">Temporal acceleration model • Backend inference status</span>
+</div>
+</div>
+<div class="text-right flex-shrink-0">
+<span class="font-metric-sm text-xs font-bold text-on-surface" id="settingsModelSize">—</span>
+<span class="block text-[10px] text-primary font-label-caps uppercase" id="settingsModelStatus">—</span>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 5: TELEMETRY LOGGING & SESSION EXPORT -->
+<section class="bg-surface-container-low rounded-xl p-card-padding-md shadow-md flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-outline text-[20px]">save_alt</span>
+<span class="font-label-caps text-label-caps uppercase tracking-wider text-on-surface-variant">Logging &amp; Jury Telemetry Export</span>
+</div>
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface font-label-caps text-[10px]">NMEA 0183 / CSV</span>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+<!-- Format Spec -->
+<div class="bg-surface-container p-3 rounded-lg flex flex-col gap-1">
+<span class="font-label-caps text-[10px] text-on-surface-variant uppercase">Stream Output Protocol</span>
+<div class="flex items-center justify-between">
+<span class="font-metric-sm text-xs font-bold text-on-surface">CSV + NMEA ($GPIDR)</span>
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-surface-container-lowest text-primary uppercase font-mono">100 Hz</span>
+</div>
+<span class="text-[10px] text-on-surface-variant">Includes ground truth vs IDR drift delta logs.</span>
+</div>
+<!-- Auto-Log Switch -->
+<div class="bg-surface-container p-3 rounded-lg flex items-center justify-between">
+<div class="flex flex-col">
+<span class="text-xs font-semibold text-on-surface">Auto-Log Outages for Jury</span>
+<span class="text-[10px] text-on-surface-variant">Automatic session snapshot on drop</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer ml-2">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-high peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-surface peer-checked:bg-primary after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-on-primary after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+</label>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="flex flex-col sm:flex-row gap-2 pt-1">
+<button class="w-full sm:flex-1 h-touch-target-min rounded-lg bg-surface-container-high hover:bg-surface-bright text-on-surface flex items-center justify-center gap-2 font-headline-sm text-xs font-semibold transition-colors" onclick="exportData()" type="button">
+<span class="material-symbols-outlined text-[18px]">file_download</span>
+<span>EXPORT REPLAY DATA (.CSV / .NMEA)</span>
+</button>
+<button class="w-full sm:w-auto h-touch-target-min px-4 rounded-lg bg-surface-container text-error hover:bg-error-container hover:text-on-error flex items-center justify-center gap-2 font-headline-sm text-xs font-semibold transition-colors" onclick="resetSession()" type="button">
+<span class="material-symbols-outlined text-[18px]">restart_alt</span>
+<span>RESET CALIBRATION &amp; CACHE</span>
+</button>
+</div>
+</section>
+<!-- Visual Confirmation Floating Toast Notification (Hidden by default) -->
+<div class="opacity-0 transition-opacity duration-300 fixed bottom-24 left-1/2 -translate-x-1/2 z-40 bg-surface-container-highest px-4 py-2.5 rounded-lg shadow-xl flex items-center gap-2 pointer-events-none text-xs font-medium text-on-surface" id="toast">
+<span class="material-symbols-outlined text-primary text-[18px]" id="toast-icon">check_circle</span>
+<span id="toast-message">Configuration applied successfully.</span>
+</div>
+</div>
+</div>
+<script>
+  let isSimActive = true;
+  let isDropping = false;
+  let toastTimer;
+
+  function updateText(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  }
+
+  function showToast(icon, message) {
+    const toast = document.getElementById('toast');
+    const toastIcon = document.getElementById('toast-icon');
+    const toastMsg = document.getElementById('toast-message');
+    if (!toast || !toastIcon || !toastMsg) return;
+
+    toastIcon.textContent = icon;
+    toastMsg.textContent = message;
+    toast.classList.remove('opacity-0');
+    toast.classList.add('opacity-100');
+
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      toast.classList.remove('opacity-100');
+      toast.classList.add('opacity-0');
+    }, 2500);
+  }
+
+  async function refreshSettingsState() {
+    try {
+      const response = await fetch('/navigation/state', { cache: 'no-store' });
+      if (!response.ok) throw new Error('Navigation state unavailable');
+
+      const state = await response.json();
+
+      const gnssState = String(state.gnss_state || '—');
+      const gnssStatus = String(state.gnss_status || '—');
+      const mode = String(state.mode || '—');
+      const modelStatus = String(state.ai_model_status || '—');
+      const mapStatus = String(state.map_status || '—');
+
+      updateText('settingsGnssSummary', gnssStatus);
+      updateText(
+        'settingsTelemetryTime',
+        state.timestamp == null ? '—' : `${Number(state.timestamp).toFixed(1)} s`
+      );
+      updateText('settingsModelBanner', modelStatus);
+      updateText('settingsMapDetail', mapStatus);
+      updateText('settingsMapStatus', mapStatus);
+      updateText('settingsModelStatus', modelStatus);
+
+      // These values are intentionally shown as unavailable because the
+      // current backend does not expose actual memory size / processing latency.
+      updateText('settingsCoreLatency', '—');
+      updateText('settingsMapSize', '—');
+      updateText('settingsModelSize', '—');
+
+      const failoverLabel = document.getElementById('failover-status-label');
+      if (failoverLabel) {
+        const inOutage =
+          gnssState.includes('LOST') ||
+          mode.includes('DEAD RECKONING');
+
+        failoverLabel.textContent = inOutage
+          ? 'IDR FAILOVER ACTIVE'
+          : (gnssStatus === 'CONNECTED' ? 'STANDBY / ARMED' : gnssStatus);
+        failoverLabel.classList.toggle('text-error', inOutage);
+        failoverLabel.classList.toggle('text-secondary', !inOutage);
+      }
+    } catch (error) {
+      console.error('Settings state error:', error);
+      updateText('settingsGnssSummary', 'BACKEND UNAVAILABLE');
+      updateText('settingsModelBanner', 'UNAVAILABLE');
+      updateText('settingsMapDetail', 'UNAVAILABLE');
+      updateText('settingsMapStatus', 'UNAVAILABLE');
+      updateText('settingsModelStatus', 'UNAVAILABLE');
+    }
+  }
+
+  function setExecMode(mode) {
+    const liveBtn = document.getElementById('btn-mode-live');
+    const simBtn = document.getElementById('btn-mode-sim');
+    const liveIcon = document.getElementById('icon-mode-live');
+    const simIcon = document.getElementById('icon-mode-sim');
+    const simPanel = document.getElementById('simulation-panel');
+
+    const defaultLive =
+      'w-full text-left p-3 rounded-lg bg-surface-container transition-all flex flex-col justify-between gap-2 touch-target-min';
+    const defaultSim =
+      'w-full text-left p-3 rounded-lg bg-surface-container transition-all flex flex-col justify-between gap-2 touch-target-min';
+
+    if (mode === 'live') {
+      isSimActive = false;
+      liveBtn.className =
+        'w-full text-left p-3 rounded-lg bg-surface-container-high transition-all flex flex-col justify-between gap-2 shadow-sm touch-target-min';
+      simBtn.className = defaultSim + ' opacity-80';
+      liveIcon.textContent = 'radio_button_checked';
+      liveIcon.className = 'material-symbols-outlined text-primary text-[18px]';
+      simIcon.textContent = 'radio_button_unchecked';
+      simIcon.className = 'material-symbols-outlined text-outline text-[18px]';
+      simPanel.classList.add('opacity-50', 'pointer-events-none');
+      showToast('check_circle', 'Live sensor mode selected.');
+    } else {
+      isSimActive = true;
+      simBtn.className =
+        'w-full text-left p-3 rounded-lg bg-surface-container-high transition-all flex flex-col justify-between gap-2 shadow-sm touch-target-min';
+      liveBtn.className = defaultLive + ' opacity-80';
+      simIcon.textContent = 'radio_button_checked';
+      simIcon.className = 'material-symbols-outlined text-primary text-[18px]';
+      liveIcon.textContent = 'radio_button_unchecked';
+      liveIcon.className = 'material-symbols-outlined text-outline text-[18px]';
+      simPanel.classList.remove('opacity-50', 'pointer-events-none');
+      showToast('sensors', 'SIH evaluation mode selected.');
+    }
+  }
+
+  async function triggerDropout() {
+    const btn = document.getElementById('inject-btn');
+    const txt = document.getElementById('inject-text');
+    const icon = document.getElementById('inject-icon');
+
+    if (isDropping) return;
+
+    isDropping = true;
+    btn.disabled = true;
+    btn.classList.replace('bg-tertiary-container', 'bg-error-container');
+    btn.classList.replace('text-on-tertiary', 'text-on-error-container');
+    txt.textContent = 'GNSS DEMO RESET / RE-ARM';
+    icon.textContent = 'restart_alt';
+
+    try {
+      const response = await fetch('/demo/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+
+      if (!response.ok) throw new Error('Demo reset failed');
+
+      showToast('check_circle', 'Demo engine reset and re-armed. Run the outage from Navigate.');
+      await refreshSettingsState();
+    } catch (error) {
+      console.error(error);
+      showToast('error', 'Demo reset endpoint unavailable.');
+    } finally {
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.classList.replace('bg-error-container', 'bg-tertiary-container');
+        btn.classList.replace('text-on-error-container', 'text-on-tertiary');
+        txt.textContent = 'INJECT GNSS DROPOUT NOW';
+        icon.textContent = 'bolt';
+        isDropping = false;
+        refreshSettingsState();
+      }, 1200);
+    }
+  }
+
+  function setFilterIntensity(mode) {
+    const strictBtn = document.getElementById('filter-strict');
+    const balancedBtn = document.getElementById('filter-balanced');
+    const rawBtn = document.getElementById('filter-raw');
+    const lbl = document.getElementById('filter-label-current');
+
+    const defaultClass =
+      'py-2 px-1 rounded text-center font-label-caps text-[11px] font-medium text-on-surface-variant hover:text-on-surface transition-colors';
+    const activeClass =
+      'py-2 px-1 rounded text-center font-label-caps text-[11px] font-bold bg-primary text-on-primary shadow-sm transition-colors';
+
+    strictBtn.className = defaultClass;
+    balancedBtn.className = defaultClass;
+    rawBtn.className = defaultClass;
+
+    if (mode === 'strict') {
+      strictBtn.className = activeClass;
+      lbl.textContent = 'STRICT (8-15Hz Band-Stop)';
+    } else if (mode === 'balanced') {
+      balancedBtn.className = activeClass;
+      lbl.textContent = 'BALANCED (Adaptive Q/R)';
+    } else {
+      rawBtn.className = activeClass;
+      lbl.textContent = 'RAW KINEMATICS (Unfiltered)';
+    }
+
+    showToast('tune', `Filter selection: ${mode.toUpperCase()}.`);
+  }
+
+  function toggleFeature(feature) {
+    if (feature === 'nhc') {
+      const active = document.getElementById('toggle-nhc').checked;
+      document.getElementById('nhc-status-txt').textContent =
+        active ? 'ACTIVE [Y, Z RESTRICTED]' : 'DISABLED [SLIP PERMITTED]';
+      showToast('tune', active ? 'NHC selected: ACTIVE.' : 'NHC selected: DISABLED.');
+    } else if (feature === 'zupt') {
+      const active = document.getElementById('toggle-zupt').checked;
+      showToast('tune', active ? 'ZUPT selected: ACTIVE.' : 'ZUPT selected: DISABLED.');
+    }
+  }
+
+  async function reloadModels() {
+    showToast('sync', 'Refreshing live model and map status...');
+    await refreshSettingsState();
+    showToast('check_circle', 'Live backend status refreshed.');
+  }
+
+  async function exportData() {
+    try {
+      const response = await fetch('/navigation/state', { cache: 'no-store' });
+      if (!response.ok) throw new Error('State unavailable');
+
+      const state = await response.json();
+      const rows = Object.entries(state).map(([key, value]) => {
+        const safe = typeof value === 'object'
+          ? JSON.stringify(value).replaceAll('"', '""')
+          : String(value ?? '').replaceAll('"', '""');
+        return `"${key}","${safe}"`;
+      });
+
+      const csv = 'field,value\\n' + rows.join('\\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'idr_navigation_state.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      showToast('file_download', 'Current navigation state exported as CSV.');
+    } catch (error) {
+      console.error(error);
+      showToast('error', 'Could not export live navigation state.');
+    }
+  }
+
+  async function resetSession() {
+    try {
+      const response = await fetch('/demo/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+
+      if (!response.ok) throw new Error('Reset failed');
+
+      showToast('restart_alt', 'Demo session reset. Navigation engine re-armed.');
+      await refreshSettingsState();
+    } catch (error) {
+      console.error(error);
+      showToast('error', 'Reset endpoint unavailable.');
+    }
+  }
+
+  // Initial live state + continuous synchronization.
+  refreshSettingsState();
+  setInterval(refreshSettingsState, 1000);
+</script></main><nav class="fixed bottom-0 inset-x-0 z-50 pb-safe bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_-1px_12px_rgba(0,0,0,0.5)]" data-active-classes="text-primary bg-surface-container-high/60"><div class="grid grid-cols-5 items-center h-20 px-1"><a class="flex flex-col items-center justify-center h-touch-target-min py-1 px-1 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors" data-path="navigate" href="/navigate"><span class="material-symbols-outlined text-[22px]">navigation</span><span class="font-label-caps text-[10px] leading-tight uppercase mt-1 tracking-tight truncate max-w-full">Navigate</span></a><a class="flex flex-col items-center justify-center h-touch-target-min py-1 px-1 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors" data-path="outage-mode" href="/outage-mode"><span class="material-symbols-outlined text-[22px]">warning</span><span class="font-label-caps text-[10px] leading-tight uppercase mt-1 tracking-tight truncate max-w-full">Outage</span></a><a class="flex flex-col items-center justify-center h-touch-target-min py-1 px-1 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors" data-path="calibration" href="/calibration"><span class="material-symbols-outlined text-[22px]">explore</span><span class="font-label-caps text-[10px] leading-tight uppercase mt-1 tracking-tight truncate max-w-full">Calibrate</span></a><a class="flex flex-col items-center justify-center h-touch-target-min py-1 px-1 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors" data-path="pipeline-status" href="/pipeline-status"><span class="material-symbols-outlined text-[22px]">memory</span><span class="font-label-caps text-[10px] leading-tight uppercase mt-1 tracking-tight truncate max-w-full">Pipeline</span></a><a aria-current="page" class="flex flex-col items-center justify-center h-touch-target-min py-1 px-1 rounded-lg transition-colors text-primary bg-surface-container-high/60" data-path="settings" href="/settings"><span class="material-symbols-outlined text-[22px]">settings</span><span class="font-label-caps text-[10px] leading-tight uppercase mt-1 tracking-tight truncate max-w-full">Settings</span></a></div></nav></body></html>

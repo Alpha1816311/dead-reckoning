@@ -1,0 +1,15 @@
+{
+  "dataset": "IO-VNBD S-S1 + V-S1",
+  "outage_start_s": 120.0,
+  "outage_duration_s": 30.0,
+  "samples": 300,
+  "reference_straight_line_distance_m": 478.5808879853961,
+  "reference_path_distance_m": 553.9762953615309,
+  "MAE_m": 239.46015111472488,
+  "RMSE_m": 277.30168998170296,
+  "max_error_m": 475.3242675222937,
+  "final_error_m": 475.3242675222937,
+  "DR_drift_percent": 85.80227556706049,
+  "map_matching": false,
+  "speed_model": true
+}

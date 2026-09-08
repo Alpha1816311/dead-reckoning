@@ -1,0 +1,6 @@
+.opencode
+__pycache__/
+__pycache__/
+Data/live_replay.jsonl
+models/speed_model_vbox.joblib
+android/.gradle/

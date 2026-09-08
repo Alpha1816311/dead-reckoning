@@ -1,0 +1,17 @@
+{
+  "input": "Data/S-S1.csv",
+  "samples": 51746,
+  "train_samples": 41396,
+  "test_samples": 10350,
+  "test_mae_mps": 0.7864029593203782,
+  "test_rmse_mps": 0.9722651486572574,
+  "features": [
+    "linear_accel_x",
+    "linear_accel_y",
+    "linear_accel_z",
+    "accel_magnitude",
+    "accel_magnitude_smooth",
+    "gyro_magnitude"
+  ],
+  "note": "Chronological holdout on supplied CSV; not an IO-VNBD result."
+}
