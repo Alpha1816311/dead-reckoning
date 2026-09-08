@@ -1,11 +1,7 @@
+fastapi>=0.100.0
+uvicorn[standard]>=0.22.0
 numpy
 pandas
 scikit-learn
-joblib
-shapely
-pyproj
-fastapi
-uvicorn[standard]
-httpx
-pytest
-matplotlib
+scipy
+pydantic
