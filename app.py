@@ -81,8 +81,8 @@ def _error(exc: Exception) -> HTTPException:
 
 @app.get("/")
 def root() -> FileResponse:
-    """Open the presentation-ready dashboard at the base server URL."""
-    return FileResponse(WEB_DIR / "index.html")
+    """Open the Live Navigation page at the base server URL."""
+    return FileResponse(WEB_DIR / "livenavigation.html")
 
 
 @app.get("/api")
