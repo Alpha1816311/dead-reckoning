@@ -1,0 +1,10 @@
+.venv/
+Data/
+models/
+android/
+*.csv
+*.png
+*.jpg
+*.pt
+*.bin
+__pycache__/
