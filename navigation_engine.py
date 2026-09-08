@@ -74,7 +74,7 @@ class NavigationEngine:
         self,
         map_path=None,
         model_path=None,
-        gnss_timeout_s=1.0,
+        gnss_timeout_s=10.0,
         forward_accel_clip=3.0,
         max_speed_mps=35.0,
         min_move_distance=0.05,
