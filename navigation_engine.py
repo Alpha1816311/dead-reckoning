@@ -93,6 +93,7 @@ class NavigationEngine:
         self.ai_accel_diff_max = float(ai_accel_diff_max)
 
         self.timestamp_normalizer = TimestampNormalizer()
+        self.gnss_timestamp_normalizer = TimestampNormalizer()
         self.imu_preprocessor = RobustIMUPreprocessor()
 
         self.orientation = _Orientation()
@@ -236,7 +237,7 @@ class NavigationEngine:
         altitude_m=None,
     ):
         try:
-            timestamp = float(timestamp)
+            timestamp = self.gnss_timestamp_normalizer.accept(timestamp).timestamp
             latitude = float(latitude)
             longitude = float(longitude)
             accuracy_m = max(0.1, float(accuracy_m))
@@ -517,6 +518,7 @@ class NavigationEngine:
 
     def reset(self):
         self.timestamp_normalizer = TimestampNormalizer()
+        self.gnss_timestamp_normalizer = TimestampNormalizer()
         self.imu_preprocessor = RobustIMUPreprocessor()
 
         self.position[:] = 0.0
