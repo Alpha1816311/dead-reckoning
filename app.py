@@ -1,253 +1,909 @@
-"""FastAPI LAN gateway for the live IDR navigation engine.
-
-Start from this directory with:
-
-    python -m uvicorn app:app --host 0.0.0.0 --port 8000
-
-Android should use the laptop's LAN address, for example
-``http://192.168.1.42:8000``; localhost on the phone is the phone itself.
-"""
-
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
+import math
 import os
+import logging
+import sys
 from pathlib import Path
 from threading import RLock
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from pydantic import BaseModel, Field, ValidationError
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 from navigation_engine import NavigationEngine
 
 
-DEFAULT_MAP = Path(__file__).resolve().parent / "Data" / "roads.geojson"
-MAP_PATH = os.getenv("IDR_ROADS_GEOJSON") or (
-    str(DEFAULT_MAP) if DEFAULT_MAP.exists() else None
+# ============================================================
+# LOGGING
+# ============================================================
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
 )
-DEFAULT_MODEL = Path(__file__).resolve().parent / "models" / "speed_model.joblib"
-MODEL_PATH = os.getenv("IDR_SPEED_MODEL") or (
-    str(DEFAULT_MODEL) if DEFAULT_MODEL.exists() else None
+
+logger = logging.getLogger("IDR_SERVER")
+
+
+# ============================================================
+# PATHS
+# ============================================================
+
+BASE_DIR = Path(__file__).resolve().parent
+
+WEB_DIR = BASE_DIR / "web"
+DATA_DIR = BASE_DIR / "Data"
+MODELS_DIR = BASE_DIR / "models"
+
+DEFAULT_MAP = DATA_DIR / "roads.geojson"
+
+DEFAULT_MODEL_JOBLIB = MODELS_DIR / "speed_model.joblib"
+DEFAULT_MODEL_PKL = MODELS_DIR / "speed_model.pkl"
+
+
+# ============================================================
+# MAP PATH
+# ============================================================
+
+environment_map = os.getenv("IDR_ROADS_GEOJSON")
+
+if environment_map:
+    MAP_PATH = environment_map
+
+elif DEFAULT_MAP.exists():
+    MAP_PATH = str(DEFAULT_MAP)
+
+else:
+    MAP_PATH = None
+
+
+# ============================================================
+# MODEL PATH
+# ============================================================
+
+environment_model = os.getenv("IDR_SPEED_MODEL")
+
+if environment_model:
+    MODEL_PATH = environment_model
+
+elif DEFAULT_MODEL_JOBLIB.exists():
+    MODEL_PATH = str(DEFAULT_MODEL_JOBLIB)
+
+elif DEFAULT_MODEL_PKL.exists():
+    MODEL_PATH = str(DEFAULT_MODEL_PKL)
+
+else:
+    MODEL_PATH = None
+
+
+# ============================================================
+# NAVIGATION ENGINE
+# ============================================================
+
+engine = NavigationEngine(
+    map_path=MAP_PATH,
+    model_path=MODEL_PATH,
 )
-engine = NavigationEngine(map_path=MAP_PATH, model_path=MODEL_PATH)
+
 engine_lock = RLock()
-WEB_DIR = Path(__file__).resolve().parent / "web"
+
+
+# ============================================================
+# FASTAPI APPLICATION
+# ============================================================
+
+def _display_configured_path(path: str | None) -> str:
+    """Return a useful startup path without exposing external host paths."""
+    if not path:
+        return "not configured"
+
+    try:
+        return str(Path(path).resolve().relative_to(BASE_DIR))
+    except ValueError:
+        return "external path configured"
+
+
+@asynccontextmanager
+async def lifespan(_application: FastAPI):
+    """Emit a compact, truthful readiness report once Uvicorn starts."""
+    runtime = engine.runtime_snapshot()
+
+    logger.info("IDR backend startup: status=READY version=%s", _application.version)
+    logger.info(
+        "Navigation engine initialized: fusion=%s gnss_timeout_s=%.2f filter=%s",
+        runtime["fusion_method"],
+        runtime["gnss_timeout_s"],
+        runtime["filter_mode"],
+    )
+    logger.info(
+        "AI model: status=%s kind=%s path=%s",
+        runtime["ai_model_status"],
+        runtime["ai_model_kind"] or "none",
+        _display_configured_path(MODEL_PATH),
+    )
+    logger.info(
+        "Offline map: status=%s path=%s road_constraints=%s",
+        runtime["map_status"],
+        _display_configured_path(MAP_PATH),
+        runtime["nhc_status"],
+    )
+    logger.info(
+        "Runtime configuration: nhc=%s map_matching=%s web_ui=%s python=%s",
+        runtime["nhc_enabled"],
+        runtime["map_matching_enabled"],
+        "available" if WEB_DIR.exists() else "missing",
+        sys.version.split()[0],
+    )
+
+    if engine.ai_model_error:
+        logger.warning("AI model is unavailable: %s", engine.ai_model_error)
+    if engine.map_error:
+        logger.warning("Offline map is unavailable: %s", engine.map_error)
+
+    yield
+    logger.info("IDR backend shutdown complete")
 
 app = FastAPI(
     title="Intelligent Dead Reckoning API",
-    version="1.0.0-live",
-    description="LAN sensor gateway and continuous GNSS/INS navigation state.",
+    version="2.0.0-live",
+    description=(
+        "Live Android GNSS + IMU Intelligent Dead Reckoning "
+        "Navigation System"
+    ),
+    lifespan=lifespan,
 )
+
+
+# ============================================================
+# CORS
+# ============================================================
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
+# ============================================================
+# DATA MODELS
+# ============================================================
+
 class IMUPayload(BaseModel):
-    timestamp: float = Field(description="Monotonic seconds from the sensor clock")
+
+    # Timestamp in seconds
+    timestamp: float
+
+    # Accelerometer
     ax: float
     ay: float
     az: float
+
+    # Gyroscope
     gx: float
     gy: float
     gz: float
+
+    # Magnetometer
     mx: float | None = None
     my: float | None = None
     mz: float | None = None
 
+    @field_validator("timestamp")
+    @classmethod
+    def timestamp_must_be_finite(cls, value: float) -> float:
+        if not math.isfinite(value):
+            raise ValueError("timestamp must be finite")
+        return value
+
 
 class GNSSPayload(BaseModel):
-    timestamp: float = Field(description="Monotonic seconds from the sensor clock")
+
+    # Timestamp in seconds
+    timestamp: float
+
     latitude: float
     longitude: float
-    speed: float | None = Field(default=None, description="m/s")
-    accuracy: float = Field(default=10.0, description="horizontal accuracy in metres")
+
+    # Android Location.speed
+    # Unit = meters per second
+    speed: float | None = None
+
+    # Android Location.accuracy
+    # Unit = meters
+    accuracy: float = 10.0
+
     altitude: float | None = None
+
+    @field_validator("timestamp")
+    @classmethod
+    def timestamp_must_be_finite(cls, value: float) -> float:
+        if not math.isfinite(value):
+            raise ValueError("timestamp must be finite")
+        return value
 
 
 class AlignmentPayload(BaseModel):
-    forward_phone: list[float] = Field(min_length=3, max_length=3)
-    up_phone: list[float] = Field(min_length=3, max_length=3)
+
+    forward_phone: list[float] = Field(
+        min_length=3,
+        max_length=3,
+    )
+
+    up_phone: list[float] = Field(
+        min_length=3,
+        max_length=3,
+    )
 
 
-def _error(exc: Exception) -> HTTPException:
-    return HTTPException(status_code=422, detail=str(exc))
+class RuntimeConfigPayload(BaseModel):
+    """The deliberately small set of controls safe to change during a run."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    filter_mode: str | None = None
+    nhc_enabled: bool | None = None
+    map_matching_enabled: bool | None = None
+    gnss_timeout_s: float | None = Field(default=None, ge=0.1, le=10.0)
+    profile: str | None = None
+
+    @field_validator("filter_mode")
+    @classmethod
+    def filter_mode_must_be_supported(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        normalized = value.strip().lower()
+        if normalized not in {"raw", "balanced", "strict"}:
+            raise ValueError("filter_mode must be one of: raw, balanced, strict")
+        return normalized
+
+    @field_validator("profile")
+    @classmethod
+    def profile_must_be_supported(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        normalized = value.strip().lower()
+        if normalized not in {"phone", "edge"}:
+            raise ValueError("profile must be one of: phone, edge")
+        return normalized
+
+    @model_validator(mode="after")
+    def require_a_setting(self) -> "RuntimeConfigPayload":
+        if not self.model_fields_set or not any(
+            getattr(self, field) is not None for field in self.model_fields_set
+        ):
+            raise ValueError("provide at least one runtime configuration setting")
+        return self
 
 
-@app.get("/")
-def root() -> FileResponse:
-    """Open the Live Navigation page at the base server URL."""
-    return FileResponse(WEB_DIR / "livenavigation.html")
+# ============================================================
+# HELPER FUNCTIONS
+# ============================================================
+
+def api_error(
+    status_code: int,
+    message: str,
+) -> HTTPException:
+
+    return HTTPException(
+        status_code=status_code,
+        detail=message,
+    )
 
 
-@app.get("/api")
-def api_info() -> dict[str, Any]:
-    return {
-        "service": "IDR live navigation gateway",
-        "dashboard": "/dashboard",
-        "health": "/health",
-        "sensor_http": ["/sensor/imu", "/sensor/gnss"],
-        "sensor_websocket": "/ws/sensor",
-        "navigation_state": "/navigation/state",
-    }
+def get_page(filename: str):
+
+    file_path = WEB_DIR / filename
+
+    if not file_path.exists():
+
+        raise HTTPException(
+            status_code=404,
+            detail=f"Web page not found: {filename}",
+        )
+
+    return FileResponse(file_path)
+
+
+# ============================================================
+# ROOT / FRONTEND
+# ============================================================
+
+@app.get("/", include_in_schema=False)
+def home():
+
+    return get_page("livenavigation.html")
+
+
+@app.get("/navigate", include_in_schema=False)
+def navigate():
+
+    return get_page("livenavigation.html")
 
 
 @app.get("/dashboard", include_in_schema=False)
-def dashboard() -> FileResponse:
-    """Self-contained browser demo dashboard served by the same LAN API."""
-    return FileResponse(WEB_DIR / "index.html")
+def dashboard():
 
-@app.get("/navigate", include_in_schema=False)
-def navigate() -> FileResponse:
-    """Stitch Navigate screen."""
-    return FileResponse(WEB_DIR / "livenavigation.html")
+    return get_page("index.html")
+
 
 @app.get("/outage", include_in_schema=False)
-def outage() -> FileResponse:
-    """Stitch Outage Mode screen."""
-    return FileResponse(WEB_DIR / "gnssoutage.html")
+def outage():
+
+    return get_page("gnssoutage.html")
+
 
 @app.get("/calibration", include_in_schema=False)
-def calibration() -> FileResponse:
-    """Stitch Calibration screen."""
-    return FileResponse(WEB_DIR / "sensorcaliberation.html")
+def calibration():
+
+    return get_page("sensorcaliberation.html")
+
 
 @app.get("/pipeline", include_in_schema=False)
-def pipeline() -> FileResponse:
-    """Stitch Fusion Pipeline screen."""
-    return FileResponse(WEB_DIR / "fusionpipeline.html")
+def pipeline():
+
+    return get_page("fusionpipeline.html")
+
 
 @app.get("/settings", include_in_schema=False)
-def settings() -> FileResponse:
-    return FileResponse(WEB_DIR / "setting.html")
+def settings():
+
+    return get_page("setting.html")
+
+
+# ============================================================
+# API INFORMATION
+# ============================================================
+
+@app.get("/api")
+def api_info() -> dict[str, Any]:
+
+    return {
+
+        "service": "IDR Live Navigation Gateway",
+
+        "version": app.version,
+
+        "server_status": "RUNNING",
+
+        "pages": {
+
+            "home": "/",
+
+            "navigate": "/navigate",
+
+            "dashboard": "/dashboard",
+
+            "outage": "/outage",
+
+            "calibration": "/calibration",
+
+            "pipeline": "/pipeline",
+
+            "settings": "/settings",
+        },
+
+        "endpoints": {
+
+            "health": "/health",
+
+            "imu": "/sensor/imu",
+
+            "gnss": "/sensor/gnss",
+
+            "state": "/navigation/state",
+
+            "position": "/api/position",
+
+            "telemetry": "/api/telemetry",
+
+            "reset": "/api/reset",
+
+            "alignment": "/config/alignment",
+
+            "config": "/config",
+
+            "websocket": "/ws/sensor",
+        },
+
+        "configuration": engine.runtime_snapshot(),
+    }
+
+
+# ============================================================
+# HEALTH CHECK
+# ============================================================
 
 @app.get("/health")
-def health() -> dict[str, Any]:
+def health():
+
     with engine_lock:
+
         return {
+
             "ok": True,
-            "service": "idr",
-            "api_version": app.version,
-            "engine": "ready",
+
+            "service": "Intelligent Dead Reckoning",
+
+            "version": app.version,
+
+            "engine_status": "READY",
+
             "map_status": engine.map_status,
+
             "map_error": engine.map_error,
-            "speed_model": (
-                "AVAILABLE"
-                if engine.accel_model.model is not None
-                else ("NOT_CONFIGURED" if MODEL_PATH is None else "UNAVAILABLE")
-            ),
+
+            "ai_model_status": engine.ai_model_status,
+
             "accepted_imu": engine.accepted_imu,
+
             "accepted_gnss": engine.accepted_gnss,
+
+            "rejected_samples": engine.rejected_samples,
+
+            "web_directory_exists": WEB_DIR.exists(),
+
+            "map_configured": MAP_PATH is not None,
+
+            "model_configured": MODEL_PATH is not None,
+
+            "runtime_configuration": engine.runtime_snapshot(),
         }
 
 
+# ============================================================
+# LIVE NAVIGATION STATE
+# ============================================================
+
 @app.get("/navigation/state")
-def navigation_state() -> dict[str, Any]:
+def navigation_state():
+
     with engine_lock:
+
         return engine.state_snapshot()
 
+
+# ============================================================
+# RUNTIME CONFIGURATION
+# ============================================================
+
+@app.get("/config")
+def get_runtime_configuration():
+    """Return only safe, effective runtime controls and their live status."""
+    with engine_lock:
+        return {
+            "ok": True,
+            "configuration": engine.runtime_snapshot(),
+            "status": {
+                "mode": engine.state_snapshot()["mode"],
+                "gnss_status": engine.state_snapshot()["gnss_status"],
+                "map_status": engine.map_status,
+                "nhc_status": engine.nhc_status,
+            },
+        }
+
+
+@app.patch("/config")
+def update_runtime_configuration(payload: RuntimeConfigPayload):
+    """Apply validated settings directly to the running navigation engine."""
+    try:
+        with engine_lock:
+            configuration = engine.set_runtime_options(
+                filter_mode=payload.filter_mode,
+                nhc_enabled=payload.nhc_enabled,
+                map_matching_enabled=payload.map_matching_enabled,
+                gnss_timeout_s=payload.gnss_timeout_s,
+                profile=payload.profile,
+            )
+            state = engine.state_snapshot()
+        return {
+            "ok": True,
+            "configuration": configuration,
+            "status": {
+                "mode": state["mode"],
+                "gnss_status": state["gnss_status"],
+                "map_status": state["map_status"],
+                "nhc_status": state["nhc_status"],
+            },
+        }
+    except ValueError as exc:
+        raise api_error(422, str(exc)) from exc
+
+
+# ============================================================
+# COMPATIBILITY ENDPOINTS
+# ============================================================
+
+@app.get("/api/position")
+def api_position():
+
+    with engine_lock:
+
+        return engine.state_snapshot()
+
+
+@app.get("/api/telemetry")
+def api_telemetry():
+
+    with engine_lock:
+
+        return engine.state_snapshot()
+
+
+# ============================================================
+# REAL IMU DATA
+# ============================================================
 
 @app.post("/sensor/imu")
-def sensor_imu(payload: IMUPayload) -> dict[str, Any]:
+def sensor_imu(payload: IMUPayload):
+
     try:
+
         mag = None
-        if payload.mx is not None and payload.my is not None and payload.mz is not None:
-            mag = [payload.mx, payload.my, payload.mz]
+
+        if (
+            payload.mx is not None
+            and payload.my is not None
+            and payload.mz is not None
+        ):
+
+            mag = [
+
+                payload.mx,
+                payload.my,
+                payload.mz,
+            ]
+
         with engine_lock:
-            return engine.process_imu(
-                timestamp=payload.timestamp,
-                accel=[payload.ax, payload.ay, payload.az],
-                gyro=[payload.gx, payload.gy, payload.gz],
+
+            result = engine.process_imu(
+
+                timestamp=float(payload.timestamp),
+
+                accel=[
+
+                    float(payload.ax),
+
+                    float(payload.ay),
+
+                    float(payload.az),
+                ],
+
+                gyro=[
+
+                    float(payload.gx),
+
+                    float(payload.gy),
+
+                    float(payload.gz),
+                ],
+
                 mag=mag,
             )
-    except ValueError as exc:
-        raise _error(exc) from exc
 
+        return result
+
+    except ValueError as exc:
+
+        logger.warning(
+            "IMU rejected: %s",
+            exc,
+        )
+
+        raise api_error(
+            422,
+            str(exc),
+        ) from exc
+
+    except Exception as exc:
+
+        logger.exception(
+            "IMU processing failed"
+        )
+
+        raise api_error(
+            500,
+            f"IMU processing failed: {exc}",
+        ) from exc
+
+
+# ============================================================
+# REAL GNSS DATA
+# ============================================================
 
 @app.post("/sensor/gnss")
-def sensor_gnss(payload: GNSSPayload) -> dict[str, Any]:
-    try:
-        with engine_lock:
-            return engine.process_gnss(
-                timestamp=payload.timestamp,
-                latitude=payload.latitude,
-                longitude=payload.longitude,
-                speed_mps=payload.speed,
-                accuracy_m=payload.accuracy,
-                altitude_m=payload.altitude,
-            )
-    except ValueError as exc:
-        raise _error(exc) from exc
+def sensor_gnss(payload: GNSSPayload):
 
+    try:
+
+        with engine_lock:
+
+            result = engine.process_gnss(
+
+                timestamp=float(payload.timestamp),
+
+                latitude=float(payload.latitude),
+
+                longitude=float(payload.longitude),
+
+                speed_mps=(
+                    None
+                    if payload.speed is None
+                    else float(payload.speed)
+                ),
+
+                accuracy_m=float(payload.accuracy),
+
+                altitude_m=(
+                    None
+                    if payload.altitude is None
+                    else float(payload.altitude)
+                ),
+            )
+
+        return result
+
+    except ValueError as exc:
+
+        logger.warning(
+            "GNSS rejected: %s",
+            exc,
+        )
+
+        raise api_error(
+            422,
+            str(exc),
+        ) from exc
+
+    except Exception as exc:
+
+        logger.exception(
+            "GNSS processing failed"
+        )
+
+        raise api_error(
+            500,
+            f"GNSS processing failed: {exc}",
+        ) from exc
+
+
+# ============================================================
+# GENERIC SENSOR ENDPOINT
+# ============================================================
 
 @app.post("/sensor")
-def sensor_event(payload: dict[str, Any]) -> dict[str, Any]:
-    """Single endpoint for generic external-IMU/dataset clients."""
-    try:
-        event_type = payload.get("type")
-        if event_type == "imu":
-            return sensor_imu(IMUPayload.model_validate(payload))
-        if event_type == "gnss":
-            return sensor_gnss(GNSSPayload.model_validate(payload))
-        raise HTTPException(status_code=422, detail="type must be 'imu' or 'gnss'")
-    except ValidationError as exc:
-        raise HTTPException(status_code=422, detail=exc.errors()) from exc
+def sensor_event(payload: dict[str, Any]):
 
+    try:
+
+        event_type = payload.get("type")
+
+        if event_type == "imu":
+
+            imu_payload = (
+                IMUPayload.model_validate(payload)
+            )
+
+            return sensor_imu(imu_payload)
+
+        if event_type == "gnss":
+
+            gnss_payload = (
+                GNSSPayload.model_validate(payload)
+            )
+
+            return sensor_gnss(gnss_payload)
+
+        raise api_error(
+            422,
+            "type must be 'imu' or 'gnss'",
+        )
+
+    except ValidationError as exc:
+
+        raise HTTPException(
+            status_code=422,
+            detail=exc.errors(),
+        ) from exc
+
+
+# ============================================================
+# PHONE / VEHICLE ALIGNMENT
+# ============================================================
 
 @app.post("/config/alignment")
-def configure_alignment(payload: AlignmentPayload) -> dict[str, Any]:
-    try:
-        with engine_lock:
-            engine.orientation.set_vehicle_alignment(
-                payload.forward_phone,
-                payload.up_phone,
-            )
-            engine.forward_phone = payload.forward_phone
-            engine.up_phone = payload.up_phone
-            return {
-                "ok": True,
-                "mounting_calibrated": engine.orientation.vehicle_calibrated,
-                "forward_phone": payload.forward_phone,
-                "up_phone": payload.up_phone,
-            }
-    except (TypeError, ValueError) as exc:
-        raise _error(exc) from exc
+def configure_alignment(
+    payload: AlignmentPayload,
+):
 
+    try:
+
+        with engine_lock:
+
+            engine.apply_manual_alignment(payload.forward_phone, payload.up_phone)
+
+            return {
+
+                "ok": True,
+
+                "mounting_calibrated":
+                    engine.orientation.vehicle_calibrated,
+
+                "forward_phone":
+                    payload.forward_phone,
+
+                "up_phone":
+                    payload.up_phone,
+
+                "mounting_status": engine.mounting_status,
+            }
+
+    except Exception as exc:
+
+        logger.exception(
+            "Alignment configuration failed"
+        )
+
+        raise api_error(
+            422,
+            str(exc),
+        ) from exc
+
+
+# ============================================================
+# RESET
+# ============================================================
 
 @app.post("/demo/reset")
-def demo_reset() -> dict[str, Any]:
-    """Reset the live engine before a replay or a physical demonstration."""
-    with engine_lock:
-        engine.reset()
-        return engine.state_snapshot()
+def demo_reset():
 
+    with engine_lock:
+
+        engine.reset()
+
+        logger.info(
+            "Navigation engine reset"
+        )
+
+        return {
+
+            "ok": True,
+
+            "message":
+                "Navigation engine reset successfully",
+
+            "state":
+                engine.state_snapshot(),
+        }
+
+
+@app.post("/api/reset")
+def api_reset():
+
+    return demo_reset()
+
+
+# ============================================================
+# WEBSOCKET
+# ============================================================
 
 @app.websocket("/ws/sensor")
-async def sensor_websocket(websocket: WebSocket) -> None:
-    """Bidirectional low-latency sensor stream.
+async def sensor_websocket(
+    websocket: WebSocket,
+):
 
-    Each received JSON message is the same shape as /sensor with a ``type``
-    field. The server replies with the latest navigation state.
-    """
     await websocket.accept()
+
+    logger.info(
+        "WebSocket client connected"
+    )
+
     try:
+
         while True:
-            payload = await websocket.receive_json()
+
+            payload = (
+                await websocket.receive_json()
+            )
+
             try:
+
                 event_type = payload.get("type")
+
                 if event_type == "imu":
-                    result = sensor_imu(IMUPayload.model_validate(payload))
+
+                    imu_payload = (
+                        IMUPayload.model_validate(payload)
+                    )
+
+                    result = sensor_imu(
+                        imu_payload
+                    )
+
                 elif event_type == "gnss":
-                    result = sensor_gnss(GNSSPayload.model_validate(payload))
+
+                    gnss_payload = (
+                        GNSSPayload.model_validate(payload)
+                    )
+
+                    result = sensor_gnss(
+                        gnss_payload
+                    )
+
+                elif event_type == "state":
+
+                    with engine_lock:
+
+                        result = (
+                            engine.state_snapshot()
+                        )
+
                 else:
-                    raise ValueError("type must be 'imu' or 'gnss'")
-                await websocket.send_json(result)
+
+                    raise ValueError(
+                        "type must be 'imu', "
+                        "'gnss', or 'state'"
+                    )
+
+                await websocket.send_json({
+
+                    "ok": True,
+
+                    "data": result,
+                })
+
             except Exception as exc:
-                await websocket.send_json({"ok": False, "error": str(exc)})
+
+                logger.warning(
+                    "WebSocket processing error: %s",
+                    exc,
+                )
+
+                await websocket.send_json({
+
+                    "ok": False,
+
+                    "error": str(exc),
+                })
+
     except WebSocketDisconnect:
-        return
+
+        logger.info(
+            "WebSocket client disconnected"
+        )
+
+
+# ============================================================
+# STATIC FILES
+#
+# IMPORTANT:
+# Keep this LAST.
+# ============================================================
+
+if WEB_DIR.exists():
+
+    app.mount(
+
+        "/",
+
+        StaticFiles(
+            directory=str(WEB_DIR),
+            html=False,
+        ),
+
+        name="web",
+    )
+
+else:
+
+    logger.warning(
+        "WEB directory not found: %s",
+        WEB_DIR,
+    )

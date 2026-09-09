@@ -1,0 +1,4 @@
+-r requirements.txt
+
+# Optional only: used by the offline plotting scripts, not the live server.
+matplotlib>=3.8,<4

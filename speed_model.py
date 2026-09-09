@@ -42,13 +42,17 @@ class SpeedModel:
         row = np.array([row_values], dtype=float)
         if not np.all(np.isfinite(row)):
             return None
-        # Preserve feature names for models trained with a pandas DataFrame.
-        if hasattr(self.model, "feature_names_in_"):
-            import pandas as pd
+        try:
+            # Preserve feature names for models trained with a pandas DataFrame.
+            if hasattr(self.model, "feature_names_in_"):
+                import pandas as pd
 
-            prediction = float(
-                self.model.predict(pd.DataFrame([row_values], columns=self.features))[0]
-            )
-        else:
-            prediction = float(self.model.predict(row)[0])
+                prediction = float(
+                    self.model.predict(pd.DataFrame([row_values], columns=self.features))[0]
+                )
+            else:
+                prediction = float(self.model.predict(row)[0])
+        except Exception as exc:
+            self.error = f"model inference failed: {exc}"
+            return None
         return float(np.clip(prediction, 0.0, 100.0)) if math.isfinite(prediction) else None
