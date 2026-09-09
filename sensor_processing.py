@@ -100,6 +100,24 @@ class RobustIMUPreprocessor:
         self.accel_bias: np.ndarray = np.zeros(3, dtype=float)
         self.filtered_linear: np.ndarray | None = None
         self.previous_filtered: np.ndarray | None = None
+        self.filter_mode = "balanced"
+
+    def set_filter_mode(self, mode: str) -> str:
+        """Apply a named vibration-filter profile. Returns the canonical name."""
+        normalized = str(mode or "balanced").strip().lower()
+        if normalized in {"raw", "raw_kinematics", "unfiltered"}:
+            self.signal_cutoff_hz = 40.0
+            self.max_linear_accel = 80.0
+            self.filter_mode = "raw"
+        elif normalized in {"strict", "band-stop", "bandstop"}:
+            self.signal_cutoff_hz = 4.0
+            self.max_linear_accel = 12.0
+            self.filter_mode = "strict"
+        else:
+            self.signal_cutoff_hz = 8.0
+            self.max_linear_accel = 35.0
+            self.filter_mode = "balanced"
+        return self.filter_mode
 
     def update(self, accel, gyro, mag=None, dt: float = 0.01) -> ProcessedIMU:
         accel = _vector(accel, "accelerometer")

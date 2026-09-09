@@ -64,6 +64,39 @@ def test_malformed_sensor_is_rejected():
     assert generic.status_code == 422
 
 
+def test_websocket_sensor_acknowledges_live_packets():
+    with client.websocket_connect("/ws/sensor") as websocket:
+        websocket.send_json(
+            {
+                "type": "gnss",
+                "timestamp": 1.0,
+                "latitude": 12.0,
+                "longitude": 77.0,
+                "speed": 0.0,
+                "accuracy": 5.0,
+            }
+        )
+        gnss_ack = websocket.receive_json()
+        assert gnss_ack["ok"] is True
+        assert gnss_ack["data"]["gnss_status"] == "CONNECTED"
+
+        websocket.send_json(
+            {
+                "type": "imu",
+                "timestamp": 1.01,
+                "ax": 0.0,
+                "ay": 0.0,
+                "az": 9.80665,
+                "gx": 0.0,
+                "gy": 0.0,
+                "gz": 0.0,
+            }
+        )
+        imu_ack = websocket.receive_json()
+        assert imu_ack["ok"] is True
+        assert imu_ack["data"]["imu_status"] == "ACTIVE"
+
+
 def test_dashboard_and_track_are_available():
     dashboard = client.get("/dashboard")
     assert dashboard.status_code == 200

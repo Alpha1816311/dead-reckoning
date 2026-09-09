@@ -32,6 +32,8 @@ q_phone_to_nav rotates vectors from phone frame into navigation frame.
 
 from __future__ import annotations
 
+import math
+
 import numpy as np
 
 
@@ -495,6 +497,36 @@ class PhoneOrientation:
             "initialized": self.initialized,
             "vehicle_calibrated": self.vehicle_calibrated,
         }
+
+    def nav_to_phone(self, vector) -> np.ndarray:
+        """Rotate a navigation-frame vector into phone coordinates."""
+        return _quat_rotate(
+            _quat_conj(self.q_phone_to_nav),
+            np.asarray(vector, dtype=float),
+        )
+
+    def euler_pitch_roll_yaw_deg(self) -> tuple[float, float, float]:
+        """Pitch, roll, yaw in degrees from the phone-to-navigation quaternion."""
+        w, x, y, z = self.q_phone_to_nav
+        sinr = 2.0 * (w * x + y * z)
+        cosr = 1.0 - 2.0 * (x * x + y * y)
+        roll = math.degrees(math.atan2(sinr, cosr))
+
+        sinp = 2.0 * (w * y - z * x)
+        sinp = float(np.clip(sinp, -1.0, 1.0))
+        pitch = math.degrees(math.asin(sinp))
+
+        siny = 2.0 * (w * z + x * y)
+        cosy = 1.0 - 2.0 * (y * y + z * z)
+        yaw = math.degrees(math.atan2(siny, cosy))
+        if yaw < 0.0:
+            yaw += 360.0
+        return pitch, roll, yaw
+
+    def reset_attitude(self) -> None:
+        """Clear gyro/magnetometer attitude without dropping mount calibration."""
+        self.q_phone_to_nav = np.array([1.0, 0.0, 0.0, 0.0])
+        self.initialized = False
 
 
 # ---------------------------------------------------------------------------

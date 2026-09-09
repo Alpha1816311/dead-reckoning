@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 import os
 import logging
+import sys
 from pathlib import Path
 from threading import RLock
 from typing import Any
@@ -94,6 +96,57 @@ engine_lock = RLock()
 # FASTAPI APPLICATION
 # ============================================================
 
+def _display_configured_path(path: str | None) -> str:
+    """Return a useful startup path without exposing external host paths."""
+    if not path:
+        return "not configured"
+
+    try:
+        return str(Path(path).resolve().relative_to(BASE_DIR))
+    except ValueError:
+        return "external path configured"
+
+
+@asynccontextmanager
+async def lifespan(_application: FastAPI):
+    """Emit a compact, truthful readiness report once Uvicorn starts."""
+    runtime = engine.runtime_snapshot()
+
+    logger.info("IDR backend startup: status=READY version=%s", _application.version)
+    logger.info(
+        "Navigation engine initialized: fusion=%s gnss_timeout_s=%.2f filter=%s",
+        runtime["fusion_method"],
+        runtime["gnss_timeout_s"],
+        runtime["filter_mode"],
+    )
+    logger.info(
+        "AI model: status=%s kind=%s path=%s",
+        runtime["ai_model_status"],
+        runtime["ai_model_kind"] or "none",
+        _display_configured_path(MODEL_PATH),
+    )
+    logger.info(
+        "Offline map: status=%s path=%s road_constraints=%s",
+        runtime["map_status"],
+        _display_configured_path(MAP_PATH),
+        runtime["nhc_status"],
+    )
+    logger.info(
+        "Runtime configuration: nhc=%s map_matching=%s web_ui=%s python=%s",
+        runtime["nhc_enabled"],
+        runtime["map_matching_enabled"],
+        "available" if WEB_DIR.exists() else "missing",
+        sys.version.split()[0],
+    )
+
+    if engine.ai_model_error:
+        logger.warning("AI model is unavailable: %s", engine.ai_model_error)
+    if engine.map_error:
+        logger.warning("Offline map is unavailable: %s", engine.map_error)
+
+    yield
+    logger.info("IDR backend shutdown complete")
+
 app = FastAPI(
     title="Intelligent Dead Reckoning API",
     version="2.0.0-live",
@@ -101,6 +154,7 @@ app = FastAPI(
         "Live Android GNSS + IMU Intelligent Dead Reckoning "
         "Navigation System"
     ),
+    lifespan=lifespan,
 )
 
 
