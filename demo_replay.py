@@ -1,19 +1,21 @@
-"""Replay CSV data through NavigationEngine and measure GNSS-outage error."""
+"""Replay the supplied CSV through the live incremental navigation engine.
+
+This is a real-data demonstration harness, not a benchmark claim. It can
+simulate GNSS ON -> OFF -> ON while still feeding every IMU row to the same
+engine used by FastAPI.
+"""
 
 from __future__ import annotations
 
 import argparse
 import json
-import math
+import os
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 from navigation_engine import NavigationEngine
-
-
-EARTH_RADIUS_M = 6371000.0
 
 
 def find_column(columns, *words):
@@ -27,7 +29,7 @@ def find_column(columns, *words):
 def required_column(df, *words):
     column = find_column(df.columns, *words)
     if column is None:
-        raise ValueError(f"Missing column containing: {', '.join(words)}")
+        raise ValueError(f"missing column containing: {', '.join(words)}")
     return column
 
 
@@ -86,6 +88,7 @@ def run_replay(
 
     lat_col = find_column(df.columns, "gps", "latitude")
     lon_col = find_column(df.columns, "gps", "longitude")
+    speed_col = find_column(df.columns, "gps", "speed")
     accuracy_col = find_column(df.columns, "gps", "accuracy")
 
     if lat_col is None or lon_col is None:
@@ -101,14 +104,13 @@ def run_replay(
     timestamps = (timestamps - timestamps[0]) / 1000.0
 
     engine = NavigationEngine(
-        origin_latitude=origin_latitude,
-        origin_longitude=origin_longitude,
+        map_path=os.getenv("IDR_ROADS_GEOJSON"),
+        model_path=os.getenv("IDR_SPEED_MODEL"),
     )
 
     records = []
-    errors_m = []
-    outage_ground_truth_distance_m = 0.0
-    previous_outage_gt = None
+    truth_origin = None
+    errors = []
 
     # Ground-truth distance travelled only during the simulated outage.
     outage_ground_truth_distance_m = 0.0
@@ -182,9 +184,10 @@ def run_replay(
 
             engine.process_gnss(
                 timestamp=timestamp,
-                lat=latitude,
-                lon=longitude,
-                accuracy_m=accuracy_m,
+                latitude=latitude,
+                longitude=longitude,
+                speed_mps=speed,
+                accuracy_m=accuracy,
             )
 
         accel = [
@@ -222,10 +225,9 @@ def run_replay(
 
         state = engine.process_imu(
             timestamp=timestamp,
-            dt=dt,
-            linear_accel=linear_accel,
-            ai_acceleration=None,
-            outage_mode=in_outage,
+            accel=accel,
+            gyro=gyro,
+            mag=mag,
         )
 
         state["simulated_gnss_available"] = not in_outage
