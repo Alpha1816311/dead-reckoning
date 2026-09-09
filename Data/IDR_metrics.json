@@ -4,7 +4,7 @@
   "outage_samples": 300,
   "outage_mae_m": 4.960190742551091,
   "outage_rmse_m": 6.759975503151269,
-  "maximum_drift_m": 13.772834693522643,
+  "maximum_drift_m": 13.772834693522645,
   "drift_at_recovery_m": 12.77674607788669,
   "reference_displacement_m": 11.377105552740945,
   "drift_percentage": 112.30225489829041,

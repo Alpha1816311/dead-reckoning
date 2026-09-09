@@ -84,20 +84,23 @@ class RobustIMUPreprocessor:
 
     def __init__(
         self,
-        gravity_time_constant: float = 2.0,  # Increased from 0.5s to prevent absorbing vehicle motion
+        gravity_time_constant: float = 2.0,
         signal_cutoff_hz: float = 8.0,
         max_linear_accel: float = 35.0,
         stationary_accel_threshold: float = 0.15,
         stationary_gyro_threshold: float = 0.05,
+        accel_deadband: float = 0.05,
     ):
         self.gravity_time_constant = float(gravity_time_constant)
         self.signal_cutoff_hz = float(signal_cutoff_hz)
         self.max_linear_accel = float(max_linear_accel)
         self.stationary_accel_thresh = float(stationary_accel_threshold)
         self.stationary_gyro_thresh = float(stationary_gyro_threshold)
+        self.accel_deadband = float(accel_deadband)
 
         self.gravity_phone: np.ndarray | None = None
         self.accel_bias: np.ndarray = np.zeros(3, dtype=float)
+        self.gyro_bias: np.ndarray = np.zeros(3, dtype=float)
         self.filtered_linear: np.ndarray | None = None
         self.previous_filtered: np.ndarray | None = None
 
@@ -110,55 +113,77 @@ class RobustIMUPreprocessor:
             raise ValueError("dt must be positive and finite")
 
         # 1. Stationary Detection (Zero Velocity Update trigger)
+        corrected_gyro = gyro - self.gyro_bias
         accel_mag = np.linalg.norm(accel)
-        gyro_mag = np.linalg.norm(gyro)
+        gyro_mag = np.linalg.norm(corrected_gyro)
         is_stationary = (
             abs(accel_mag - GRAVITY_MPS2) < self.stationary_accel_thresh
             and gyro_mag < self.stationary_gyro_thresh
         )
 
-        # 2. Gravity Estimation
+        # 2. Dynamic Bias Auto-Calibration
+        if is_stationary:
+            # Calibrate zero-rate gyro offset
+            gyro_bias_alpha = 1.0 - math.exp(-dt / 3.0)
+            self.gyro_bias += gyro_bias_alpha * (gyro - self.gyro_bias)
+
+            # Calibrate accelerometer zero offset using time-scale alpha
+            accel_bias_alpha = 1.0 - math.exp(-dt / 2.0)
+            raw_linear = accel - (self.gravity_phone if self.gravity_phone is not None else accel)
+            self.accel_bias += accel_bias_alpha * (raw_linear - self.accel_bias)
+
+        # 3. Exact Gyro-Gravity Kinematic Propagation (Rodrigues Formula)
         if self.gravity_phone is None:
-            # Initialize direction vector from raw measurement normalized to GRAVITY_MPS2
             self.gravity_phone = (accel / (accel_mag + 1e-8)) * GRAVITY_MPS2
         else:
-            # Adaptive LPF: Only update gravity orientation aggressively when static or near 1G
-            if is_stationary:
-                tau = self.gravity_time_constant * 0.5  # Adapt faster when stationary
-            else:
-                tau = self.gravity_time_constant * 3.0  # Adapt slower during dynamic motion
+            # Rodrigues rotation update for angular velocity vector over dt
+            omega_norm = np.linalg.norm(corrected_gyro)
+            if omega_norm > 1e-6:
+                axis = corrected_gyro / omega_norm
+                angle = -omega_norm * dt
+                cos_a = math.cos(angle)
+                sin_a = math.sin(angle)
+                # Rotate gravity vector around body gyro axis
+                self.gravity_phone = (
+                    self.gravity_phone * cos_a
+                    + np.cross(axis, self.gravity_phone) * sin_a
+                    + axis * np.dot(axis, self.gravity_phone) * (1.0 - cos_a)
+                )
 
+            # Complementary pull back to accelerometer orientation reference
+            tau = self.gravity_time_constant * 0.1 if is_stationary else self.gravity_time_constant * 3.0
             gravity_alpha = 1.0 - math.exp(-dt / max(tau, 1e-3))
             self.gravity_phone += gravity_alpha * (accel - self.gravity_phone)
 
-            # Strict normalization: Ensure magnitude is EXACTLY 9.80665 m/s^2
+            # Normalization lock to exact gravity constant
             current_g_norm = np.linalg.norm(self.gravity_phone)
             if current_g_norm > 1e-4:
                 self.gravity_phone = (self.gravity_phone / current_g_norm) * GRAVITY_MPS2
 
-        # 3. Dynamic Bias Auto-Calibration
+        # 4. Linear Acceleration Extraction & Adaptive Dead-Banding
         if is_stationary:
-            raw_linear = accel - self.gravity_phone
-            # Slowly update bias estimation while vehicle is stopped
-            self.accel_bias += 0.05 * (raw_linear - self.accel_bias)
+            # ZUPT hard-clamp: prevent integration drift during stationary state
+            linear = np.zeros(3, dtype=float)
+        else:
+            linear = accel - self.gravity_phone - self.accel_bias
+            # Suppress values below noise floor
+            linear[np.abs(linear) < self.accel_deadband] = 0.0
 
-        # 4. Extract True Linear Acceleration
-        linear = accel - self.gravity_phone - self.accel_bias
-
-        # Clamp extreme sensor outliers/pot-holes
         clipped = np.clip(linear, -self.max_linear_accel, self.max_linear_accel)
 
         # 5. Low-Pass Filter Linear Acceleration
         signal_alpha = 1.0 - math.exp(-2.0 * math.pi * self.signal_cutoff_hz * dt)
         if self.filtered_linear is None:
-            # Zero out negligible initial residual floating-point noise
             initial_filtered = clipped.copy()
             initial_filtered[np.abs(initial_filtered) < 1e-8] = 0.0
             self.filtered_linear = initial_filtered
         else:
-            self.filtered_linear += signal_alpha * (clipped - self.filtered_linear)
+            if is_stationary:
+                # Decay lingering filter memory when stopped
+                self.filtered_linear *= math.exp(-dt / 0.05)
+            else:
+                self.filtered_linear += signal_alpha * (clipped - self.filtered_linear)
 
-        # Snap near-zero values to exact 0.0 to pass strict float assertions
         self.filtered_linear[np.abs(self.filtered_linear) < 1e-8] = 0.0
 
         # 6. Vibration Calculation
@@ -171,7 +196,7 @@ class RobustIMUPreprocessor:
 
         return ProcessedIMU(
             raw_accel=accel.copy(),
-            raw_gyro=gyro.copy(),
+            raw_gyro=corrected_gyro,
             raw_mag=None if mag is None else mag.copy(),
             gravity_phone=self.gravity_phone.copy(),
             linear_accel_phone=linear,
