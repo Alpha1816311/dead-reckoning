@@ -75,6 +75,8 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
     private val imuPacketsProduced = AtomicLong(0)
     private val imuPacketsSent = AtomicLong(0)
     private val gnssPacketsSent = AtomicLong(0)
+    private val imuPacketsDropped = AtomicLong(0)
+    private val gnssPacketsDropped = AtomicLong(0)
     private val failedPackets = AtomicLong(0)
     private var connectionState = "DISCONNECTED"
     private var latestError = "None"
@@ -96,6 +98,12 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
                 if (type == LiveSensorTransport.PacketType.IMU) imuPacketsSent.incrementAndGet()
                 else gnssPacketsSent.incrementAndGet()
                 recordSuccessfulTransmission()
+            }
+
+            override fun onPacketDropped(type: LiveSensorTransport.PacketType, message: String) {
+                if (type == LiveSensorTransport.PacketType.IMU) imuPacketsDropped.incrementAndGet()
+                else gnssPacketsDropped.incrementAndGet()
+                updateTelemetry()
             }
 
             override fun onPacketFailure(message: String) {
@@ -294,7 +302,7 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
         val magnetometerJson = if (hasMagnetometer) ",\"mx\":${m[0]},\"my\":${m[1]},\"mz\":${m[2]}" else ""
         val body = "{\"type\":\"imu\",\"timestamp\":$timestamp,\"ax\":${a[0]},\"ay\":${a[1]},\"az\":${a[2]},\"gx\":${g[0]},\"gy\":${g[1]},\"gz\":${g[2]}$magnetometerJson}"
         imuPacketsProduced.incrementAndGet()
-        submitUpload("/sensor/imu", body, true)
+        submitPacket(body, true)
     }
 
     override fun onLocationChanged(location: Location) {
@@ -302,11 +310,11 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
         val timestamp = location.elapsedRealtimeNanos / 1_000_000_000.0
         val speed = if (location.hasSpeed()) location.speed.toString() else "null"
         val altitude = if (location.hasAltitude()) location.altitude.toString() else "null"
-        val body = "{\"timestamp\":$timestamp,\"latitude\":${location.latitude},\"longitude\":${location.longitude},\"speed\":$speed,\"accuracy\":${location.accuracy},\"altitude\":$altitude}"
-        submitUpload("/sensor/gnss", body, false)
+        val body = "{\"type\":\"gnss\",\"timestamp\":$timestamp,\"latitude\":${location.latitude},\"longitude\":${location.longitude},\"speed\":$speed,\"accuracy\":${location.accuracy},\"altitude\":$altitude}"
+        submitPacket(body, false)
     }
 
-    private fun submitUpload(path: String, body: String, isImu: Boolean) {
+    private fun submitPacket(body: String, isImu: Boolean) {
         if (isImu) transport.submitImu(body) else transport.submitGnss(body)
     }
 
@@ -349,7 +357,7 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
             val lastSuccess = lastSuccessfulTransmission?.let {
                 android.text.format.DateFormat.format("HH:mm:ss", it).toString()
             } ?: "never"
-            telemetryView.text = "IMU produced/sent: ${imuPacketsProduced.get()}/${imuPacketsSent.get()}   GNSS sent: ${gnssPacketsSent.get()}   Failed: ${failedPackets.get()}   Last success: $lastSuccess"
+            telemetryView.text = "IMU produced/sent/dropped: ${imuPacketsProduced.get()}/${imuPacketsSent.get()}/${imuPacketsDropped.get()}   GNSS sent/dropped: ${gnssPacketsSent.get()}/${gnssPacketsDropped.get()}   Errors: ${failedPackets.get()}   Last success: $lastSuccess"
         }
     }
 

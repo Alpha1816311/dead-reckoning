@@ -32,12 +32,154 @@ q_phone_to_nav rotates vectors from phone frame into navigation frame.
 
 from __future__ import annotations
 
+from collections import deque
+from enum import Enum
 import math
 
 import numpy as np
 
 
 _EPS = 1e-12
+
+
+class AlignmentState(str, Enum):
+    """Lifecycle of the physical phone-to-vehicle mounting estimate."""
+
+    UNALIGNED = "UNALIGNED"
+    CALIBRATING = "CALIBRATING"
+    ALIGNED = "ALIGNED"
+    LOCKED = "LOCKED"
+
+
+class VehicleAlignmentCalibrator:
+    """Build a phone-to-vehicle transform from stable IMU and GNSS evidence.
+
+    Gravity supplies pitch/roll; a recent, accurate GNSS course supplies the
+    horizontal vehicle-forward direction.  Samples are deliberately bounded
+    and only accepted during smooth motion, so an isolated pothole, braking
+    event, or old GNSS heading cannot lock an alignment.
+    """
+
+    MIN_ALIGNED_SAMPLES = 20
+    LOCK_SAMPLES = 30
+    MAX_COURSE_AGE_S = 2.0
+    MAX_GYRO_RAD_S = 0.15
+    MAX_VIBRATION_RMS = 0.35
+    MAX_LINEAR_ACCEL_MPS2 = 1.5
+
+    def __init__(self) -> None:
+        self._up_samples: deque[np.ndarray] = deque(maxlen=60)
+        self._forward_samples: deque[np.ndarray] = deque(maxlen=60)
+        self.state = AlignmentState.UNALIGNED
+        self.confidence = 0.0
+        self.source = "NONE"
+        self.locked = False
+        self.rejected_samples = 0
+
+    @staticmethod
+    def _mean_direction(samples: deque[np.ndarray]) -> tuple[np.ndarray | None, float]:
+        if not samples:
+            return None, 0.0
+        mean = np.mean(np.asarray(samples, dtype=float), axis=0)
+        concentration = float(np.linalg.norm(mean))
+        direction = _normalize(mean)
+        return direction, min(1.0, concentration)
+
+    def set_manual(self) -> None:
+        self._up_samples.clear()
+        self._forward_samples.clear()
+        self.state = AlignmentState.LOCKED
+        self.confidence = 1.0
+        self.source = "MANUAL"
+        self.locked = True
+
+    def observe(
+        self,
+        *,
+        timestamp: float,
+        gravity_phone,
+        gyro_phone,
+        vibration_rms: float,
+        linear_accel_phone,
+        forward_phone=None,
+        course_age_s: float | None = None,
+    ) -> tuple[np.ndarray, np.ndarray] | None:
+        """Record one IMU observation and return a usable alignment if ready."""
+        if self.locked:
+            return None
+
+        self.state = AlignmentState.CALIBRATING
+        gravity = _normalize(np.asarray(gravity_phone, dtype=float))
+        gyro_norm = float(np.linalg.norm(np.asarray(gyro_phone, dtype=float)))
+        linear_norm = float(np.linalg.norm(np.asarray(linear_accel_phone, dtype=float)))
+        stable = (
+            gravity is not None
+            and math.isfinite(vibration_rms)
+            and vibration_rms <= self.MAX_VIBRATION_RMS
+            and gyro_norm <= self.MAX_GYRO_RAD_S
+            and linear_norm <= self.MAX_LINEAR_ACCEL_MPS2
+        )
+        if not stable:
+            self.rejected_samples += 1
+            self._update_confidence()
+            return None
+
+        self._up_samples.append(gravity)
+        if (
+            forward_phone is not None
+            and course_age_s is not None
+            and 0.0 <= course_age_s <= self.MAX_COURSE_AGE_S
+        ):
+            forward = np.asarray(forward_phone, dtype=float)
+            # Vehicle forward is horizontal; reject an invalid heading rather
+            # than silently accepting a vector parallel to gravity.
+            forward = forward - float(np.dot(forward, gravity)) * gravity
+            forward = _normalize(forward)
+            if forward is not None:
+                self._forward_samples.append(forward)
+
+        alignment = self._update_confidence()
+        if alignment is None:
+            return None
+
+        if self.confidence >= 0.80 and len(self._forward_samples) >= self.LOCK_SAMPLES:
+            self.state = AlignmentState.LOCKED
+            self.locked = True
+            self.source = "AUTOMATIC"
+        else:
+            self.state = AlignmentState.ALIGNED
+            self.source = "AUTOMATIC"
+        return alignment
+
+    def _update_confidence(self) -> tuple[np.ndarray, np.ndarray] | None:
+        up, up_consistency = self._mean_direction(self._up_samples)
+        forward, forward_consistency = self._mean_direction(self._forward_samples)
+        if up is None or forward is None:
+            # Gravity-only evidence is useful progress but is not a physical
+            # phone-to-vehicle alignment without a driving-direction yaw.
+            gravity_progress = min(0.35, len(self._up_samples) / self.LOCK_SAMPLES * 0.35)
+            self.confidence = gravity_progress
+            return None
+
+        forward = forward - float(np.dot(forward, up)) * up
+        forward = _normalize(forward)
+        if forward is None:
+            self.rejected_samples += 1
+            self.confidence = 0.0
+            return None
+
+        sample_progress = min(1.0, len(self._forward_samples) / self.LOCK_SAMPLES)
+        gravity_progress = min(1.0, len(self._up_samples) / self.LOCK_SAMPLES)
+        self.confidence = float(np.clip(
+            0.35 * sample_progress
+            + 0.25 * gravity_progress
+            + 0.40 * min(up_consistency, forward_consistency),
+            0.0,
+            1.0,
+        ))
+        if len(self._forward_samples) < self.MIN_ALIGNED_SAMPLES:
+            return None
+        return forward, up
 
 
 # ---------------------------------------------------------------------------

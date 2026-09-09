@@ -1310,7 +1310,7 @@
       ============================ */
 
       window.setProfile =
-        function (type) {
+        async function (type) {
 
           const phoneBtn =
             document.getElementById(
@@ -1323,6 +1323,18 @@
             );
 
           if (!phoneBtn || !edgeBtn) return;
+
+          try {
+            const response = await fetch('/config', {
+              method: 'PATCH',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({profile: type})
+            });
+            if (!response.ok) throw new Error(await response.text());
+          } catch (error) {
+            console.error('Runtime profile update failed:', error);
+            return;
+          }
 
 
           if (type === "phone") {

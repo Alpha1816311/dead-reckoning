@@ -7,7 +7,9 @@ All timestamps are expected to be monotonic seconds from the same clock.
 
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import dataclass
+from enum import Enum
 import math
 
 import numpy as np
@@ -20,6 +22,15 @@ GRAVITY_MPS2 = 9.80665
 class TimestampedSample:
     timestamp: float
     dt: float
+
+
+class MotionState(str, Enum):
+    STATIONARY = "STATIONARY"
+    IDLING = "IDLING"
+    MOVING = "MOVING"
+    VIBRATION = "VIBRATION"
+    SHOCK = "SHOCK"
+    UNRELIABLE = "UNRELIABLE"
 
 
 class TimestampNormalizer:
@@ -77,6 +88,9 @@ class ProcessedIMU:
     filtered_linear_accel_phone: np.ndarray
     vibration_rms: float
     is_stationary: bool
+    motion_state: MotionState
+    quality_score: float
+    shock_detected: bool
 
 
 class RobustIMUPreprocessor:
@@ -101,6 +115,9 @@ class RobustIMUPreprocessor:
         self.filtered_linear: np.ndarray | None = None
         self.previous_filtered: np.ndarray | None = None
         self.filter_mode = "balanced"
+        self.linear_magnitudes: deque[float] = deque(maxlen=20)
+        self.gyro_magnitudes: deque[float] = deque(maxlen=20)
+        self.shock_limit_mps2 = 15.0
 
     def set_filter_mode(self, mode: str) -> str:
         """Apply a named vibration-filter profile. Returns the canonical name."""
@@ -108,14 +125,17 @@ class RobustIMUPreprocessor:
         if normalized in {"raw", "raw_kinematics", "unfiltered"}:
             self.signal_cutoff_hz = 40.0
             self.max_linear_accel = 80.0
+            self.shock_limit_mps2 = 30.0
             self.filter_mode = "raw"
         elif normalized in {"strict", "band-stop", "bandstop"}:
             self.signal_cutoff_hz = 4.0
             self.max_linear_accel = 12.0
+            self.shock_limit_mps2 = 8.0
             self.filter_mode = "strict"
         else:
             self.signal_cutoff_hz = 8.0
             self.max_linear_accel = 35.0
+            self.shock_limit_mps2 = 15.0
             self.filter_mode = "balanced"
         return self.filter_mode
 
@@ -162,9 +182,15 @@ class RobustIMUPreprocessor:
 
         # 4. Extract True Linear Acceleration
         linear = accel - self.gravity_phone - self.accel_bias
+        raw_linear_norm = float(np.linalg.norm(linear))
+        shock_detected = raw_linear_norm > self.shock_limit_mps2 or gyro_mag > 3.0
 
-        # Clamp extreme sensor outliers/pot-holes
+        # Bounded vector clipping prevents a pothole or sensor spike from
+        # dominating integration while retaining the event for quality logic.
         clipped = np.clip(linear, -self.max_linear_accel, self.max_linear_accel)
+        clipped_norm = float(np.linalg.norm(clipped))
+        if clipped_norm > self.shock_limit_mps2:
+            clipped *= self.shock_limit_mps2 / clipped_norm
 
         # 5. Low-Pass Filter Linear Acceleration
         signal_alpha = 1.0 - math.exp(-2.0 * math.pi * self.signal_cutoff_hz * dt)
@@ -187,6 +213,36 @@ class RobustIMUPreprocessor:
             vibration_rms = float(np.sqrt(np.mean(residual * residual)))
         self.previous_filtered = clipped.copy()
 
+        filtered_norm = float(np.linalg.norm(self.filtered_linear))
+        self.linear_magnitudes.append(filtered_norm)
+        self.gyro_magnitudes.append(float(gyro_mag))
+        window_std = float(np.std(self.linear_magnitudes)) if len(self.linear_magnitudes) > 2 else 0.0
+        window_energy = float(np.sqrt(np.mean(np.square(self.linear_magnitudes))))
+
+        if shock_detected:
+            motion_state = MotionState.SHOCK
+            quality_score = 0.15
+        elif is_stationary:
+            motion_state = MotionState.STATIONARY
+            quality_score = 0.98
+        elif (
+            abs(accel_mag - GRAVITY_MPS2) < 0.40
+            and gyro_mag < 0.15
+            and window_energy < 0.30
+        ):
+            # Small, persistent engine/mount vibration is not vehicle motion.
+            motion_state = MotionState.IDLING
+            quality_score = 0.82
+        elif vibration_rms > 0.75 or window_std > 0.90:
+            motion_state = MotionState.VIBRATION
+            quality_score = 0.40
+        elif gyro_mag > 1.5:
+            motion_state = MotionState.UNRELIABLE
+            quality_score = 0.25
+        else:
+            motion_state = MotionState.MOVING
+            quality_score = 0.85
+
         return ProcessedIMU(
             raw_accel=accel.copy(),
             raw_gyro=gyro.copy(),
@@ -196,4 +252,7 @@ class RobustIMUPreprocessor:
             filtered_linear_accel_phone=self.filtered_linear.copy(),
             vibration_rms=vibration_rms,
             is_stationary=is_stationary,
+            motion_state=motion_state,
+            quality_score=quality_score,
+            shock_detected=shock_detected,
         )

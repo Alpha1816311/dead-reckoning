@@ -7,25 +7,23 @@ import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.URL
 import java.util.ArrayDeque
-import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 
 /**
- * Acknowledged, bounded live transport for the existing /ws/sensor API.
+ * Acknowledged, bounded WebSocket transport for the existing /ws/sensor API.
  *
  * Only one packet is awaiting an acknowledgement at a time. IMU samples are
  * replaceable (the newest sample wins); GNSS samples are FIFO and capped to
- * avoid replaying stale positions after an outage. REST is a serialized
- * fallback when a WebSocket cannot be established.
+ * avoid replaying stale positions after an outage. Sensor callbacks only
+ * replace or append to bounded in-memory slots; they never perform I/O.
  */
 class LiveSensorTransport(private val listener: Listener) {
     interface Listener {
         fun onConnectionState(state: String, message: String)
         fun onPacketAcknowledged(type: PacketType)
+        fun onPacketDropped(type: PacketType, message: String)
         fun onPacketFailure(message: String)
     }
 
@@ -38,7 +36,6 @@ class LiveSensorTransport(private val listener: Listener) {
         .connectTimeout(3, TimeUnit.SECONDS)
         .readTimeout(0, TimeUnit.MILLISECONDS)
         .build()
-    private val worker = Executors.newSingleThreadExecutor()
     private val reconnectScheduler = Executors.newSingleThreadScheduledExecutor()
     private val gnssQueue = ArrayDeque<Packet>()
 
@@ -50,12 +47,15 @@ class LiveSensorTransport(private val listener: Listener) {
     private var latestImu: Packet? = null
     private var reconnectAttempt = 0
     private var reconnectFuture: ScheduledFuture<*>? = null
+    private var acknowledgementTimeout: ScheduledFuture<*>? = null
+    private var connectionGeneration = 0L
 
     fun start(url: String) {
         synchronized(lock) {
             backendUrl = url
             active = true
             reconnectAttempt = 0
+            connectionGeneration += 1
         }
         connect()
     }
@@ -65,8 +65,11 @@ class LiveSensorTransport(private val listener: Listener) {
         synchronized(lock) {
             active = false
             connecting = false
+            connectionGeneration += 1
             reconnectFuture?.cancel(false)
             reconnectFuture = null
+            acknowledgementTimeout?.cancel(false)
+            acknowledgementTimeout = null
             latestImu = null
             gnssQueue.clear()
             inFlight = null
@@ -79,17 +82,19 @@ class LiveSensorTransport(private val listener: Listener) {
 
     fun shutdown() {
         stop()
-        worker.shutdownNow()
         reconnectScheduler.shutdownNow()
         client.dispatcher.executorService.shutdown()
         client.connectionPool.evictAll()
     }
 
     fun submitImu(json: String) {
+        var replaced = false
         synchronized(lock) {
             if (!active) return
+            replaced = latestImu != null
             latestImu = Packet(PacketType.IMU, json)
         }
+        if (replaced) listener.onPacketDropped(PacketType.IMU, "IMU sample superseded by a newer sample.")
         pump()
     }
 
@@ -97,7 +102,7 @@ class LiveSensorTransport(private val listener: Listener) {
         synchronized(lock) {
             if (!active) return
             if (gnssQueue.size >= MAX_GNSS_BUFFER) {
-                listener.onPacketFailure("GNSS buffer is full; newest fix was dropped.")
+                listener.onPacketDropped(PacketType.GNSS, "GNSS buffer is full; newest fix was dropped.")
                 return
             }
             gnssQueue.addLast(Packet(PacketType.GNSS, json))
@@ -107,19 +112,21 @@ class LiveSensorTransport(private val listener: Listener) {
 
     private fun connect() {
         val request: Request
+        val generation: Long
         synchronized(lock) {
             if (!active || connecting || webSocket != null || backendUrl.isBlank()) return
             connecting = true
             request = Request.Builder().url(toWebSocketUrl(backendUrl)).build()
+            generation = connectionGeneration
         }
         listener.onConnectionState("CONNECTING", "Opening live sensor connection.")
-        client.newWebSocket(request, socketListener)
+        client.newWebSocket(request, socketListener(generation))
     }
 
-    private val socketListener = object : WebSocketListener() {
+    private fun socketListener(generation: Long) = object : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
             synchronized(lock) {
-                if (!active) {
+                if (!active || generation != connectionGeneration) {
                     webSocket.close(1000, "Collection stopped")
                     return
                 }
@@ -142,8 +149,11 @@ class LiveSensorTransport(private val listener: Listener) {
             }
 
             synchronized(lock) {
+                if (generation != connectionGeneration || this@LiveSensorTransport.webSocket !== webSocket) return
                 packet = inFlight
                 inFlight = null
+                acknowledgementTimeout?.cancel(false)
+                acknowledgementTimeout = null
             }
             if (packet == null) return
             if (accepted) listener.onPacketAcknowledged(packet.type)
@@ -152,19 +162,24 @@ class LiveSensorTransport(private val listener: Listener) {
         }
 
         override fun onFailure(webSocket: WebSocket, throwable: Throwable, response: Response?) {
-            handleSocketUnavailable("WebSocket failed: ${throwable.message ?: throwable.javaClass.simpleName}")
+            handleSocketUnavailable(webSocket, generation, "WebSocket failed: ${throwable.message ?: throwable.javaClass.simpleName}")
         }
 
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-            handleSocketUnavailable("WebSocket closed: $code ${reason.ifBlank { "no reason" }}")
+            handleSocketUnavailable(webSocket, generation, "WebSocket closed: $code ${reason.ifBlank { "no reason" }}")
         }
     }
 
-    private fun handleSocketUnavailable(message: String) {
+    private fun handleSocketUnavailable(socket: WebSocket?, generation: Long, message: String) {
         val shouldReconnect: Boolean
         synchronized(lock) {
+            // A failed connection can fail before onOpen, when webSocket is
+            // still null. Ignore only callbacks from a different live socket.
+            if (generation != connectionGeneration || (webSocket != null && socket != null && webSocket !== socket)) return
             webSocket = null
             connecting = false
+            acknowledgementTimeout?.cancel(false)
+            acknowledgementTimeout = null
             // Delivery is ambiguous after a socket failure. Do not replay an
             // in-flight sample: the backend may already have processed it,
             // and replaying it could violate its strictly increasing timestamp
@@ -173,7 +188,7 @@ class LiveSensorTransport(private val listener: Listener) {
             shouldReconnect = active
         }
         if (!shouldReconnect) return
-        listener.onConnectionState("ERROR", "$message; using REST fallback while reconnecting.")
+        listener.onConnectionState("ERROR", "$message; reconnecting live sensor connection.")
         listener.onPacketFailure(message)
         scheduleReconnect()
         pump()
@@ -201,45 +216,37 @@ class LiveSensorTransport(private val listener: Listener) {
 
         if (socket != null) {
             if (!socket.send(packet.json)) {
-                acknowledgeFailure("WebSocket send failed.")
-                handleSocketUnavailable("WebSocket send failed")
+                handleSocketUnavailable(socket, connectionGeneration, "WebSocket send failed")
+            } else {
+                scheduleAcknowledgementTimeout()
             }
             return
         }
-
-        worker.execute { postRestFallback(packet) }
-    }
-
-    private fun postRestFallback(packet: Packet) {
-        try {
-            val endpoint = if (packet.type == PacketType.IMU) "/sensor/imu" else "/sensor/gnss"
-            val connection = (URL("$backendUrl$endpoint").openConnection() as HttpURLConnection).apply {
-                requestMethod = "POST"
-                connectTimeout = 3_000
-                readTimeout = 3_000
-                doOutput = true
-                setRequestProperty("Content-Type", "application/json")
-            }
-            connection.outputStream.use { it.write(packet.json.toByteArray(Charsets.UTF_8)) }
-            val status = connection.responseCode
-            connection.disconnect()
-            if (status in 200..299) acknowledgeSuccess(packet.type)
-            else acknowledgeFailure("REST fallback returned HTTP $status")
-        } catch (error: Exception) {
-            acknowledgeFailure("REST fallback failed: ${error.message ?: error.javaClass.simpleName}")
-        }
-    }
-
-    private fun acknowledgeSuccess(type: PacketType) {
-        synchronized(lock) { inFlight = null }
-        listener.onPacketAcknowledged(type)
-        pump()
+        scheduleReconnect()
     }
 
     private fun acknowledgeFailure(message: String) {
-        synchronized(lock) { inFlight = null }
+        synchronized(lock) {
+            inFlight = null
+            acknowledgementTimeout?.cancel(false)
+            acknowledgementTimeout = null
+        }
         listener.onPacketFailure(message)
         pump()
+    }
+
+    private fun scheduleAcknowledgementTimeout() {
+        synchronized(lock) {
+            acknowledgementTimeout?.cancel(false)
+            acknowledgementTimeout = reconnectScheduler.schedule({
+                var socket: WebSocket? = null
+                synchronized(lock) {
+                    if (!active || inFlight == null) return@schedule
+                    socket = webSocket
+                }
+                socket?.cancel()
+            }, ACKNOWLEDGEMENT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        }
     }
 
     private fun nextPacketLocked(): Packet? {
@@ -263,5 +270,6 @@ class LiveSensorTransport(private val listener: Listener) {
     private companion object {
         const val MAX_GNSS_BUFFER = 4
         const val MAX_RECONNECT_SECONDS = 30L
+        const val ACKNOWLEDGEMENT_TIMEOUT_SECONDS = 5L
     }
 }

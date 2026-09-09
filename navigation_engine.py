@@ -8,8 +8,8 @@ import os
 
 import numpy as np
 
-from alignment import PhoneOrientation
-from sensor_processing import TimestampNormalizer, RobustIMUPreprocessor
+from alignment import AlignmentState, PhoneOrientation, VehicleAlignmentCalibrator
+from sensor_processing import MotionState, TimestampNormalizer, RobustIMUPreprocessor
 from speed_model import SpeedModel
 
 logger = logging.getLogger(__name__)
@@ -105,10 +105,16 @@ class NavigationEngine:
         self.timestamp_normalizer = TimestampNormalizer()
         self.imu_preprocessor = RobustIMUPreprocessor()
         self.filter_mode = "balanced"
+        self.runtime_profile = "phone"
 
         self.orientation = PhoneOrientation()
         self.orientation.set_vehicle_alignment([0.0, 1.0, 0.0], [0.0, 0.0, 1.0])
         self.orientation.vehicle_calibrated = False
+        self.alignment_calibrator = VehicleAlignmentCalibrator()
+        self.alignment_state = AlignmentState.UNALIGNED
+        self.alignment_confidence = 0.0
+        self.alignment_source = "NONE"
+        self.alignment_locked = False
         self.mounting_status = "DEFAULT"
         self.manual_alignment = False
         self.forward_phone = [0.0, 1.0, 0.0]
@@ -120,6 +126,11 @@ class NavigationEngine:
         self.heading_deg = None
         self.speed_mps = 0.0
         self.speed_source = "NONE"
+        self.speed_confidence = 0.0
+        self.motion_state = MotionState.STATIONARY
+        self.motion_quality_score = 0.0
+        self.mount_disturbance_status = "NORMAL"
+        self._mount_disturbance_samples = 0
 
         self.origin_latitude = None
         self.origin_longitude = None
@@ -127,6 +138,8 @@ class NavigationEngine:
         self.last_gnss_timestamp = None
         self.last_imu_timestamp = None
         self.gnss_accuracy_m = None
+        self._alignment_course_heading_deg = None
+        self._alignment_course_timestamp = None
 
         self.gnss_state = GNSSState.WAITING_FOR_FIX
 
@@ -263,9 +276,13 @@ class NavigationEngine:
         nhc_enabled: bool | None = None,
         map_matching_enabled: bool | None = None,
         profile: str | None = None,
+        gnss_timeout_s: float | None = None,
     ) -> dict:
         if filter_mode is not None:
-            self.filter_mode = self.imu_preprocessor.set_filter_mode(filter_mode)
+            normalized_filter = str(filter_mode).strip().lower()
+            if normalized_filter not in {"raw", "balanced", "strict"}:
+                raise ValueError("filter_mode must be raw, balanced, or strict")
+            self.filter_mode = self.imu_preprocessor.set_filter_mode(normalized_filter)
         if nhc_enabled is not None:
             self.nhc_enabled = bool(nhc_enabled)
             if self.map_matcher is not None:
@@ -274,15 +291,29 @@ class NavigationEngine:
             self.map_matching_enabled = bool(map_matching_enabled)
         if profile is not None:
             normalized = str(profile).strip().lower()
+            if normalized not in {"phone", "edge"}:
+                raise ValueError("profile must be phone or edge")
+            self.runtime_profile = normalized
             if normalized == "edge":
                 self.gnss_timeout_s = 0.25
             else:
                 self.gnss_timeout_s = 1.0
+        if gnss_timeout_s is not None:
+            timeout = float(gnss_timeout_s)
+            if not math.isfinite(timeout) or not 0.1 <= timeout <= 10.0:
+                raise ValueError("gnss_timeout_s must be finite and between 0.1 and 10.0 seconds")
+            self.gnss_timeout_s = timeout
+            self.runtime_profile = "custom"
         self._refresh_constraint_status()
         return self.runtime_snapshot()
 
     def apply_manual_alignment(self, forward_phone, up_phone) -> None:
         self.orientation.set_vehicle_alignment(forward_phone, up_phone)
+        self.alignment_calibrator.set_manual()
+        self.alignment_state = self.alignment_calibrator.state
+        self.alignment_confidence = self.alignment_calibrator.confidence
+        self.alignment_source = self.alignment_calibrator.source
+        self.alignment_locked = self.alignment_calibrator.locked
         self.forward_phone = list(forward_phone)
         self.up_phone = list(up_phone)
         self.manual_alignment = True
@@ -296,6 +327,7 @@ class NavigationEngine:
             "map_status": self.map_status,
             "nhc_status": self.nhc_status,
             "gnss_timeout_s": self.gnss_timeout_s,
+            "runtime_profile": self.runtime_profile,
             "ai_model_status": self.ai_model_status,
             "ai_model_kind": self.ai_model_kind,
             "fusion_method": self.fusion_method,
@@ -335,25 +367,44 @@ class NavigationEngine:
         if age > self.gnss_timeout_s:
             self.gnss_state = GNSSState.INS_DEAD_RECKONING
 
-    def _maybe_auto_align(self, gravity_phone) -> None:
-        if self.manual_alignment or not self.orientation.initialized:
+    def _maybe_auto_align(self, sample, processed, gyro_phone) -> None:
+        if self.manual_alignment or self.alignment_locked:
             return
-        if self.heading_deg is None or self.speed_mps < 3.0:
-            return
-        if gravity_phone is None:
-            return
+        forward_phone = None
+        course_age_s = None
+        if (
+            self.orientation.initialized
+            and self._alignment_course_heading_deg is not None
+            and self._alignment_course_timestamp is not None
+        ):
+            course_age_s = sample.timestamp - self._alignment_course_timestamp
+            course_rad = math.radians(self._alignment_course_heading_deg)
+            # Navigation uses [east, north, up], while course is clockwise
+            # from north.  This fixes yaw from measured driving direction.
+            forward_nav = np.array([math.sin(course_rad), math.cos(course_rad), 0.0])
+            forward_phone = self.orientation.nav_to_phone(forward_nav)
 
-        heading_rad = math.radians(self.heading_deg)
-        forward_nav = np.array(
-            [math.cos(heading_rad), math.sin(heading_rad), 0.0],
-            dtype=float,
+        alignment = self.alignment_calibrator.observe(
+            timestamp=sample.timestamp,
+            gravity_phone=processed.gravity_phone,
+            gyro_phone=gyro_phone,
+            vibration_rms=processed.vibration_rms,
+            linear_accel_phone=processed.filtered_linear_accel_phone,
+            forward_phone=forward_phone,
+            course_age_s=course_age_s,
         )
-        forward_phone = self.orientation.nav_to_phone(forward_nav)
+        self.alignment_state = self.alignment_calibrator.state
+        self.alignment_confidence = self.alignment_calibrator.confidence
+        self.alignment_source = self.alignment_calibrator.source
+        self.alignment_locked = self.alignment_calibrator.locked
+        if alignment is None:
+            return
+        forward, up = alignment
         try:
-            self.orientation.set_vehicle_alignment(forward_phone, gravity_phone)
-            self.forward_phone = forward_phone.tolist()
-            self.up_phone = np.asarray(gravity_phone, dtype=float).tolist()
-            self.mounting_status = "AUTO"
+            self.orientation.set_vehicle_alignment(forward, up)
+            self.forward_phone = forward.tolist()
+            self.up_phone = up.tolist()
+            self.mounting_status = "AUTO_LOCKED" if self.alignment_locked else "AUTO"
         except ValueError:
             return
 
@@ -363,16 +414,22 @@ class NavigationEngine:
         magnitude = float(np.linalg.norm(linear_vehicle))
         self.accel_mag_history.append(magnitude)
         smooth = float(np.mean(self.accel_mag_history))
-        return self.speed_estimator.predict(
-            {
-                "linear_accel_x": float(linear_vehicle[0]),
-                "linear_accel_y": float(linear_vehicle[1]),
-                "linear_accel_z": float(linear_vehicle[2]),
-                "accel_magnitude": magnitude,
-                "accel_magnitude_smooth": smooth,
-                "gyro_magnitude": float(np.linalg.norm(gyro_vehicle)),
-            }
+        values = {
+            "linear_accel_x": float(linear_vehicle[0]),
+            "linear_accel_y": float(linear_vehicle[1]),
+            "linear_accel_z": float(linear_vehicle[2]),
+            "accel_magnitude": magnitude,
+            "accel_magnitude_smooth": smooth,
+            "gyro_magnitude": float(np.linalg.norm(gyro_vehicle)),
+        }
+        if not all(math.isfinite(value) for value in values.values()):
+            return None
+        prediction = self.speed_estimator.predict(
+            values
         )
+        if prediction is None or not math.isfinite(prediction):
+            return None
+        return float(prediction)
 
     def _apply_map_match(self) -> None:
         if (
@@ -472,6 +529,9 @@ class NavigationEngine:
 
             if gnss_heading is not None and (gnss_speed is None or gnss_speed > 1.0):
                 self.heading_deg = _heading_blend(self.heading_deg, gnss_heading, 0.65)
+                if gnss_speed is not None and gnss_speed >= 3.0 and accuracy_m <= 15.0:
+                    self._alignment_course_heading_deg = gnss_heading
+                    self._alignment_course_timestamp = timestamp
 
             if gnss_speed is not None:
                 if was_lost:
@@ -479,6 +539,7 @@ class NavigationEngine:
                 else:
                     self.speed_mps = gnss_speed
                 self.speed_source = "GNSS"
+                self.speed_confidence = 0.98 if accuracy_m <= 12.0 else 0.70
 
             gnss_weight = 0.85 if accuracy_m <= 12.0 else 0.45
             if self.origin_latitude is None or self.accepted_gnss == 0:
@@ -539,6 +600,15 @@ class NavigationEngine:
                 dt=dt,
             )
             self.vibration_rms = float(processed.vibration_rms)
+            self.motion_state = processed.motion_state
+            self.motion_quality_score = float(processed.quality_score)
+            if processed.shock_detected and float(np.linalg.norm(processed.raw_gyro)) > 1.5:
+                self._mount_disturbance_samples = 20
+                self.mount_disturbance_status = "SUSPECTED"
+            elif self._mount_disturbance_samples > 0:
+                self._mount_disturbance_samples -= 1
+                if self._mount_disturbance_samples == 0:
+                    self.mount_disturbance_status = "NORMAL"
             self.accepted_imu += 1
             self.last_imu_timestamp = sample.timestamp
             self.update_rate_hz = 1.0 / max(dt, 1e-3)
@@ -563,7 +633,7 @@ class NavigationEngine:
                 self.pitch_deg, self.roll_deg, _yaw = self.orientation.euler_pitch_roll_yaw_deg()
 
             self._update_mode_from_age(sample.timestamp)
-            self._maybe_auto_align(processed.gravity_phone)
+            self._maybe_auto_align(sample, processed, processed.raw_gyro)
 
             if self.heading_deg is None:
                 self.heading_deg = 0.0
@@ -571,7 +641,12 @@ class NavigationEngine:
             yaw_rate_deg = -math.degrees(float(gyro_vehicle[2]))
             self.heading_deg = _wrap_heading(self.heading_deg + yaw_rate_deg * dt)
 
-            forward_accel = float(linear_vehicle[0])
+            quality_weight = {
+                MotionState.SHOCK: 0.0,
+                MotionState.UNRELIABLE: 0.15,
+                MotionState.VIBRATION: 0.35,
+            }.get(processed.motion_state, 1.0)
+            forward_accel = float(linear_vehicle[0]) * quality_weight
             ai_accel = None
             if (
                 self.gnss_state == GNSSState.INS_DEAD_RECKONING
@@ -595,29 +670,43 @@ class NavigationEngine:
 
             previous_speed = self.speed_mps
             truly_stopped = (
-                processed.is_stationary
-                and self.speed_mps < 2.0
+                processed.motion_state in {MotionState.STATIONARY, MotionState.IDLING}
+                and self.speed_mps < 1.0
             )
             if truly_stopped:
                 self.speed_mps = 0.0
-                self.speed_source = "ZUPT"
+                self.speed_source = "STATIONARY"
+                self.speed_confidence = 0.98 if processed.motion_state == MotionState.STATIONARY else 0.85
             else:
                 integrated = float(
                     np.clip(previous_speed + forward_accel * dt, 0.0, self.max_speed_mps)
                 )
                 ai_speed = None
-                if self.gnss_state == GNSSState.INS_DEAD_RECKONING:
+                if (
+                    self.gnss_state == GNSSState.INS_DEAD_RECKONING
+                    and processed.motion_state == MotionState.MOVING
+                    and processed.quality_score >= 0.65
+                    and self.mount_disturbance_status == "NORMAL"
+                ):
                     ai_speed = self._predict_ai_speed(linear_vehicle, gyro_vehicle)
-                if ai_speed is not None:
-                    self.speed_mps = float(np.clip(0.55 * integrated + 0.45 * ai_speed, 0.0, self.max_speed_mps))
-                    self.speed_source = "AI_SPEED"
+                ai_is_plausible = (
+                    ai_speed is not None
+                    and 0.0 <= ai_speed <= self.max_speed_mps
+                    and abs(ai_speed - integrated) <= max(4.0, 0.75 * max(integrated, 1.0))
+                )
+                if ai_is_plausible:
+                    self.speed_mps = float(np.clip(0.65 * integrated + 0.35 * ai_speed, 0.0, self.max_speed_mps))
+                    self.speed_source = "ML"
+                    self.speed_confidence = min(0.75, 0.45 + 0.35 * processed.quality_score)
                 elif self.gnss_state in {GNSSState.FUSED, GNSSState.GNSS_AIDED, GNSSState.GNSS_DEGRADED, GNSSState.GNSS_REACQUISITION}:
                     self.speed_mps = integrated
                     if self.speed_source != "GNSS":
                         self.speed_source = "INERTIAL"
+                        self.speed_confidence = min(0.70, 0.35 + 0.40 * processed.quality_score)
                 else:
                     self.speed_mps = integrated
                     self.speed_source = "INERTIAL"
+                    self.speed_confidence = min(0.55, 0.20 + 0.40 * processed.quality_score)
 
             heading_rad = math.radians(self.heading_deg)
             distance = 0.5 * (previous_speed + self.speed_mps) * dt
@@ -694,6 +783,10 @@ class NavigationEngine:
             "speed_mps": float(self.speed_mps),
             "speed_kmh": float(self.speed_mps * 3.6),
             "speed_source": self.speed_source,
+            "speed_confidence": float(self.speed_confidence),
+            "motion_state": self.motion_state.value,
+            "motion_quality_score": float(self.motion_quality_score),
+            "mount_disturbance_status": self.mount_disturbance_status,
             "heading_deg": self.heading_deg,
             "yaw_deg": yaw_deg,
             "pitch_deg": self.pitch_deg,
@@ -704,6 +797,7 @@ class NavigationEngine:
             "mode": mode,
             "uncertainty_m": self.uncertainty_m,
             "nhc_status": self.nhc_status,
+            "nhc_enabled": self.nhc_enabled,
             "ai_model_status": self.ai_model_status,
             "ai_model_kind": self.ai_model_kind,
             "ai_model_error": self.ai_model_error,
@@ -715,10 +809,16 @@ class NavigationEngine:
             "map_confidence": self.last_map_confidence,
             "mounting_calibrated": bool(self.orientation.vehicle_calibrated),
             "mounting_status": self.mounting_status,
+            "alignment_state": self.alignment_state.value,
+            "alignment_confidence": float(self.alignment_confidence),
+            "alignment_source": self.alignment_source,
+            "alignment_locked": self.alignment_locked,
             "orientation_initialized": bool(self.orientation.initialized),
             "vibration_rms": float(self.vibration_rms),
             "filter_mode": self.filter_mode,
             "filter_status": self.filter_mode.upper(),
+            "gnss_timeout_s": self.gnss_timeout_s,
+            "runtime_profile": self.runtime_profile,
             "update_rate_hz": self.update_rate_hz,
             "accepted_imu": self.accepted_imu,
             "accepted_gnss": self.accepted_gnss,
@@ -741,6 +841,11 @@ class NavigationEngine:
         self.heading_deg = None
         self.speed_mps = 0.0
         self.speed_source = "NONE"
+        self.speed_confidence = 0.0
+        self.motion_state = MotionState.STATIONARY
+        self.motion_quality_score = 0.0
+        self.mount_disturbance_status = "NORMAL"
+        self._mount_disturbance_samples = 0
         self.origin_latitude = None
         self.origin_longitude = None
         self.last_gnss_timestamp = None
@@ -759,4 +864,12 @@ class NavigationEngine:
         self._reacq_remaining = 0
         self._last_gnss_position = None
         self.last_map_confidence = None
+        self._alignment_course_heading_deg = None
+        self._alignment_course_timestamp = None
+        if self.manual_alignment:
+            self.alignment_calibrator.set_manual()
+        self.alignment_state = self.alignment_calibrator.state
+        self.alignment_confidence = self.alignment_calibrator.confidence
+        self.alignment_source = self.alignment_calibrator.source
+        self.alignment_locked = self.alignment_calibrator.locked
         self._refresh_constraint_status()

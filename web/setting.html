@@ -35,7 +35,7 @@
 <!-- Segmented Mode Cards -->
 <div class="grid grid-cols-1 md:grid-cols-2 gap-2" id="exec-mode-selector">
 <!-- Option A: Live Hardware -->
-<button class="w-full text-left p-3 rounded-lg bg-surface-container transition-all flex flex-col justify-between gap-2 touch-target-min" id="btn-mode-live" onclick="setExecMode('live')" type="button">
+<button disabled="" class="w-full text-left p-3 rounded-lg bg-surface-container opacity-50 cursor-not-allowed transition-all flex flex-col justify-between gap-2 touch-target-min" id="btn-mode-live" type="button">
 <div class="flex items-start justify-between">
 <div class="flex items-center gap-2">
 <span class="material-symbols-outlined text-outline text-[18px]" id="icon-mode-live">radio_button_unchecked</span>
@@ -52,7 +52,7 @@
 </div>
 </button>
 <!-- Option B: Forced Evaluation Simulation (Active State) -->
-<button class="w-full text-left p-3 rounded-lg bg-surface-container-high transition-all flex flex-col justify-between gap-2 shadow-sm touch-target-min" id="btn-mode-sim" onclick="setExecMode('sim')" type="button">
+<button disabled="" class="w-full text-left p-3 rounded-lg bg-surface-container-high opacity-50 cursor-not-allowed transition-all flex flex-col justify-between gap-2 shadow-sm touch-target-min" id="btn-mode-sim" type="button">
 <div class="flex items-start justify-between">
 <div class="flex items-center gap-2">
 <span class="material-symbols-outlined text-primary text-[18px]" id="icon-mode-sim">radio_button_checked</span>
@@ -70,13 +70,13 @@
 </button>
 </div>
 <!-- Simulation Scenario Drawer -->
-<div class="bg-surface-container rounded-lg p-3 flex flex-col gap-3" id="simulation-panel">
+<div class="bg-surface-container rounded-lg p-3 flex flex-col gap-3 opacity-50 pointer-events-none" id="simulation-panel">
 <div class="flex items-center justify-between">
 <div class="flex items-center gap-1.5">
 <span class="material-symbols-outlined text-secondary text-[18px]">route</span>
 <span class="font-label-caps text-label-caps text-secondary uppercase tracking-wider">Benchmark Scenarios</span>
 </div>
-<span class="font-label-caps text-[10px] text-on-surface-variant">SIH JURY BENCHMARK</span>
+<span class="font-label-caps text-[10px] text-on-surface-variant">UNAVAILABLE: NO BACKEND SCENARIO ENGINE</span>
 </div>
 <div class="grid grid-cols-1 gap-2">
 <!-- Scenario 1 -->
@@ -126,9 +126,9 @@
 </div>
 <!-- Inject Action Row -->
 <div class="flex flex-col sm:flex-row items-center gap-2 pt-1">
-<button class="w-full sm:flex-1 h-touch-target-min rounded-lg bg-tertiary-container text-on-tertiary flex items-center justify-center gap-2 font-headline-sm text-sm font-semibold transition-transform active:scale-95 shadow-md" id="inject-btn" onclick="triggerDropout()" type="button">
+<button disabled="" class="w-full sm:flex-1 h-touch-target-min rounded-lg bg-surface-container-high text-on-surface-variant opacity-50 cursor-not-allowed flex items-center justify-center gap-2 font-headline-sm text-sm font-semibold shadow-md" id="inject-btn" type="button">
 <span class="material-symbols-outlined text-[20px]" id="inject-icon">bolt</span>
-<span id="inject-text">INJECT GNSS DROPOUT NOW</span>
+<span id="inject-text">GNSS DROPOUT CONTROL UNAVAILABLE</span>
 </button>
 <div class="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-3 px-3 py-2 rounded-lg bg-surface-container-lowest">
 <span class="font-label-caps text-[10px] text-on-surface-variant uppercase">Failover Status:</span>
@@ -192,13 +192,13 @@
 <span class="text-[11px] text-on-surface-variant">Zero-clamp covariance at traffic halts</span>
 </div>
 <label class="relative inline-flex items-center cursor-pointer ml-2">
-<input checked="" class="sr-only peer" id="toggle-zupt" onchange="toggleFeature('zupt')" type="checkbox"/>
-<div class="w-11 h-6 bg-surface-container-high peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-surface peer-checked:bg-primary after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-on-primary after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+<input checked="" disabled="" class="sr-only peer" id="toggle-zupt" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-high opacity-50 rounded-full peer-checked:after:translate-x-full peer-checked:after:border-surface peer-checked:bg-primary after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-on-primary after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
 </label>
 </div>
 <div class="flex items-center justify-between text-[10px] font-metric-sm text-on-surface-variant bg-surface-container-lowest px-2 py-1 rounded">
 <span>SENSITIVITY WINDOW</span>
-<span class="text-primary font-bold">±0.05 m/s² (IDLE LOCK)</span>
+<span class="text-outline font-bold">AUTOMATIC / NOT CONFIGURABLE</span>
 </div>
 </div>
 </div>
@@ -217,14 +217,14 @@
 <div class="flex items-center justify-between">
 <div class="flex flex-col">
 <span class="text-xs font-semibold text-on-surface">Carrier-to-Noise Cut-off (C/N0)</span>
-<span class="text-[11px] text-on-surface-variant">Signals below this threshold trigger instant IDR dead reckoning failover</span>
+<span class="text-[11px] text-on-surface-variant">Unavailable: the current Android payload does not include C/N0 telemetry.</span>
 </div>
 <div class="text-right">
 <span class="font-metric-large text-base font-bold text-primary" id="cn0-val">26</span>
 <span class="font-metric-sm text-xs text-on-surface-variant">dB-Hz</span>
 </div>
 </div>
-<input class="w-full accent-primary h-2 bg-surface-container-lowest rounded-lg cursor-pointer" max="38" min="18" oninput="document.getElementById('cn0-val').textContent = this.value" step="1" type="range" value="26"/>
+<input disabled="" class="w-full accent-primary h-2 bg-surface-container-lowest rounded-lg opacity-50" max="38" min="18" step="1" type="range" value="26"/>
 <div class="flex justify-between text-[10px] font-metric-sm text-outline">
 <span>18 dB-Hz (Permissive)</span>
 <span>26 dB-Hz (Standard Default)</span>
@@ -270,7 +270,7 @@
 </div>
 <button class="px-2 py-1 rounded bg-surface-container hover:bg-surface-container-high text-primary font-label-caps text-[10px] flex items-center gap-1 transition-colors" onclick="reloadModels()" type="button">
 <span class="material-symbols-outlined text-[14px]">sync</span>
-<span>RELOAD ALL</span>
+<span>REFRESH STATUS</span>
 </button>
 </div>
 <div class="flex flex-col gap-2">
@@ -347,7 +347,7 @@
 </button>
 <button class="w-full sm:w-auto h-touch-target-min px-4 rounded-lg bg-surface-container text-error hover:bg-error-container hover:text-on-error flex items-center justify-center gap-2 font-headline-sm text-xs font-semibold transition-colors" onclick="resetSession()" type="button">
 <span class="material-symbols-outlined text-[18px]">restart_alt</span>
-<span>RESET CALIBRATION &amp; CACHE</span>
+<span>RESET NAVIGATION SESSION</span>
 </button>
 </div>
 </section>
@@ -408,6 +408,7 @@
       updateText('settingsMapDetail', mapStatus);
       updateText('settingsMapStatus', mapStatus);
       updateText('settingsModelStatus', modelStatus);
+      renderRuntimeConfiguration(state);
 
       // These values are intentionally shown as unavailable because the
       // current backend does not expose actual memory size / processing latency.
@@ -435,6 +436,41 @@
       updateText('settingsMapStatus', 'UNAVAILABLE');
       updateText('settingsModelStatus', 'UNAVAILABLE');
     }
+  }
+
+  function renderRuntimeConfiguration(configuration) {
+    const mode = configuration.filter_mode || 'balanced';
+    const labels = {
+      strict: 'STRICT (8-15Hz Band-Stop)',
+      balanced: 'BALANCED (Adaptive)',
+      raw: 'RAW KINEMATICS (Unfiltered)'
+    };
+    const defaultClass =
+      'py-2 px-1 rounded text-center font-label-caps text-[11px] font-medium text-on-surface-variant hover:text-on-surface transition-colors';
+    const activeClass =
+      'py-2 px-1 rounded text-center font-label-caps text-[11px] font-bold bg-primary text-on-primary shadow-sm transition-colors';
+    ['strict', 'balanced', 'raw'].forEach((candidate) => {
+      const button = document.getElementById(`filter-${candidate}`);
+      if (button) button.className = candidate === mode ? activeClass : defaultClass;
+    });
+    updateText('filter-label-current', labels[mode] || 'BACKEND CONFIGURATION');
+
+    const nhc = document.getElementById('toggle-nhc');
+    if (nhc) nhc.checked = configuration.nhc_enabled === true;
+    updateText(
+      'nhc-status-txt',
+      configuration.nhc_enabled === true ? 'ACTIVE [Y, Z RESTRICTED]' : 'DISABLED [SLIP PERMITTED]'
+    );
+  }
+
+  async function patchRuntimeConfiguration(patch) {
+    const response = await fetch('/config', {
+      method: 'PATCH',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(patch)
+    });
+    if (!response.ok) throw new Error(await response.text());
+    return response.json();
   }
 
   function setExecMode(mode) {
@@ -515,44 +551,30 @@
     }
   }
 
-  function setFilterIntensity(mode) {
-    const strictBtn = document.getElementById('filter-strict');
-    const balancedBtn = document.getElementById('filter-balanced');
-    const rawBtn = document.getElementById('filter-raw');
-    const lbl = document.getElementById('filter-label-current');
-
-    const defaultClass =
-      'py-2 px-1 rounded text-center font-label-caps text-[11px] font-medium text-on-surface-variant hover:text-on-surface transition-colors';
-    const activeClass =
-      'py-2 px-1 rounded text-center font-label-caps text-[11px] font-bold bg-primary text-on-primary shadow-sm transition-colors';
-
-    strictBtn.className = defaultClass;
-    balancedBtn.className = defaultClass;
-    rawBtn.className = defaultClass;
-
-    if (mode === 'strict') {
-      strictBtn.className = activeClass;
-      lbl.textContent = 'STRICT (8-15Hz Band-Stop)';
-    } else if (mode === 'balanced') {
-      balancedBtn.className = activeClass;
-      lbl.textContent = 'BALANCED (Adaptive Q/R)';
-    } else {
-      rawBtn.className = activeClass;
-      lbl.textContent = 'RAW KINEMATICS (Unfiltered)';
+  async function setFilterIntensity(mode) {
+    try {
+      const result = await patchRuntimeConfiguration({filter_mode: mode});
+      renderRuntimeConfiguration(result.configuration);
+      showToast('tune', `Filter applied to navigation engine: ${mode.toUpperCase()}.`);
+    } catch (error) {
+      console.error(error);
+      showToast('error', 'Filter change was rejected by the backend.');
+      refreshSettingsState();
     }
-
-    showToast('tune', `Filter selection: ${mode.toUpperCase()}.`);
   }
 
-  function toggleFeature(feature) {
+  async function toggleFeature(feature) {
     if (feature === 'nhc') {
       const active = document.getElementById('toggle-nhc').checked;
-      document.getElementById('nhc-status-txt').textContent =
-        active ? 'ACTIVE [Y, Z RESTRICTED]' : 'DISABLED [SLIP PERMITTED]';
-      showToast('tune', active ? 'NHC selected: ACTIVE.' : 'NHC selected: DISABLED.');
-    } else if (feature === 'zupt') {
-      const active = document.getElementById('toggle-zupt').checked;
-      showToast('tune', active ? 'ZUPT selected: ACTIVE.' : 'ZUPT selected: DISABLED.');
+      try {
+        const result = await patchRuntimeConfiguration({nhc_enabled: active});
+        renderRuntimeConfiguration(result.configuration);
+        showToast('tune', active ? 'NHC enabled in navigation engine.' : 'NHC disabled in navigation engine.');
+      } catch (error) {
+        console.error(error);
+        showToast('error', 'NHC change was rejected by the backend.');
+        refreshSettingsState();
+      }
     }
   }
 
@@ -603,7 +625,7 @@
 
       if (!response.ok) throw new Error('Reset failed');
 
-      showToast('restart_alt', 'Demo session reset. Navigation engine re-armed.');
+      showToast('restart_alt', 'Navigation session reset. Mount alignment is retained.');
       await refreshSettingsState();
     } catch (error) {
       console.error(error);

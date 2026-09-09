@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+import math
 import os
 import logging
 import sys
@@ -12,7 +13,7 @@ from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 from navigation_engine import NavigationEngine
 
@@ -195,6 +196,13 @@ class IMUPayload(BaseModel):
     my: float | None = None
     mz: float | None = None
 
+    @field_validator("timestamp")
+    @classmethod
+    def timestamp_must_be_finite(cls, value: float) -> float:
+        if not math.isfinite(value):
+            raise ValueError("timestamp must be finite")
+        return value
+
 
 class GNSSPayload(BaseModel):
 
@@ -214,6 +222,13 @@ class GNSSPayload(BaseModel):
 
     altitude: float | None = None
 
+    @field_validator("timestamp")
+    @classmethod
+    def timestamp_must_be_finite(cls, value: float) -> float:
+        if not math.isfinite(value):
+            raise ValueError("timestamp must be finite")
+        return value
+
 
 class AlignmentPayload(BaseModel):
 
@@ -226,6 +241,46 @@ class AlignmentPayload(BaseModel):
         min_length=3,
         max_length=3,
     )
+
+
+class RuntimeConfigPayload(BaseModel):
+    """The deliberately small set of controls safe to change during a run."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    filter_mode: str | None = None
+    nhc_enabled: bool | None = None
+    map_matching_enabled: bool | None = None
+    gnss_timeout_s: float | None = Field(default=None, ge=0.1, le=10.0)
+    profile: str | None = None
+
+    @field_validator("filter_mode")
+    @classmethod
+    def filter_mode_must_be_supported(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        normalized = value.strip().lower()
+        if normalized not in {"raw", "balanced", "strict"}:
+            raise ValueError("filter_mode must be one of: raw, balanced, strict")
+        return normalized
+
+    @field_validator("profile")
+    @classmethod
+    def profile_must_be_supported(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        normalized = value.strip().lower()
+        if normalized not in {"phone", "edge"}:
+            raise ValueError("profile must be one of: phone, edge")
+        return normalized
+
+    @model_validator(mode="after")
+    def require_a_setting(self) -> "RuntimeConfigPayload":
+        if not self.model_fields_set or not any(
+            getattr(self, field) is not None for field in self.model_fields_set
+        ):
+            raise ValueError("provide at least one runtime configuration setting")
+        return self
 
 
 # ============================================================
@@ -353,17 +408,12 @@ def api_info() -> dict[str, Any]:
 
             "alignment": "/config/alignment",
 
+            "config": "/config",
+
             "websocket": "/ws/sensor",
         },
 
-        "configuration": {
-
-            "map_path": MAP_PATH,
-
-            "model_path": MODEL_PATH,
-
-            "web_directory": str(WEB_DIR),
-        },
+        "configuration": engine.runtime_snapshot(),
     }
 
 
@@ -403,6 +453,8 @@ def health():
             "map_configured": MAP_PATH is not None,
 
             "model_configured": MODEL_PATH is not None,
+
+            "runtime_configuration": engine.runtime_snapshot(),
         }
 
 
@@ -416,6 +468,53 @@ def navigation_state():
     with engine_lock:
 
         return engine.state_snapshot()
+
+
+# ============================================================
+# RUNTIME CONFIGURATION
+# ============================================================
+
+@app.get("/config")
+def get_runtime_configuration():
+    """Return only safe, effective runtime controls and their live status."""
+    with engine_lock:
+        return {
+            "ok": True,
+            "configuration": engine.runtime_snapshot(),
+            "status": {
+                "mode": engine.state_snapshot()["mode"],
+                "gnss_status": engine.state_snapshot()["gnss_status"],
+                "map_status": engine.map_status,
+                "nhc_status": engine.nhc_status,
+            },
+        }
+
+
+@app.patch("/config")
+def update_runtime_configuration(payload: RuntimeConfigPayload):
+    """Apply validated settings directly to the running navigation engine."""
+    try:
+        with engine_lock:
+            configuration = engine.set_runtime_options(
+                filter_mode=payload.filter_mode,
+                nhc_enabled=payload.nhc_enabled,
+                map_matching_enabled=payload.map_matching_enabled,
+                gnss_timeout_s=payload.gnss_timeout_s,
+                profile=payload.profile,
+            )
+            state = engine.state_snapshot()
+        return {
+            "ok": True,
+            "configuration": configuration,
+            "status": {
+                "mode": state["mode"],
+                "gnss_status": state["gnss_status"],
+                "map_status": state["map_status"],
+                "nhc_status": state["nhc_status"],
+            },
+        }
+    except ValueError as exc:
+        raise api_error(422, str(exc)) from exc
 
 
 # ============================================================
@@ -628,20 +727,7 @@ def configure_alignment(
 
         with engine_lock:
 
-            engine.orientation.set_vehicle_alignment(
-
-                payload.forward_phone,
-
-                payload.up_phone,
-            )
-
-            engine.forward_phone = (
-                payload.forward_phone
-            )
-
-            engine.up_phone = (
-                payload.up_phone
-            )
+            engine.apply_manual_alignment(payload.forward_phone, payload.up_phone)
 
             return {
 
@@ -655,6 +741,8 @@ def configure_alignment(
 
                 "up_phone":
                     payload.up_phone,
+
+                "mounting_status": engine.mounting_status,
             }
 
     except Exception as exc:
