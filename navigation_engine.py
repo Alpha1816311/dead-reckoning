@@ -5,6 +5,7 @@ from enum import Enum
 import logging
 import math
 import os
+import time
 
 import numpy as np
 
@@ -85,16 +86,19 @@ class NavigationEngine:
         self,
         map_path=None,
         model_path=None,
-        gnss_timeout_s=1.0,
+        gnss_timeout_s=3.0,
         forward_accel_clip=3.0,
         max_speed_mps=35.0,
         min_move_distance=0.05,
         ai_accel_gate_max=6.0,
         ai_accel_diff_max=2.0,
+        _clock=None,
     ):
         self.map_path = map_path
         self.model_path = model_path
         self.gnss_timeout_s = float(gnss_timeout_s)
+        # Monotonic clock function.  Override in tests to use simulated time.
+        self._clock = _clock if _clock is not None else time.monotonic
 
         self.forward_accel_clip = float(forward_accel_clip)
         self.max_speed_mps = float(max_speed_mps)
@@ -136,6 +140,9 @@ class NavigationEngine:
         self.origin_longitude = None
 
         self.last_gnss_timestamp = None
+        # Backend monotonic receive time — used exclusively for freshness/timeout
+        # checks so that Android clock-domain differences can never corrupt gnss_age_s.
+        self.last_gnss_receive_time: float | None = None
         self.last_imu_timestamp = None
         self.gnss_accuracy_m = None
         self._alignment_course_heading_deg = None
@@ -155,6 +162,13 @@ class NavigationEngine:
         self.map_matching_enabled = True
         self.nhc_enabled = True
         self.last_map_confidence = None
+        self.last_map_nearest_road_m: float | None = None  # lateral distance to nearest road (m)
+        self.last_map_matched_position: tuple[float, float] | None = None  # (lat, lon) after snapping
+        self.last_raw_gnss_position: tuple[float, float] | None = None  # (lat, lon) last GNSS fix
+        # Geographic bounds of the loaded road network [min_lat, max_lat, min_lon, max_lon]
+        # Used to report honestly whether the current position falls inside the map area.
+        self.map_bounds: tuple[float, float, float, float] | None = None
+        self.map_out_of_bounds: bool = False
 
         self.speed_estimator = SpeedModel()
         self.accel_model = TemporalAccelerationModel()
@@ -194,6 +208,23 @@ class NavigationEngine:
                 )
                 self.map_status = "READY"
                 self.map_error = None
+                # Compute the bounding box of all road coordinates so we can
+                # report honestly whether the current position falls inside the
+                # map area (and thus whether NO_MATCH is expected or surprising).
+                try:
+                    all_lats = []
+                    all_lons = []
+                    for road in roads:
+                        for lon, lat in road.geometry.coords:
+                            all_lats.append(lat)
+                            all_lons.append(lon)
+                    if all_lats:
+                        self.map_bounds = (
+                            min(all_lats), max(all_lats),
+                            min(all_lons), max(all_lons),
+                        )
+                except Exception:
+                    self.map_bounds = None
             else:
                 self.map_status = "UNAVAILABLE"
                 self.map_error = "GeoJSON contained no LineString roads"
@@ -351,19 +382,29 @@ class NavigationEngine:
         longitude = self.origin_longitude + math.degrees(position[0] / (EARTH_RADIUS_M * cos_lat))
         return latitude, longitude
 
-    def _gnss_age(self, timestamp: float | None = None) -> float | None:
-        if self.last_gnss_timestamp is None:
-            return None
-        now = self.last_imu_timestamp if timestamp is None else timestamp
-        if now is None:
-            return None
-        return max(0.0, float(now) - float(self.last_gnss_timestamp))
+    def _gnss_age(self, timestamp: float | None = None) -> float | None:  # noqa: ARG002
+        """Return GNSS freshness in seconds using backend monotonic clock only.
 
-    def _update_mode_from_age(self, timestamp: float) -> None:
-        if self.last_gnss_timestamp is None:
+        The ``timestamp`` argument is kept for API compatibility but is no
+        longer used — comparing Android device timestamps with Python wall or
+        monotonic clocks produces wildly wrong ages (the observed 12 884 954 s
+        bug).  Using ``time.monotonic()`` on both sides of the subtraction
+        guarantees a correct, clock-domain-consistent measurement.
+        """
+        if self.last_gnss_receive_time is None:
+            return None
+        return max(0.0, self._clock() - self.last_gnss_receive_time)
+
+    def _update_mode_from_age(self, timestamp: float) -> None:  # noqa: ARG001
+        """Transition to dead-reckoning when GNSS has been absent too long.
+
+        Uses the same backend monotonic clock as ``_gnss_age`` so that the
+        timeout decision is made from the same reference as the reported age.
+        """
+        if self.last_gnss_receive_time is None:
             self.gnss_state = GNSSState.WAITING_FOR_FIX
             return
-        age = timestamp - self.last_gnss_timestamp
+        age = self._clock() - self.last_gnss_receive_time
         if age > self.gnss_timeout_s:
             self.gnss_state = GNSSState.INS_DEAD_RECKONING
 
@@ -443,6 +484,21 @@ class NavigationEngine:
         if ll is None:
             return
 
+        # Check whether current position falls within the road network's bounding box.
+        # If it doesn't, NO_MATCH is expected and we log it once rather than
+        # silently reporting a misleading NO_MATCH status.
+        if self.map_bounds is not None:
+            min_lat, max_lat, min_lon, max_lon = self.map_bounds
+            outside = not (min_lat <= ll[0] <= max_lat and min_lon <= ll[1] <= max_lon)
+            if outside and not self.map_out_of_bounds:
+                logger.warning(
+                    "Map matching: current position (%.5f, %.5f) is outside the road "
+                    "network bounding box (lat %.4f–%.4f, lon %.4f–%.4f). "
+                    "NO_MATCH is expected — load a map that covers this area for real matching.",
+                    ll[0], ll[1], min_lat, max_lat, min_lon, max_lon,
+                )
+            self.map_out_of_bounds = outside
+
         try:
             from map_matching import VehicleState
 
@@ -461,10 +517,16 @@ class NavigationEngine:
             return
 
         self.last_map_confidence = float(matched.confidence)
+        # Always store the lateral distance so diagnostics are useful even on NO_MATCH
+        if math.isfinite(matched.lateral_error):
+            self.last_map_nearest_road_m = float(matched.lateral_error)
+
         if matched.road_id is None or matched.confidence < 0.25:
             self.map_status = "NO_MATCH"
+            self.last_map_matched_position = None
             return
 
+        self.last_map_matched_position = (float(matched.latitude), float(matched.longitude))
         snapped = self._ll_to_xy(matched.latitude, matched.longitude)
         self.position = 0.65 * snapped + 0.35 * self.position
         self.map_status = "MATCHED"
@@ -577,9 +639,14 @@ class NavigationEngine:
 
             self.gnss_state = state
             self.last_gnss_timestamp = timestamp
+            # Record backend receive time for freshness calculations.
+            # This is the ONLY value used by _gnss_age / _update_mode_from_age.
+            self.last_gnss_receive_time = self._clock()
             if self.last_imu_timestamp is None:
                 self.last_imu_timestamp = timestamp
             self._last_gnss_position = new_position.copy()
+            # Store the raw GNSS lat/lon before any map snapping for diagnostics.
+            self.last_raw_gnss_position = (float(latitude), float(longitude))
             self.accepted_gnss += 1
             self.gnss_accuracy_m = accuracy_m
             self.uncertainty_m = accuracy_m
@@ -798,6 +865,7 @@ class NavigationEngine:
             "gnss_state": self.gnss_state.value,
             "gnss_status": gnss_status,
             "gnss_age_s": gnss_age,
+            "last_gnss_backend_receive_time": self.last_gnss_receive_time,
             "mode": mode,
             "uncertainty_m": self.uncertainty_m,
             "nhc_status": self.nhc_status,
@@ -811,6 +879,25 @@ class NavigationEngine:
             "map_error": self.map_error,
             "map_matching_enabled": self.map_matching_enabled,
             "map_confidence": self.last_map_confidence,
+            "map_out_of_bounds": self.map_out_of_bounds,
+            "nearest_road_distance_m": self.last_map_nearest_road_m,
+            "raw_gnss_position": (
+                {"latitude": self.last_raw_gnss_position[0], "longitude": self.last_raw_gnss_position[1]}
+                if self.last_raw_gnss_position is not None else None
+            ),
+            "map_matched_position": (
+                {"latitude": self.last_map_matched_position[0], "longitude": self.last_map_matched_position[1]}
+                if self.last_map_matched_position is not None else None
+            ),
+            "map_bounds": (
+                {
+                    "min_lat": self.map_bounds[0],
+                    "max_lat": self.map_bounds[1],
+                    "min_lon": self.map_bounds[2],
+                    "max_lon": self.map_bounds[3],
+                }
+                if self.map_bounds is not None else None
+            ),
             "mounting_calibrated": bool(self.orientation.vehicle_calibrated),
             "mounting_status": self.mounting_status,
             "alignment_state": self.alignment_state.value,
@@ -853,6 +940,7 @@ class NavigationEngine:
         self.origin_latitude = None
         self.origin_longitude = None
         self.last_gnss_timestamp = None
+        self.last_gnss_receive_time = None
         self.last_imu_timestamp = None
         self.gnss_accuracy_m = None
         self.gnss_state = GNSSState.WAITING_FOR_FIX
@@ -868,6 +956,10 @@ class NavigationEngine:
         self._reacq_remaining = 0
         self._last_gnss_position = None
         self.last_map_confidence = None
+        self.last_map_nearest_road_m = None
+        self.last_map_matched_position = None
+        self.last_raw_gnss_position = None
+        self.map_out_of_bounds = False
         self._alignment_course_heading_deg = None
         self._alignment_course_timestamp = None
         if self.manual_alignment:

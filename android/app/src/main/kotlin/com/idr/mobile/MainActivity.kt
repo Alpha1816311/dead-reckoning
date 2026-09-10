@@ -18,10 +18,8 @@ import android.os.Bundle
 import android.os.SystemClock
 import android.text.InputType
 import android.view.Gravity
-import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebChromeClient
-import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Button
@@ -37,12 +35,16 @@ import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 
 class MainActivity : Activity(), SensorEventListener, LocationListener {
     private val permissionRequest = 42
     private val preferencesName = "idr_connection"
     private val serverUrlKey = "server_url"
+    // 10.0.2.2 is the Android emulator loopback to the host.
+    // On a physical device enter the laptop LAN IP, e.g. http://192.168.1.42:8000
     private val defaultBackendUrl = "http://10.0.2.2:8000"
 
     private lateinit var preferences: SharedPreferences
@@ -53,6 +55,8 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
     private lateinit var connectionStatusView: TextView
     private lateinit var collectionStatusView: TextView
     private lateinit var telemetryView: TextView
+    private lateinit var sensorDebugView: TextView
+    private lateinit var gnssStatusView: TextView
     private lateinit var errorView: TextView
     private lateinit var transport: LiveSensorTransport
 
@@ -62,25 +66,40 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
     )
     private var sender: ScheduledFuture<*>? = null
 
-    private var accelerometer = FloatArray(3)
-    private var gyroscope = FloatArray(3)
-    private var magnetometer = FloatArray(3)
-    private var hasAccelerometer = false
-    private var hasGyroscope = false
-    private var hasMagnetometer = false
-    private var running = false
-    private var collectionRequested = false
-    private var backendUrl = defaultBackendUrl
+    // ---------------------------------------------------------------
+    // Sensor state — written by the SensorManager callback thread,
+    // read by the scheduler thread.  Use AtomicReference / AtomicBoolean
+    // so the scheduler thread always sees the latest values (no CPU-cache
+    // visibility hazard).
+    // ---------------------------------------------------------------
+    private val accelRef = AtomicReference(FloatArray(3))
+    private val gyroRef  = AtomicReference(FloatArray(3))
+    private val magRef   = AtomicReference(FloatArray(3))
+    private val hasAccel = AtomicBoolean(false)
+    private val hasGyro  = AtomicBoolean(false)
+    private val hasMag   = AtomicBoolean(false)
 
-    private val imuPacketsProduced = AtomicLong(0)
-    private val imuPacketsSent = AtomicLong(0)
-    private val gnssPacketsSent = AtomicLong(0)
-    private val imuPacketsDropped = AtomicLong(0)
-    private val gnssPacketsDropped = AtomicLong(0)
-    private val failedPackets = AtomicLong(0)
+    // Stage-by-stage diagnostic counters
+    private val accelCallbacks   = AtomicLong(0)   // Stage 1: raw sensor events
+    private val gyroCallbacks    = AtomicLong(0)   // Stage 1: raw sensor events
+    private val gnssCallbacks    = AtomicLong(0)   // Stage 2: raw GNSS events
+    private val imuPacketsProduced = AtomicLong(0) // Stage 3: packets assembled
+    private val imuPacketsSent   = AtomicLong(0)   // Stage 5: backend ACK received
+    private val gnssPacketsSent  = AtomicLong(0)   // Stage 5: backend ACK received
+    private val imuPacketsDropped = AtomicLong(0)  // dropped (superseded)
+    private val gnssPacketsDropped = AtomicLong(0) // dropped (buffer full)
+    private val failedPackets    = AtomicLong(0)   // Stage 6: transport failures
+
+    @Volatile private var running = false
+    @Volatile private var collectionRequested = false
+    @Volatile private var backendUrl = defaultBackendUrl
+
     private var connectionState = "DISCONNECTED"
     private var latestError = "None"
     private var lastSuccessfulTransmission: Long? = null
+    private var lastGnssEventTime: Long? = null
+    private var lastGnssLat: Double? = null
+    private var lastGnssLon: Double? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -93,26 +112,24 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
             override fun onConnectionState(state: String, message: String) {
                 setConnectionState(state, message)
             }
-
             override fun onPacketAcknowledged(type: LiveSensorTransport.PacketType) {
                 if (type == LiveSensorTransport.PacketType.IMU) imuPacketsSent.incrementAndGet()
                 else gnssPacketsSent.incrementAndGet()
                 recordSuccessfulTransmission()
             }
-
             override fun onPacketDropped(type: LiveSensorTransport.PacketType, message: String) {
                 if (type == LiveSensorTransport.PacketType.IMU) imuPacketsDropped.incrementAndGet()
                 else gnssPacketsDropped.incrementAndGet()
                 updateTelemetry()
             }
-
             override fun onPacketFailure(message: String) {
                 recordNetworkFailure(message)
             }
         })
         updateTelemetry()
+        updateSensorDebug()
         updateCollectionStatus("STOPPED")
-        setConnectionState("DISCONNECTED", "Set the server URL and test the connection.")
+        setConnectionState("DISCONNECTED", "Enter the LAN IP and tap Test Connection.")
     }
 
     private fun loadSavedBackendUrl(): String {
@@ -133,7 +150,7 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
     private fun saveBackendUrlFromInput(): String? {
         val normalized = validateBackendUrl(serverUrlInput.text.toString())
         if (normalized == null) {
-            setConnectionState("ERROR", "Enter a valid http:// or https:// server URL.")
+            setConnectionState("ERROR", "Enter a valid http:// or https:// URL with a port.")
             return null
         }
         backendUrl = normalized
@@ -149,32 +166,41 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(12), dp(8), dp(12), dp(8))
         }
+
+        // URL row
         val serverRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
         serverUrlInput = EditText(this).apply {
-            hint = "Backend URL (e.g. http://192.168.1.42:8000)"
+            hint = "e.g. http://192.168.1.42:8000  (laptop LAN IP)"
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
             setSingleLine(true)
             setText(backendUrl)
         }
         serverRow.addView(serverUrlInput, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        serverRow.addView(button("Test Connection") { testConnection() })
+        serverRow.addView(button("Test") { testConnection() })
         root.addView(serverRow)
 
         connectionStatusView = statusText()
         collectionStatusView = statusText()
-        telemetryView = statusText()
-        errorView = statusText()
         root.addView(connectionStatusView)
         root.addView(collectionStatusView)
 
+        // Control buttons
         val controls = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        controls.addView(button("Start Collection") { requestStartCollection() }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        controls.addView(button("Stop Collection") { stopCollectionByUser() }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        controls.addView(button("▶ Start") { requestStartCollection() }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        controls.addView(button("■ Stop")  { stopCollectionByUser()   }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         root.addView(controls)
+
+        // Stage-by-stage diagnostics
+        sensorDebugView = statusText()
+        telemetryView   = statusText()
+        gnssStatusView  = statusText()
+        errorView       = statusText()
+        root.addView(sensorDebugView)
         root.addView(telemetryView)
+        root.addView(gnssStatusView)
         root.addView(errorView)
 
         webView = WebView(this).apply {
@@ -196,36 +222,42 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
     }
 
     private fun statusText(): TextView = TextView(this).apply {
-        textSize = 13f
+        textSize = 12f
         setPadding(0, dp(2), 0, dp(2))
     }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
+    // ---------------------------------------------------------------
+    // TEST CONNECTION
+    // ---------------------------------------------------------------
     private fun testConnection() {
         val url = saveBackendUrlFromInput() ?: return
-        setConnectionState("CONNECTING", "Testing $url/health")
+        setConnectionState("CONNECTING", "Testing $url/health …")
         try {
             healthExecutor.execute {
                 try {
-                    val connection = openConnection("$url/health", "GET")
-                    val status = connection.responseCode
-                    connection.disconnect()
+                    val conn = openConnection("$url/health", "GET")
+                    val status = conn.responseCode
+                    conn.disconnect()
                     if (status in 200..299) {
                         recordSuccessfulTransmission()
-                        setConnectionState("CONNECTED", "Backend health check succeeded.")
+                        setConnectionState("CONNECTED", "Health OK (HTTP $status) — ready to stream.")
                     } else {
-                        recordNetworkFailure("Health check returned HTTP $status")
+                        recordNetworkFailure("Health returned HTTP $status")
                     }
-                } catch (error: Exception) {
-                    recordNetworkFailure("Health check failed: ${error.message ?: error.javaClass.simpleName}")
+                } catch (e: Exception) {
+                    recordNetworkFailure("Health failed: ${e.message ?: e.javaClass.simpleName}")
                 }
             }
         } catch (_: RejectedExecutionException) {
-            recordNetworkFailure("Network worker is busy; try again.")
+            recordNetworkFailure("Network worker busy; retry.")
         }
     }
 
+    // ---------------------------------------------------------------
+    // START / STOP COLLECTION
+    // ---------------------------------------------------------------
     private fun requestStartCollection() {
         collectionRequested = true
         if (saveBackendUrlFromInput() == null) {
@@ -233,8 +265,12 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
             return
         }
         if (!hasFineLocationPermission()) {
-            updateCollectionStatus("WAITING FOR PRECISE LOCATION PERMISSION")
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION), permissionRequest)
+            updateCollectionStatus("WAITING FOR LOCATION PERMISSION")
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
+                permissionRequest
+            )
             return
         }
         startSensors()
@@ -246,36 +282,39 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
     @SuppressLint("MissingPermission")
     private fun startSensors() {
         if (running || !hasFineLocationPermission()) return
-        registerSensor(Sensor.TYPE_ACCELEROMETER)
-        registerSensor(Sensor.TYPE_GYROSCOPE)
-        registerSensor(Sensor.TYPE_MAGNETIC_FIELD)
-        try {
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 100L, 0f, this)
-        } catch (error: Exception) {
-            recordNetworkFailure("GPS registration failed: ${error.message ?: error.javaClass.simpleName}")
-        }
-        running = true
-        transport.start(backendUrl)
-        sender = scheduler.scheduleAtFixedRate({ sendImu() }, 0L, 100L, TimeUnit.MILLISECONDS)
-        updateCollectionStatus("RUNNING")
-    }
 
-    private fun registerSensor(type: Int) {
-        val sensor = sensorManager.getDefaultSensor(type)
-        if (sensor == null) {
-            if (type == Sensor.TYPE_ACCELEROMETER || type == Sensor.TYPE_GYROSCOPE) {
-                recordNetworkFailure("Required ${sensorName(type)} is unavailable on this device.")
-            }
+        // Register sensors — report registration result on-screen
+        val accelOk = registerSensor(Sensor.TYPE_ACCELEROMETER)
+        val gyroOk  = registerSensor(Sensor.TYPE_GYROSCOPE)
+        registerSensor(Sensor.TYPE_MAGNETIC_FIELD) // optional
+
+        if (!accelOk || !gyroOk) {
+            updateCollectionStatus("ERROR — required IMU sensor missing")
             return
         }
-        sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_GAME)
+
+        // GPS location updates
+        try {
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 200L, 0f, this)
+        } catch (e: Exception) {
+            // Not fatal — GNSS will just be absent
+            recordNetworkFailure("GPS registration: ${e.message ?: e.javaClass.simpleName}")
+        }
+
+        running = true
+        transport.start(backendUrl)
+
+        // Schedule IMU packets at 10 Hz (every 100 ms)
+        sender = scheduler.scheduleAtFixedRate({ sendImu() }, 50L, 100L, TimeUnit.MILLISECONDS)
+
+        updateCollectionStatus("RUNNING — url=$backendUrl")
+        updateSensorDebug()
     }
 
-    private fun sensorName(type: Int): String = when (type) {
-        Sensor.TYPE_ACCELEROMETER -> "accelerometer"
-        Sensor.TYPE_GYROSCOPE -> "gyroscope"
-        Sensor.TYPE_MAGNETIC_FIELD -> "magnetometer"
-        else -> "sensor"
+    /** Returns true if sensor was successfully registered. */
+    private fun registerSensor(type: Int): Boolean {
+        val sensor = sensorManager.getDefaultSensor(type) ?: return false
+        return sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_GAME)
     }
 
     private fun stopCollectionByUser() {
@@ -293,36 +332,88 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
         updateCollectionStatus(status)
     }
 
+    // ---------------------------------------------------------------
+    // SEND IMU — called from scheduler thread at 10 Hz
+    // ---------------------------------------------------------------
     private fun sendImu() {
-        if (!running || !hasAccelerometer || !hasGyroscope) return
-        val a = accelerometer.copyOf()
-        val g = gyroscope.copyOf()
-        val m = magnetometer.copyOf()
+        if (!running) return
+        if (!hasAccel.get() || !hasGyro.get()) return  // wait for first sensor events
+
+        val a = accelRef.get()
+        val g = gyroRef.get()
+        val m = magRef.get()
+
+        // Use SystemClock.elapsedRealtimeNanos for monotonic boot-relative time in seconds.
+        // The backend TimestampNormalizer accepts any finite monotonic value.
         val timestamp = SystemClock.elapsedRealtimeNanos() / 1_000_000_000.0
-        val magnetometerJson = if (hasMagnetometer) ",\"mx\":${m[0]},\"my\":${m[1]},\"mz\":${m[2]}" else ""
-        val body = "{\"type\":\"imu\",\"timestamp\":$timestamp,\"ax\":${a[0]},\"ay\":${a[1]},\"az\":${a[2]},\"gx\":${g[0]},\"gy\":${g[1]},\"gz\":${g[2]}$magnetometerJson}"
+
+        val magJson = if (hasMag.get()) ",\"mx\":${m[0]},\"my\":${m[1]},\"mz\":${m[2]}" else ""
+        val body = "{\"type\":\"imu\",\"timestamp\":$timestamp," +
+                   "\"ax\":${a[0]},\"ay\":${a[1]},\"az\":${a[2]}," +
+                   "\"gx\":${g[0]},\"gy\":${g[1]},\"gz\":${g[2]}$magJson}"
+
         imuPacketsProduced.incrementAndGet()
-        submitPacket(body, true)
+        transport.submitImu(body)
     }
 
+    // ---------------------------------------------------------------
+    // GNSS CALLBACK
+    // ---------------------------------------------------------------
     override fun onLocationChanged(location: Location) {
         if (!running) return
+        gnssCallbacks.incrementAndGet()
+        lastGnssEventTime = System.currentTimeMillis()
+        lastGnssLat = location.latitude
+        lastGnssLon = location.longitude
+
         val timestamp = location.elapsedRealtimeNanos / 1_000_000_000.0
-        val speed = if (location.hasSpeed()) location.speed.toString() else "null"
+        val speed    = if (location.hasSpeed())    location.speed.toString()    else "null"
         val altitude = if (location.hasAltitude()) location.altitude.toString() else "null"
-        val body = "{\"type\":\"gnss\",\"timestamp\":$timestamp,\"latitude\":${location.latitude},\"longitude\":${location.longitude},\"speed\":$speed,\"accuracy\":${location.accuracy},\"altitude\":$altitude}"
-        submitPacket(body, false)
+        val body = "{\"type\":\"gnss\",\"timestamp\":$timestamp," +
+                   "\"latitude\":${location.latitude},\"longitude\":${location.longitude}," +
+                   "\"speed\":$speed,\"accuracy\":${location.accuracy},\"altitude\":$altitude}"
+
+        transport.submitGnss(body)
+        updateGnssStatus()
     }
 
-    private fun submitPacket(body: String, isImu: Boolean) {
-        if (isImu) transport.submitImu(body) else transport.submitGnss(body)
+    // ---------------------------------------------------------------
+    // SENSOR CALLBACKS
+    // ---------------------------------------------------------------
+    override fun onSensorChanged(event: SensorEvent) {
+        when (event.sensor.type) {
+            Sensor.TYPE_ACCELEROMETER -> {
+                accelRef.set(event.values.copyOf())
+                hasAccel.set(true)
+                accelCallbacks.incrementAndGet()
+            }
+            Sensor.TYPE_GYROSCOPE -> {
+                gyroRef.set(event.values.copyOf())
+                hasGyro.set(true)
+                gyroCallbacks.incrementAndGet()
+            }
+            Sensor.TYPE_MAGNETIC_FIELD -> {
+                magRef.set(event.values.copyOf())
+                hasMag.set(true)
+            }
+        }
     }
 
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+    override fun onProviderEnabled(provider: String) = Unit
+    override fun onProviderDisabled(provider: String) = Unit
+
+    @Deprecated("Deprecated in Java")
+    override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) = Unit
+
+    // ---------------------------------------------------------------
+    // NETWORK
+    // ---------------------------------------------------------------
     private fun openConnection(url: String, method: String): HttpURLConnection =
         (URL(url).openConnection() as HttpURLConnection).apply {
             requestMethod = method
-            connectTimeout = 3_000
-            readTimeout = 3_000
+            connectTimeout = 4_000
+            readTimeout = 4_000
             setRequestProperty("Accept", "application/json")
         }
 
@@ -336,11 +427,14 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
         setConnectionState("ERROR", message)
     }
 
+    // ---------------------------------------------------------------
+    // UI UPDATES
+    // ---------------------------------------------------------------
     private fun setConnectionState(state: String, message: String) {
         connectionState = state
         latestError = if (state == "ERROR") message else "None"
         runOnUiThread {
-            connectionStatusView.text = "Connection: $connectionState — $message"
+            connectionStatusView.text = "Transport: $connectionState — $message"
             errorView.text = "Last error: $latestError"
             updateTelemetry()
         }
@@ -351,31 +445,49 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
         runOnUiThread { collectionStatusView.text = "Collection: $status" }
     }
 
+    private fun updateSensorDebug() {
+        if (!::sensorDebugView.isInitialized) return
+        runOnUiThread {
+            sensorDebugView.text =
+                "S1 Accel cb:${accelCallbacks.get()}  Gyro cb:${gyroCallbacks.get()}  GNSS cb:${gnssCallbacks.get()}"
+        }
+    }
+
     private fun updateTelemetry() {
         if (!::telemetryView.isInitialized) return
         runOnUiThread {
-            val lastSuccess = lastSuccessfulTransmission?.let {
+            val lastTx = lastSuccessfulTransmission?.let {
                 android.text.format.DateFormat.format("HH:mm:ss", it).toString()
             } ?: "never"
-            telemetryView.text = "IMU produced/sent/dropped: ${imuPacketsProduced.get()}/${imuPacketsSent.get()}/${imuPacketsDropped.get()}   GNSS sent/dropped: ${gnssPacketsSent.get()}/${gnssPacketsDropped.get()}   Errors: ${failedPackets.get()}   Last success: $lastSuccess"
+            // Update sensor debug counters at the same time
+            sensorDebugView.text =
+                "S1 Accel:${accelCallbacks.get()} Gyro:${gyroCallbacks.get()} GNSS:${gnssCallbacks.get()}"
+            telemetryView.text =
+                "S3 produced:${imuPacketsProduced.get()}  " +
+                "S5 imu_ack:${imuPacketsSent.get()} gnss_ack:${gnssPacketsSent.get()}  " +
+                "drop:${imuPacketsDropped.get()+gnssPacketsDropped.get()}  " +
+                "S6 fail:${failedPackets.get()}  lastTx:$lastTx"
         }
     }
 
-    override fun onSensorChanged(event: SensorEvent) {
-        when (event.sensor.type) {
-            Sensor.TYPE_ACCELEROMETER -> { accelerometer = event.values.copyOf(); hasAccelerometer = true }
-            Sensor.TYPE_GYROSCOPE -> { gyroscope = event.values.copyOf(); hasGyroscope = true }
-            Sensor.TYPE_MAGNETIC_FIELD -> { magnetometer = event.values.copyOf(); hasMagnetometer = true }
+    private fun updateGnssStatus() {
+        if (!::gnssStatusView.isInitialized) return
+        runOnUiThread {
+            val lat = lastGnssLat
+            val lon = lastGnssLon
+            val t = lastGnssEventTime?.let {
+                android.text.format.DateFormat.format("HH:mm:ss", it).toString()
+            } ?: "never"
+            gnssStatusView.text = if (lat != null && lon != null)
+                "S2 GNSS: ${String.format("%.5f", lat)}, ${String.format("%.5f", lon)} @$t"
+            else
+                "S2 GNSS: waiting for fix (outdoor + clear sky needed)"
         }
     }
 
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
-    override fun onProviderEnabled(provider: String) = Unit
-    override fun onProviderDisabled(provider: String) = Unit
-
-    @Deprecated("Deprecated in Java")
-    override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) = Unit
-
+    // ---------------------------------------------------------------
+    // PERMISSIONS
+    // ---------------------------------------------------------------
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode != permissionRequest || !collectionRequested) return
@@ -384,13 +496,14 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
         } else {
             collectionRequested = false
             updateCollectionStatus("STOPPED — PRECISE LOCATION REQUIRED")
-            setConnectionState("ERROR", "Precise location permission is required to collect GNSS.")
+            setConnectionState("ERROR", "Precise location permission is required for GNSS.")
         }
     }
 
     override fun onPause() {
         super.onPause()
-        if (running) stopSensors("PAUSED")
+        // Do NOT stop sensors on pause — screen-off must not kill the live stream.
+        // User must explicitly press Stop to halt collection.
     }
 
     override fun onResume() {

@@ -341,6 +341,7 @@ def outage():
 
 
 @app.get("/calibration", include_in_schema=False)
+@app.get("/calibrate", include_in_schema=False)
 def calibration():
 
     return get_page("sensorcaliberation.html")

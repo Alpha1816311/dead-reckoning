@@ -325,19 +325,20 @@ tailwind.config = {
 
         <div class="hidden sm:flex flex-col items-end mr-1">
 
-          <span
-            class="font-metric-sm text-metric-sm text-on-surface"
-          >
-            14:28:09.4 Z
-          </span>
+        <span
+          id="utcClock"
+          class="font-metric-sm text-metric-sm text-on-surface"
+        >
+          —
+        </span>
 
-          <span
-            class="font-label-caps text-label-caps text-on-surface-variant"
-          >
-            UTC TELEMETRY
-          </span>
+        <span
+          class="font-label-caps text-label-caps text-on-surface-variant"
+        >
+          UTC TELEMETRY
+        </span>
 
-        </div>
+      </div>
 
         <div
           class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"
@@ -681,7 +682,7 @@ tailwind.config = {
               class="font-metric-display text-metric-display-mobile text-on-surface tracking-tighter"
               id="speedValue"
             >
-              64
+              —
             </span>
 
             <div class="flex flex-col">
@@ -743,6 +744,31 @@ tailwind.config = {
 
           </div>
 
+        </div>
+
+
+        <!-- ===================================================
+             LIVE DIAGNOSTICS STRIP  (real-time pipeline proof)
+             =================================================== -->
+
+        <div
+          class="bg-surface-container-low rounded-xl px-3 py-2 flex flex-col gap-1 shadow-sm font-mono text-[11px] text-on-surface-variant"
+          id="diagStrip"
+        >
+          <div class="flex items-center justify-between">
+            <span class="text-primary font-bold uppercase tracking-wider">LIVE PIPELINE DIAGNOSTICS</span>
+            <span id="diagMode" class="text-secondary font-bold">—</span>
+          </div>
+          <div class="grid grid-cols-2 gap-x-4 gap-y-0.5">
+            <span>Lat: <span id="diagLat" class="text-on-surface">—</span></span>
+            <span>Lon: <span id="diagLon" class="text-on-surface">—</span></span>
+            <span>Speed: <span id="diagSpeed" class="text-on-surface">— km/h</span></span>
+            <span>Accuracy: <span id="diagAccuracy" class="text-on-surface">— m</span></span>
+            <span>IMU accepted: <span id="diagImuCount" class="text-primary">—</span></span>
+            <span>GNSS accepted: <span id="diagGnssCount" class="text-secondary">—</span></span>
+            <span>GNSS status: <span id="diagGnssStatus" class="text-on-surface">—</span></span>
+            <span>Timestamp: <span id="diagTs" class="text-on-surface-variant">—</span></span>
+          </div>
         </div>
 
 
@@ -1055,7 +1081,7 @@ tailwind.config = {
       <a
         class="flex flex-col items-center justify-center flex-1 h-touch-target-min py-1 px-1 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors"
         data-path="calibration"
-        href="/calibrate"
+        href="/calibration"
       >
 
         <span class="material-symbols-outlined text-[22px]">
@@ -1342,7 +1368,12 @@ tailwind.config = {
           Array.isArray(state.track) &&
           state.track.length > 0
         ) {
-          navigationPath.setLatLngs(state.track);
+          // state.track contains objects {latitude, longitude, ...}
+          // Leaflet requires [lat, lon] arrays
+          const latlngs = state.track
+            .filter(p => p.latitude != null && p.longitude != null)
+            .map(p => [p.latitude, p.longitude]);
+          if (latlngs.length > 0) navigationPath.setLatLngs(latlngs);
         }
 
 
@@ -1531,6 +1562,51 @@ tailwind.config = {
           state.gnss_status ||
           'GNSS STATUS —'
         );
+
+
+        // ------------------------------------------------------
+        // LIVE DIAGNOSTICS STRIP
+        // Proof that real data is flowing through the pipeline.
+        // All values come from /navigation/state which is only
+        // updated when real packets reach NavigationEngine.
+        // ------------------------------------------------------
+
+        const pos = state.position || {};
+        const lat = pos.latitude;
+        const lon = pos.longitude;
+
+        updateIfPresent('diagMode',
+          (state.mode || '—').toUpperCase());
+
+        updateIfPresent('diagLat',
+          lat != null ? Number(lat).toFixed(6) : '—');
+
+        updateIfPresent('diagLon',
+          lon != null ? Number(lon).toFixed(6) : '—');
+
+        updateIfPresent('diagSpeed',
+          state.speed_kmh != null
+            ? Number(state.speed_kmh).toFixed(1) + ' km/h'
+            : '— km/h');
+
+        updateIfPresent('diagAccuracy',
+          state.uncertainty_m != null
+            ? '±' + Number(state.uncertainty_m).toFixed(1) + ' m'
+            : '— m');
+
+        updateIfPresent('diagImuCount',
+          state.accepted_imu != null ? String(state.accepted_imu) : '—');
+
+        updateIfPresent('diagGnssCount',
+          state.accepted_gnss != null ? String(state.accepted_gnss) : '—');
+
+        updateIfPresent('diagGnssStatus',
+          state.gnss_status || '—');
+
+        updateIfPresent('diagTs',
+          state.timestamp != null
+            ? Number(state.timestamp).toFixed(1) + ' s'
+            : '—');
 
       }
 
@@ -1939,6 +2015,7 @@ tailwind.config = {
               await startNavigationDemo();
 
 
+              // Demo runs for 175 ticks × 100 ms = 17.5 s; re-enable after it ends
               setTimeout(
                 () => {
 
@@ -1948,7 +2025,7 @@ tailwind.config = {
                     originalHTML;
 
                 },
-                1000
+                18000
               );
 
 
@@ -1969,16 +2046,67 @@ tailwind.config = {
 
       }
       // ========================================================
+      // RECENTER BUTTON
+      // ========================================================
+
+      const recenterBtn = document.getElementById('recenterBtn');
+      if (recenterBtn) {
+        recenterBtn.addEventListener('click', () => {
+          mapCentered = true;
+          const pos = vehicleMarker.getLatLng();
+          navigationMap.setView(pos, navigationMap.getZoom(), { animate: true });
+        });
+      }
+
+
+      // ========================================================
+      // ZOOM CORRIDOR BUTTON (toggle track fit vs fixed zoom)
+      // ========================================================
+
+      const zoomCorridorBtn = document.getElementById('zoomCorridorBtn');
+      if (zoomCorridorBtn) {
+        zoomCorridorBtn.addEventListener('click', () => {
+          const latlngs = navigationPath.getLatLngs();
+          if (latlngs.length > 1) {
+            navigationMap.fitBounds(navigationPath.getBounds(), { padding: [32, 32], animate: true });
+            mapCentered = false;
+          }
+        });
+      }
+
+      // Disable auto-center when user drags/zooms map
+      navigationMap.on('dragstart zoomstart', () => { mapCentered = false; });
+
+
+      // ========================================================
+      // LIVE UTC CLOCK
+      // ========================================================
+
+      function tickClock() {
+        const el = document.getElementById('utcClock');
+        if (!el) return;
+        const now = new Date();
+        const hh = String(now.getUTCHours()).padStart(2, '0');
+        const mm = String(now.getUTCMinutes()).padStart(2, '0');
+        const ss = String(now.getUTCSeconds()).padStart(2, '0');
+        const ms = String(Math.floor(now.getUTCMilliseconds() / 100));
+        el.textContent = `${hh}:${mm}:${ss}.${ms} Z`;
+      }
+      tickClock();
+      setInterval(tickClock, 100);
+
+
+      // ========================================================
       // INITIAL STATE
       // ========================================================
       refreshState();
+
+
       // ========================================================
-      // KEEP UI SYNCHRONIZED WITH BACKEND
+      // KEEP UI SYNCHRONIZED WITH BACKEND — 200ms ≈ 5 Hz
       // ========================================================
-      setInterval(
-        refreshState,
-        600
-      );
+      setInterval(refreshState, 200);
+
     })();
   </script>
 </body>
