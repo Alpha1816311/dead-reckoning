@@ -519,8 +519,12 @@ class NavigationEngine:
             was_lost = self.gnss_state in {
                 GNSSState.GNSS_LOST,
                 GNSSState.INS_DEAD_RECKONING,
-                GNSSState.GNSS_DEGRADED,
             }
+            # GNSS_DEGRADED means poor-quality but still present GNSS — not a
+            # full outage. We treat it as a normal fused update so a sudden
+            # accuracy improvement does not trigger an unnecessary reacquisition
+            # ramp.  The existing else branch already re-evaluates accuracy on
+            # every fix and will assign FUSED when the quality recovers.
 
             if speed_mps is not None and math.isfinite(float(speed_mps)):
                 gnss_speed = max(0.0, float(speed_mps))

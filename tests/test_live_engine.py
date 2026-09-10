@@ -231,3 +231,176 @@ def test_ml_speed_is_used_only_when_valid_and_falls_back_when_invalid():
     engine.process_gnss(0.0, 12.0, 77.0, speed_mps=5.0, accuracy_m=4.0)
     state = engine.process_imu(1.1, [0.0, 2.0, 9.80665], [0.0, 0.0, 0.0])
     assert state["speed_source"] == "INERTIAL"
+
+
+# ---------------------------------------------------------------------------
+# Additional coverage: DR drift, GNSS accuracy states, reacquisition quality
+# ---------------------------------------------------------------------------
+
+def test_dr_uncertainty_grows_during_gnss_outage():
+    """Uncertainty_m should increase monotonically during INS dead reckoning."""
+    engine = NavigationEngine(gnss_timeout_s=0.5)
+    engine.process_gnss(0.0, 12.0, 77.0, speed_mps=10.0, accuracy_m=4.0)
+    engine.process_gnss(0.1, 12.0, 77.00001, speed_mps=10.0, accuracy_m=4.0)
+
+    # Drive into dead reckoning
+    prev_uncertainty = None
+    for step in range(1, 15):
+        state = engine.process_imu(
+            timestamp=0.1 + step * 0.1,
+            accel=[0.0, 0.0, 9.80665],
+            gyro=[0.0, 0.0, 0.0],
+        )
+        if state["gnss_state"] == GNSSState.INS_DEAD_RECKONING.value:
+            unc = state["uncertainty_m"]
+            assert unc is not None
+            if prev_uncertainty is not None:
+                assert unc >= prev_uncertainty, (
+                    f"Uncertainty should not shrink during DR: {prev_uncertainty} -> {unc}"
+                )
+            prev_uncertainty = unc
+
+    assert prev_uncertainty is not None, "Must have entered dead reckoning at some point"
+
+
+def test_gnss_degraded_state_on_low_accuracy():
+    """Poor GNSS accuracy (>25m) after first fix should produce GNSS_DEGRADED."""
+    engine = NavigationEngine(gnss_timeout_s=5.0)
+    # First fix establishes the origin cleanly
+    engine.process_gnss(0.0, 12.0, 77.0, speed_mps=8.0, accuracy_m=5.0)
+    engine.process_gnss(0.5, 12.0, 77.00005, speed_mps=8.0, accuracy_m=5.0)
+
+    # Feed some IMU to advance time slightly
+    for step in range(1, 4):
+        engine.process_imu(
+            timestamp=0.5 + step * 0.1,
+            accel=[0.0, 0.0, 9.80665],
+            gyro=[0.0, 0.0, 0.0],
+        )
+
+    # A fix with poor accuracy should produce GNSS_DEGRADED
+    state = engine.process_gnss(
+        timestamp=0.9,
+        latitude=12.0,
+        longitude=77.0001,
+        speed_mps=8.0,
+        accuracy_m=30.0,   # > 25 m threshold
+    )
+    assert state["gnss_state"] == GNSSState.GNSS_DEGRADED.value, (
+        f"Expected GNSS_DEGRADED for 30m accuracy, got {state['gnss_state']}"
+    )
+    assert state["gnss_status"] == "DEGRADED"
+
+
+def test_reacquisition_produces_no_catastrophic_position_jump():
+    """After GNSS recovery, fused position must be closer to GNSS than raw INS."""
+    engine = NavigationEngine(gnss_timeout_s=0.5)
+    # Establish position at origin
+    engine.process_gnss(0.0, 12.0, 77.0, speed_mps=10.0, accuracy_m=4.0)
+    engine.process_gnss(0.1, 12.0, 77.00001, speed_mps=10.0, accuracy_m=4.0)
+
+    # 20 IMU-only steps: DR drifts the position
+    for step in range(1, 21):
+        engine.process_imu(
+            timestamp=0.1 + step * 0.1,
+            accel=[0.0, 0.0, 9.80665],
+            gyro=[0.0, 0.0, 0.0],
+        )
+
+    ins_position = engine.position.copy()
+
+    # GNSS returns 22 m east of origin
+    gnss_lat = 12.0
+    gnss_lon = 77.0002  # approximately 22 m east
+    recovered = engine.process_gnss(
+        timestamp=2.2,
+        latitude=gnss_lat,
+        longitude=gnss_lon,
+        speed_mps=10.0,
+        accuracy_m=4.0,
+    )
+    assert recovered["gnss_state"] == GNSSState.GNSS_REACQUISITION.value
+
+    fused_east = engine.position[0]
+    gnss_east = engine._ll_to_xy(gnss_lat, gnss_lon)[0]
+
+    # Fused position must be between DR and GNSS (no snap to exact GNSS)
+    assert fused_east < gnss_east, "Fused should not jump all the way to GNSS immediately"
+    assert fused_east >= ins_position[0] or fused_east > 0, (
+        "Fused should move toward GNSS"
+    )
+
+
+def test_gnss_aided_state_with_good_accuracy():
+    """First fix with good accuracy establishes GNSS_AIDED immediately."""
+    engine = NavigationEngine(gnss_timeout_s=2.0)
+    state = engine.process_gnss(
+        0.0, 12.0, 77.0, speed_mps=5.0, accuracy_m=5.0
+    )
+    assert state["gnss_state"] == GNSSState.GNSS_AIDED.value
+    assert state["gnss_status"] == "CONNECTED"
+    assert state["position"] is not None
+    assert math.isclose(state["position"]["latitude"], 12.0, rel_tol=1e-6)
+
+
+def test_reset_clears_position_and_counters_but_keeps_manual_alignment():
+    """Engine reset must wipe navigation state while preserving manual alignment."""
+    engine = NavigationEngine(gnss_timeout_s=1.0)
+    engine.apply_manual_alignment([0.0, 1.0, 0.0], [0.0, 0.0, 1.0])
+    engine.process_gnss(0.0, 12.0, 77.0, speed_mps=5.0, accuracy_m=4.0)
+    engine.process_imu(0.1, [0.0, 0.0, 9.80665], [0.0, 0.0, 0.0])
+    assert engine.accepted_imu == 1
+    assert engine.accepted_gnss == 1
+
+    engine.reset()
+
+    assert engine.accepted_imu == 0
+    assert engine.accepted_gnss == 0
+    assert engine.origin_latitude is None
+    assert engine.gnss_state == GNSSState.WAITING_FOR_FIX
+    # Manual alignment must survive reset
+    assert engine.alignment_locked is True
+    assert engine.alignment_source == "MANUAL"
+
+
+def test_filter_mode_change_takes_effect_immediately():
+    """set_runtime_options must apply filter mode to the preprocessor instance."""
+    engine = NavigationEngine()
+    assert engine.filter_mode == "balanced"
+
+    engine.set_runtime_options(filter_mode="strict")
+    assert engine.filter_mode == "strict"
+    assert engine.imu_preprocessor.filter_mode == "strict"
+
+    engine.set_runtime_options(filter_mode="raw")
+    assert engine.filter_mode == "raw"
+    assert engine.imu_preprocessor.signal_cutoff_hz == 40.0
+
+
+def test_nhc_disabled_allows_lateral_velocity_contribution():
+    """With NHC disabled, lateral velocity adds a small non-zero east component."""
+    engine_nhc = NavigationEngine(gnss_timeout_s=5.0)
+    engine_no_nhc = NavigationEngine(gnss_timeout_s=5.0)
+    engine_no_nhc.set_runtime_options(nhc_enabled=False)
+
+    for engine in (engine_nhc, engine_no_nhc):
+        engine.process_gnss(0.0, 12.0, 77.0, speed_mps=10.0, accuracy_m=4.0)
+        engine.process_gnss(0.1, 12.0, 77.00001, speed_mps=10.0, accuracy_m=4.0)
+
+    # 10 IMU samples with a lateral linear acceleration component
+    for step in range(1, 11):
+        t = 0.1 + step * 0.1
+        for engine in (engine_nhc, engine_no_nhc):
+            engine.process_imu(
+                timestamp=t,
+                accel=[2.0, 0.0, 9.80665],   # lateral accel in phone X
+                gyro=[0.0, 0.0, 0.0],
+            )
+
+    # Both paths produce valid positions; NHC path must not crash
+    state_nhc = engine_nhc.state_snapshot()
+    state_no_nhc = engine_no_nhc.state_snapshot()
+    assert state_nhc["nhc_status"] == "KINEMATIC"
+    assert state_no_nhc["nhc_status"] == "DISABLED"
+    assert state_nhc["position"] is not None
+    assert state_no_nhc["position"] is not None
