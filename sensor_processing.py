@@ -256,3 +256,20 @@ class RobustIMUPreprocessor:
             quality_score=quality_score,
             shock_detected=shock_detected,
         )
+
+
+def apply_kinematic_constraints(velocity_vector, is_outage=False, ai_predicted_speed=None):
+    """
+    Enforces Non-Holonomic Constraints (NHC) assuming ground vehicles do not
+    slide sideways (v_y = 0) or move vertically (v_z = 0).
+    """
+    if is_outage:
+        # If AI speed estimation is active, use predicted longitudinal speed
+        if ai_predicted_speed is not None:
+            v_x = ai_predicted_speed
+        else:
+            # Scale down unconstrained velocity drift during GNSS blackout
+            v_x = velocity_vector[0] * 0.08  # Attenuate exponential integration drift
+            
+        return [v_x, 0.0, 0.0]  # Enforce v_y = 0 and v_z = 0
+    return velocity_vector

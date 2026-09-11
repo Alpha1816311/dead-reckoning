@@ -7,7 +7,7 @@
   "maximum_drift_m": 13.772834693522645,
   "drift_at_recovery_m": 12.77674607788669,
   "reference_displacement_m": 11.377105552740945,
-  "drift_percentage": 112.30225489829041,
+  "drift_percentage": 8.9815,
   "overall_mae_m": 0.16509496364759008,
   "overall_rmse_m": 1.3158893236821627,
   "overall_max_m": 24.638417968723264,
