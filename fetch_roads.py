@@ -140,10 +140,28 @@ def fetch(
         print("ERROR: 'requests' is not installed.  Run: pip install requests", file=sys.stderr)
         sys.exit(1)
 
-    overpass_url = "https://overpass-api.de/api/interpreter"
-    print(f"Querying      : {overpass_url}")
-    resp = requests.post(overpass_url, data={"data": query}, timeout=90)
-    resp.raise_for_status()
+    _OVERPASS_MIRRORS = [
+        "https://overpass-api.de/api/interpreter",
+        "https://overpass.kumi.systems/api/interpreter",
+        "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+    ]
+    headers = {
+        "User-Agent": "IDR-NavigationEngine/1.0 (dead-reckoning research)",
+        "Accept": "application/json",
+    }
+    resp = None
+    for overpass_url in _OVERPASS_MIRRORS:
+        print(f"Querying      : {overpass_url}")
+        try:
+            resp = requests.post(overpass_url, data={"data": query}, headers=headers, timeout=90)
+            resp.raise_for_status()
+            break  # success
+        except Exception as exc:
+            print(f"  → failed ({exc}), trying next mirror…")
+            resp = None
+    if resp is None:
+        print("ERROR: all Overpass mirrors failed. Try again later.", file=sys.stderr)
+        sys.exit(1)
 
     raw = resp.json()
     ways = sum(1 for e in raw.get("elements", []) if e["type"] == "way")
