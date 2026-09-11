@@ -157,8 +157,12 @@ class RobustIMUPreprocessor:
 
         # 2. Gravity Estimation
         if self.gravity_phone is None:
-            # Initialize direction vector from raw measurement normalized to GRAVITY_MPS2
-            self.gravity_phone = (accel / (accel_mag + 1e-8)) * GRAVITY_MPS2
+            # Initialize gravity assuming phone +Z axis points upward (typical dash/holder
+            # mount).  Using the first raw sample directly would absorb any forward vehicle
+            # acceleration already present at startup, producing an artificially low linear
+            # acceleration signal from the very first sample.  The LPF below will adapt the
+            # direction to the real orientation within a few seconds regardless of mounting.
+            self.gravity_phone = np.array([0.0, 0.0, GRAVITY_MPS2])
         else:
             # Adaptive LPF: Only update gravity orientation aggressively when static or near 1G
             if is_stationary:
@@ -226,11 +230,14 @@ class RobustIMUPreprocessor:
             motion_state = MotionState.STATIONARY
             quality_score = 0.98
         elif (
-            abs(accel_mag - GRAVITY_MPS2) < 0.40
+            abs(accel_mag - GRAVITY_MPS2) < 0.20
             and gyro_mag < 0.15
-            and window_energy < 0.30
+            and window_energy < 0.25
         ):
             # Small, persistent engine/mount vibration is not vehicle motion.
+            # Threshold is deliberately tight: even 1 m/s² of horizontal forward
+            # acceleration raises total accel magnitude by ~0.05 m/s², so a
+            # threshold of 0.20 ensures real driving is not classified as idling.
             motion_state = MotionState.IDLING
             quality_score = 0.82
         elif vibration_rms > 0.75 or window_std > 0.90:
@@ -256,20 +263,3 @@ class RobustIMUPreprocessor:
             quality_score=quality_score,
             shock_detected=shock_detected,
         )
-
-
-def apply_kinematic_constraints(velocity_vector, is_outage=False, ai_predicted_speed=None):
-    """
-    Enforces Non-Holonomic Constraints (NHC) assuming ground vehicles do not
-    slide sideways (v_y = 0) or move vertically (v_z = 0).
-    """
-    if is_outage:
-        # If AI speed estimation is active, use predicted longitudinal speed
-        if ai_predicted_speed is not None:
-            v_x = ai_predicted_speed
-        else:
-            # Scale down unconstrained velocity drift during GNSS blackout
-            v_x = velocity_vector[0] * 0.08  # Attenuate exponential integration drift
-            
-        return [v_x, 0.0, 0.0]  # Enforce v_y = 0 and v_z = 0
-    return velocity_vector
