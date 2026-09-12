@@ -60,8 +60,13 @@ def run_replay(
     outage_duration: float,
     output_path: str | None = None,
     max_rows: int | None = None,
+    gnss_speed_unit: str = "mps",
 ):
     df = pd.read_csv(input_path, encoding="cp1252", engine="python")
+    vbox_path = Path("Data/V-S1.csv")
+    vbox = pd.read_csv(vbox_path, encoding="cp1252", engine="python") if vbox_path.exists() else None
+    vbox_speed_col = find_column(vbox.columns, "velocity") if vbox is not None else None
+    vbox_heading_col = find_column(vbox.columns, "heading") if vbox is not None else None
 
     time_col = required_column(df, "time")
 
@@ -103,9 +108,11 @@ def run_replay(
 
     timestamps = (timestamps - timestamps[0]) / 1000.0
 
+    replay_clock = [0.0]
     engine = NavigationEngine(
         map_path=os.getenv("IDR_ROADS_GEOJSON"),
         model_path=os.getenv("IDR_SPEED_MODEL"),
+        _clock=lambda: replay_clock[0],
     )
 
     records = []
@@ -126,6 +133,10 @@ def run_replay(
         row = df.iloc[index]
 
         timestamp = float(timestamps[index])
+        # The live engine intentionally uses a monotonic receive clock for GNSS
+        # freshness. In replay, that clock must share the recorded timestamp
+        # domain or a simulated outage is never detected.
+        replay_clock[0] = timestamp
 
         latitude = float(
             pd.to_numeric(
@@ -165,9 +176,13 @@ def run_replay(
                     )
                 )
 
-                # Dataset labels its speed in km/h.
-                if "km" in str(speed_col).lower():
+                # IO-VNBD's ``GPS SPEED (Kmh)`` values are empirically m/s
+                # scale (15.55 against VBOX 15.79 m/s at 120.1 s).  Keep the
+                # unit explicit for other input sources.
+                if gnss_speed_unit.lower() == "kmh":
                     speed /= 3.6
+                elif gnss_speed_unit.lower() != "mps":
+                    raise ValueError("gnss_speed_unit must be 'kmh' or 'mps'")
 
             accuracy = 10.0
 
@@ -232,6 +247,34 @@ def run_replay(
 
         state["simulated_gnss_available"] = not in_outage
 
+        # Keep local reference coordinates with every record so the replay is
+        # directly plottable across GNSS, blackout, and recovery modes.
+        earth_radius = 6_378_137.0
+        truth_xy = np.array([
+            np.radians(longitude - truth_origin[1]) * earth_radius * np.cos(np.radians(truth_origin[0])),
+            np.radians(latitude - truth_origin[0]) * earth_radius,
+        ])
+        state["reference_east_m"] = float(truth_xy[0])
+        state["reference_north_m"] = float(truth_xy[1])
+        if vbox is not None and index < len(vbox):
+            if vbox_speed_col is not None:
+                state["reference_speed_mps"] = float(pd.to_numeric(vbox.iloc[index][vbox_speed_col], errors="coerce") / 3.6)
+            if vbox_heading_col is not None:
+                state["reference_heading_deg"] = float(pd.to_numeric(vbox.iloc[index][vbox_heading_col], errors="coerce"))
+        if state["position"] is not None:
+            estimate_xy = np.array([
+                state["local_position_m"]["east"],
+                state["local_position_m"]["north"],
+            ])
+            state["position_error_m"] = float(np.linalg.norm(estimate_xy - truth_xy))
+        if "reference_heading_deg" in state:
+            delta = ((state["heading_deg"] - state["reference_heading_deg"] + 180) % 360) - 180
+            state["heading_error_deg"] = float(delta)
+            heading = np.radians(state["reference_heading_deg"])
+            error_xy = estimate_xy - truth_xy
+            state["along_track_error_m"] = float(error_xy[0] * np.sin(heading) + error_xy[1] * np.cos(heading))
+            state["cross_track_error_m"] = float(error_xy[0] * np.cos(heading) - error_xy[1] * np.sin(heading))
+
         records.append(state)
 
         # ---------------------------------------------------------
@@ -257,40 +300,7 @@ def run_replay(
 
             # Position error between DR estimate and actual GPS position.
             if state["position"] is not None:
-                earth_radius = 6_378_137.0
-
-                truth_xy = np.array(
-                    [
-                        np.radians(
-                            longitude - truth_origin[1]
-                        )
-                        * earth_radius
-                        * np.cos(
-                            np.radians(
-                                truth_origin[0]
-                            )
-                        ),
-                        np.radians(
-                            latitude - truth_origin[0]
-                        )
-                        * earth_radius,
-                    ]
-                )
-
-                estimate_xy = np.array(
-                    [
-                        state["local_position_m"]["east"],
-                        state["local_position_m"]["north"],
-                    ]
-                )
-
-                errors.append(
-                    float(
-                        np.linalg.norm(
-                            estimate_xy - truth_xy
-                        )
-                    )
-                )
+                errors.append(state["position_error_m"])
 
     # -------------------------------------------------------------
     # FINAL OUTAGE METRICS
@@ -342,6 +352,18 @@ def run_replay(
             )
         ) * 100.0
 
+    recovery_jump_m = None
+    for index in range(1, len(records)):
+        if records[index - 1]["simulated_gnss_available"] is False and records[index]["simulated_gnss_available"]:
+            previous = records[index - 1].get("local_position_m")
+            current = records[index].get("local_position_m")
+            if previous is not None and current is not None:
+                recovery_jump_m = float(np.hypot(
+                    current["east"] - previous["east"],
+                    current["north"] - previous["north"],
+                ))
+            break
+
     summary = {
         "input": str(input_path),
         "samples_replayed": len(records),
@@ -359,6 +381,7 @@ def run_replay(
         ),
 
         "outage_drift_pct": drift_pct,
+        "gnss_recovery_discontinuity_m": recovery_jump_m,
 
         "final_state": engine.state_snapshot(),
 
@@ -392,7 +415,42 @@ def run_replay(
                 + "\n"
             )
 
+        _save_replay_plots(records, path.with_suffix(""))
+        metrics_path = path.with_name("mvp_demo_metrics.json") if path.name.startswith("mvp_demo_") else path.with_name(path.stem + "_metrics.json")
+        metrics_path.write_text(json.dumps(summary, indent=2, default=str), encoding="utf-8")
+
     return summary
+
+
+def _save_replay_plots(records, prefix: Path) -> None:
+    """Write reproducible trajectory and error/mode plots for a replay."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    rows = [row for row in records if row.get("local_position_m") is not None]
+    if not rows:
+        return
+    time_s = [row["timestamp"] for row in rows]
+    ref_e = [row["reference_east_m"] for row in rows]
+    ref_n = [row["reference_north_m"] for row in rows]
+    est_e = [row["local_position_m"]["east"] for row in rows]
+    est_n = [row["local_position_m"]["north"] for row in rows]
+    errors = [row.get("position_error_m", float("nan")) for row in rows]
+    outage = [not row["simulated_gnss_available"] for row in rows]
+
+    fig, axes = plt.subplots(2, 1, figsize=(10, 9))
+    axes[0].plot(ref_e, ref_n, label="GNSS reference")
+    axes[0].plot(est_e, est_n, label="Navigation estimate")
+    axes[0].set(xlabel="East (m)", ylabel="North (m)", title="GNSS blackout → DR → recovery")
+    axes[0].axis("equal"); axes[0].grid(alpha=0.3); axes[0].legend()
+    axes[1].plot(time_s, errors, label="Position error (m)")
+    axes[1].fill_between(time_s, 0, 1, where=outage, alpha=0.2, label="GNSS blackout")
+    axes[1].set(xlabel="Time (s)", ylabel="Error / outage", title="Error and navigation mode")
+    axes[1].grid(alpha=0.3); axes[1].legend()
+    fig.tight_layout()
+    fig.savefig(str(prefix) + "_trajectory_error_mode.png", dpi=140)
+    plt.close(fig)
 
 
 def main():
@@ -419,13 +477,14 @@ def main():
 
     parser.add_argument(
         "--output",
-        default="Data/live_replay.jsonl",
+        default="Data/mvp_demo_trajectory.jsonl",
     )
 
     parser.add_argument(
         "--max-rows",
         type=int,
     )
+    parser.add_argument("--gnss-speed-unit", choices=("kmh", "mps"), default="mps")
 
     args = parser.parse_args()
 
@@ -435,6 +494,7 @@ def main():
         outage_duration=args.outage_duration,
         output_path=args.output,
         max_rows=args.max_rows,
+        gnss_speed_unit=args.gnss_speed_unit,
     )
 
     print(

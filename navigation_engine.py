@@ -10,6 +10,7 @@ import time
 import numpy as np
 
 from alignment import AlignmentState, PhoneOrientation, VehicleAlignmentCalibrator
+from gnss_ins_fusion import fuse_gnss_ins
 from sensor_processing import MotionState, TimestampNormalizer, RobustIMUPreprocessor
 from speed_model import SpeedModel
 
@@ -45,6 +46,92 @@ def _heading_blend(current: float | None, measured: float, weight: float) -> flo
         return _wrap_heading(measured)
     delta = ((measured - current + 180.0) % 360.0) - 180.0
     return _wrap_heading(current + weight * delta)
+
+
+class GyroYawCalibrator:
+    """Select the phone gyro axis/sign which best explains GNSS course turns."""
+
+    def __init__(self, min_distance_m: float = 4.0, min_speed_mps: float = 3.0):
+        self.min_distance_m = float(min_distance_m)
+        self.min_speed_mps = float(min_speed_mps)
+        self.axis = 2
+        self.sign = -1.0
+        self._gyro = [deque(maxlen=600), deque(maxlen=600), deque(maxlen=600)]
+        self._dt = deque(maxlen=600)
+        self._last_position: np.ndarray | None = None
+        self._last_heading: float | None = None
+        self._scores = np.full(3, np.inf)
+        self._sign_votes = np.zeros(3)
+        self._observations = 0
+        self.confidence = 0.0
+        self.locked = False
+
+    def add_imu(self, gyro: np.ndarray, dt: float) -> None:
+        gyro = np.asarray(gyro, dtype=float)
+        if gyro.shape != (3,) or not np.all(np.isfinite(gyro)):
+            return
+        for axis in range(3):
+            self._gyro[axis].append(float(gyro[axis]))
+        self._dt.append(max(1e-4, float(dt)))
+
+    def observe_gnss(self, position: np.ndarray, speed_mps: float | None) -> bool:
+        """Use sufficiently separated GNSS fixes, tolerating duplicate positions."""
+        position = np.asarray(position, dtype=float)
+        if position.shape != (2,) or not np.all(np.isfinite(position)):
+            return False
+        if speed_mps is not None and speed_mps < self.min_speed_mps:
+            return False
+        if self._last_position is None:
+            self._last_position = position.copy()
+            return False
+        delta = position - self._last_position
+        if float(np.linalg.norm(delta)) < self.min_distance_m:
+            return False
+        heading = _wrap_heading(math.degrees(math.atan2(delta[0], delta[1])))
+        self._last_position = position.copy()
+        if self._last_heading is None:
+            self._last_heading = heading
+            self._clear_window()
+            return False
+        heading_change = ((heading - self._last_heading + 180.0) % 360.0) - 180.0
+        self._last_heading = heading
+        if len(self._dt) < 5 or abs(heading_change) < 2.0:
+            self._clear_window()
+            return False
+        dt = np.asarray(self._dt, dtype=float)
+        residuals = np.full(3, np.inf)
+        signs = np.zeros(3)
+        for axis in range(3):
+            values = np.asarray(self._gyro[axis], dtype=float)
+            n = min(len(values), len(dt))
+            integrated_deg = math.degrees(float(np.sum(values[-n:] * dt[-n:])))
+            if abs(integrated_deg) >= 3.0:
+                sign = 1.0 if integrated_deg * heading_change > 0 else -1.0
+                residuals[axis] = abs(heading_change - sign * integrated_deg)
+                signs[axis] = sign
+        valid = np.isfinite(residuals)
+        if not np.any(valid):
+            self._clear_window()
+            return False
+        for axis in np.where(valid)[0]:
+            previous = self._scores[axis]
+            self._scores[axis] = residuals[axis] if not math.isfinite(previous) else 0.8 * previous + 0.2 * residuals[axis]
+            self._sign_votes[axis] += signs[axis]
+        best = int(np.nanargmin(self._scores))
+        finite_scores = np.sort(self._scores[np.isfinite(self._scores)])
+        margin = 0.0 if len(finite_scores) < 2 else max(0.0, (finite_scores[1] - finite_scores[0]) / max(5.0, finite_scores[1]))
+        self._observations += 1
+        self.confidence = min(1.0, 0.20 * self._observations + 0.4 * margin)
+        self.axis = best
+        self.sign = 1.0 if self._sign_votes[best] >= 0 else -1.0
+        self.locked = self._observations >= 3 and self.confidence >= 0.55
+        self._clear_window()
+        return True
+
+    def _clear_window(self) -> None:
+        for values in self._gyro:
+            values.clear()
+        self._dt.clear()
 
 
 class TemporalAccelerationModel:
@@ -92,6 +179,7 @@ class NavigationEngine:
         min_move_distance=0.05,
         ai_accel_gate_max=6.0,
         ai_accel_diff_max=2.0,
+        max_reacquisition_correction_m=15.0,
         _clock=None,
     ):
         self.map_path = map_path
@@ -105,6 +193,7 @@ class NavigationEngine:
         self.min_move_distance = float(min_move_distance)
         self.ai_accel_gate_max = float(ai_accel_gate_max)
         self.ai_accel_diff_max = float(ai_accel_diff_max)
+        self.max_reacquisition_correction_m = max(0.1, float(max_reacquisition_correction_m))
 
         self.timestamp_normalizer = TimestampNormalizer()
         self.imu_preprocessor = RobustIMUPreprocessor()
@@ -190,10 +279,12 @@ class NavigationEngine:
         # Yaw axis auto-detection: track which phone gyro axis (0,1,2) best
         # predicts GNSS-derived heading changes. Updated during GNSS-aided flight.
         # Default to axis 2 (Z) for a phone lying flat.
-        self._gyro_yaw_axis: int = 2
-        self._gyro_yaw_sign: float = -1.0   # sign: negative = CW heading when axis positive
-        self._gyro_yaw_buffer_axes: list = [deque(maxlen=100), deque(maxlen=100), deque(maxlen=100)]
-        self._gyro_yaw_buffer_dt: deque = deque(maxlen=100)
+        self.yaw_calibrator = GyroYawCalibrator()
+        # Compatibility aliases for existing integrations that inspect diagnostics.
+        self._gyro_yaw_axis: int = self.yaw_calibrator.axis
+        self._gyro_yaw_sign: float = self.yaw_calibrator.sign
+        self._gyro_yaw_buffer_axes = self.yaw_calibrator._gyro
+        self._gyro_yaw_buffer_dt = self.yaw_calibrator._dt
         self._prev_gnss_heading: float | None = None
         self._last_mag_yaw: float | None = None
 
@@ -622,12 +713,25 @@ class NavigationEngine:
                 self.position = new_position
                 state = GNSSState.GNSS_AIDED
             elif was_lost:
-                self.position = 0.70 * ins_position + 0.30 * new_position
+                # Start GNSS recovery with a bounded complementary correction;
+                # later fixes increase the pull rather than causing a snap.
+                fused_position = fuse_gnss_ins(
+                    [new_position], [ins_position], [self.velocity],
+                    gnss_available=[True], gnss_weight=0.30,
+                )[0]
+                correction = fused_position - ins_position
+                correction_norm = float(np.linalg.norm(correction))
+                if correction_norm > self.max_reacquisition_correction_m:
+                    correction *= self.max_reacquisition_correction_m / correction_norm
+                self.position = ins_position + correction
                 state = GNSSState.GNSS_REACQUISITION
                 self._reacq_remaining = 4
             elif self._reacq_remaining > 0:
                 pull = 0.40 + 0.10 * (4 - self._reacq_remaining)
-                self.position = (1.0 - pull) * ins_position + pull * new_position
+                self.position = fuse_gnss_ins(
+                    [new_position], [ins_position], [self.velocity],
+                    gnss_available=[True], gnss_weight=pull,
+                )[0]
                 self._reacq_remaining -= 1
                 state = (
                     GNSSState.FUSED
@@ -635,7 +739,10 @@ class NavigationEngine:
                     else GNSSState.GNSS_REACQUISITION
                 )
             else:
-                self.position = gnss_weight * new_position + (1.0 - gnss_weight) * ins_position
+                self.position = fuse_gnss_ins(
+                    [new_position], [ins_position], [self.velocity],
+                    gnss_available=[True], gnss_weight=gnss_weight,
+                )[0]
                 state = GNSSState.GNSS_DEGRADED if accuracy_m > 25.0 else GNSSState.FUSED
 
             if self.heading_deg is not None:
@@ -661,51 +768,11 @@ class NavigationEngine:
             self.gnss_accuracy_m = accuracy_m
             self.uncertainty_m = accuracy_m
 
-            # --- Yaw axis calibration: record GNSS heading change vs buffered gyro ---
-            if (
-                gnss_heading is not None
-                and self._prev_gnss_heading is not None
-                and len(self._gyro_yaw_buffer_dt) >= 5
-                and gnss_speed is not None and gnss_speed > 3.0
-            ):
-                gnss_hdg_change = ((gnss_heading - self._prev_gnss_heading + 180) % 360) - 180
-                if abs(gnss_hdg_change) > 2.0:  # only calibrate during real turns
-                    # Integrate each axis over the buffered IMU interval
-                    dt_arr = np.asarray(list(self._gyro_yaw_buffer_dt), dtype=float)
-                    for axis in range(3):
-                        ax_arr = np.asarray(list(self._gyro_yaw_buffer_axes[axis]), dtype=float)
-                        integrated = float(np.sum(ax_arr * dt_arr))
-                        # Find sign+scale: gnss_hdg_change = sign * integrated
-                        if abs(integrated) > 0.05:  # at least 3 deg equivalent
-                            sign = 1.0 if (integrated * gnss_hdg_change > 0) else -1.0
-                            # Score = |correlation|
-                            score = abs(gnss_hdg_change) / (abs(integrated) * 180 / math.pi + 0.1)
-                            # Update running best axis
-                            if not hasattr(self, '_gyro_axis_scores'):
-                                self._gyro_axis_scores = [0.0, 0.0, 0.0]
-                                self._gyro_axis_sign_votes = [0.0, 0.0, 0.0]
-                            # Exponential moving average of |residual|
-                            predicted = sign * integrated * 180 / math.pi
-                            residual = abs(gnss_hdg_change - predicted)
-                            self._gyro_axis_scores[axis] = 0.9 * self._gyro_axis_scores[axis] + 0.1 * residual
-                            self._gyro_axis_sign_votes[axis] += sign
-                    # Select axis with lowest residual (best prediction)
-                    if hasattr(self, '_gyro_axis_scores'):
-                        best_axis = int(np.argmin(self._gyro_axis_scores))
-                        best_sign = 1.0 if self._gyro_axis_sign_votes[best_axis] >= 0 else -1.0
-                        if self._gyro_yaw_axis != best_axis:
-                            logger.info(
-                                "Yaw axis updated: %d -> %d (sign %+.0f)",
-                                self._gyro_yaw_axis, best_axis, best_sign,
-                            )
-                        self._gyro_yaw_axis = best_axis
-                        self._gyro_yaw_sign = best_sign
-
-            self._prev_gnss_heading = gnss_heading if gnss_heading is not None else self._prev_gnss_heading
-            # Clear gyro buffers after using them for calibration
-            for buf in self._gyro_yaw_buffer_axes:
-                buf.clear()
-            self._gyro_yaw_buffer_dt.clear()
+            # Calibrate from a meaningful GNSS displacement window, not merely
+            # consecutive fixes (which are often duplicates on phone receivers).
+            if self.yaw_calibrator.observe_gnss(new_position, gnss_speed):
+                self._gyro_yaw_axis = self.yaw_calibrator.axis
+                self._gyro_yaw_sign = self.yaw_calibrator.sign
 
             self._apply_map_match()
             self._append_track()
@@ -773,7 +840,7 @@ class NavigationEngine:
             # where the vehicle yaw maps onto gyro_y (pitch) rather than gyro_z.
             # Additionally, blend in the magnetometer-aided yaw from the orientation
             # quaternion so that slow heading drift is suppressed.
-            if self.alignment_locked:
+            if self.alignment_locked and not self.yaw_calibrator.locked:
                 # Calibrated path: vehicle-frame gyro Z drives heading
                 yaw_rate_deg = -math.degrees(float(gyro_vehicle[2]))
                 self.heading_deg = _wrap_heading(self.heading_deg + yaw_rate_deg * dt)
@@ -781,9 +848,7 @@ class NavigationEngine:
                 # Uncalibrated path: use the auto-detected yaw axis with LPF gyro.
                 # Buffer all three axes so GNSS can calibrate which axis is yaw.
                 gyro_filt = np.asarray(processed.filtered_gyro_phone, dtype=float)
-                for axis in range(3):
-                    self._gyro_yaw_buffer_axes[axis].append(float(gyro_filt[axis]))
-                self._gyro_yaw_buffer_dt.append(dt)
+                self.yaw_calibrator.add_imu(gyro_filt, dt)
 
                 # Integrate heading using the calibrated yaw axis
                 yaw_rate = self._gyro_yaw_sign * float(gyro_filt[self._gyro_yaw_axis])
@@ -794,6 +859,7 @@ class NavigationEngine:
                 # (relative, not absolute) to correct gyro drift.
                 if (
                     self.gnss_state == GNSSState.INS_DEAD_RECKONING
+                    and not self.yaw_calibrator.locked
                     and self.orientation.initialized
                     and processed.raw_mag is not None
                     and np.linalg.norm(processed.raw_mag) > 1.0
@@ -954,6 +1020,10 @@ class NavigationEngine:
             "mount_disturbance_status": self.mount_disturbance_status,
             "heading_deg": self.heading_deg,
             "yaw_deg": yaw_deg,
+            "yaw_axis": self._gyro_yaw_axis,
+            "yaw_sign": self._gyro_yaw_sign,
+            "yaw_calibration_confidence": float(self.yaw_calibrator.confidence),
+            "yaw_calibration_locked": bool(self.yaw_calibrator.locked),
             "pitch_deg": self.pitch_deg,
             "roll_deg": self.roll_deg,
             "gnss_state": self.gnss_state.value,

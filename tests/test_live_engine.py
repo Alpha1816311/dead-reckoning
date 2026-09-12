@@ -2,7 +2,7 @@ import math
 
 import numpy as np
 
-from navigation_engine import GNSSState, NavigationEngine
+from navigation_engine import GNSSState, GyroYawCalibrator, NavigationEngine
 from sensor_processing import RobustIMUPreprocessor, TimestampNormalizer
 
 
@@ -331,6 +331,30 @@ def test_reacquisition_produces_no_catastrophic_position_jump():
     assert fused_east >= ins_position[0] or fused_east > 0, (
         "Fused should move toward GNSS"
     )
+
+
+def test_yaw_calibrator_uses_gnss_windows_and_locks_best_signed_axis():
+    calibrator = GyroYawCalibrator(min_distance_m=3.0, min_speed_mps=2.0)
+    assert not calibrator.observe_gnss(np.array([0.0, 0.0]), 6.0)
+
+    position = np.zeros(2)
+    for heading_deg in (0.0, 45.0, 90.0, 135.0):
+        # The physical vehicle yaw is phone gyro Y with the opposite sign.
+        for _ in range(30):
+            calibrator.add_imu(np.array([0.01, -math.radians(15.0), 0.005]), 0.1)
+        position += 5.0 * np.array([
+            math.sin(math.radians(heading_deg)),
+            math.cos(math.radians(heading_deg)),
+        ])
+        calibrator.observe_gnss(position, 6.0)
+
+    assert calibrator.axis == 1
+    assert calibrator.sign == -1.0
+    assert calibrator.locked
+
+    # Duplicate/short GNSS movement is rejected and cannot change calibration.
+    assert not calibrator.observe_gnss(position + np.array([0.5, 0.0]), 6.0)
+    assert calibrator.axis == 1
 
 
 def test_gnss_aided_state_with_good_accuracy():
