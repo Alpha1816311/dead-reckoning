@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IDR MVP — Live Navigation Dashboard</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, "Segoe UI", system-ui, sans-serif; background: #0f131d; color: #dee2f0; min-height: 100vh; }
+header { background: #090e17; border-bottom: 1px solid #252a34; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+header h1 { font-size: 15px; font-weight: 600; letter-spacing: .05em; }
+.header-status { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.conn-dot { width: 9px; height: 9px; border-radius: 50%; background: #86948a; display: inline-block; margin-right: 4px; }
+.conn-dot.connected { background: #4edea3; animation: pulse 1.4s ease-in-out infinite; }
+.conn-dot.blackout  { background: #ffb95f; animation: pulse .8s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+.hdr-badge { font-size: 10px; font-weight: 700; letter-spacing: .08em; padding: 3px 10px; border-radius: 12px; background: #1b2029; display: flex; align-items: center; gap: 5px; }
+
+.layout { display: grid; grid-template-columns: 320px 1fr; height: calc(100vh - 49px); overflow: hidden; }
+.sidebar { background: #090e17; border-right: 1px solid #252a34; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.map-area { position: relative; }
+#map { width: 100%; height: 100%; }
+
+.card { background: #1b2029; border: 1px solid #252a34; border-radius: 9px; padding: 12px; }
+.card h3 { font-size: 10px; font-weight: 700; letter-spacing: .08em; color: #86948a; text-transform: uppercase; margin-bottom: 9px; }
+
+/* Mode pill */
+.mode-pill { display: inline-flex; align-items: center; gap: 5px; padding: 4px 11px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: .07em; }
+.mode-GNSS_AIDED,.mode-GNSS_INS_FUSED { background: rgba(78,222,163,.15); color: #4edea3; }
+.mode-DEAD_RECKONING { background: rgba(255,185,95,.2); color: #ffb95f; }
+.mode-REACQUISITION  { background: rgba(76,215,246,.15); color: #4cd7f6; }
+.mode-GNSS_DEGRADED  { background: rgba(255,180,171,.15); color: #ffb4ab; }
+.mode-WAITING_FOR_FIX,.mode-default { background: rgba(134,148,138,.12); color: #86948a; }
+
+.metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.metric { background: #0f131d; border-radius: 7px; padding: 8px; }
+.metric .label { font-size: 9px; color: #86948a; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 3px; }
+.metric .value { font-family: 'Consolas', 'JetBrains Mono', monospace; font-size: 18px; font-weight: 600; }
+.v-green { color: #4edea3; } .v-yellow { color: #ffb95f; } .v-cyan { color: #4cd7f6; } .v-red { color: #ffb4ab; } .v-muted { color: #86948a; }
+
+/* Connection card */
+.conn-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; font-size: 12px; }
+.conn-key { color: #86948a; font-size: 11px; }
+.conn-val { font-family: monospace; font-size: 11px; }
+
+/* Controls */
+button { font-size: 11px; font-weight: 600; letter-spacing: .06em; border-radius: 7px; padding: 9px 14px; border: none; cursor: pointer; transition: opacity .15s; width: 100%; margin-bottom: 6px; }
+button:disabled { opacity: .35; cursor: not-allowed; }
+.btn-green  { background: #4edea3; color: #001f12; }
+.btn-red    { background: #ffb4ab; color: #690005; }
+.btn-yellow { background: #ffb95f; color: #2a1a00; }
+.btn-blue   { background: #4cd7f6; color: #003640; }
+.btn-grey   { background: #252a34; color: #dee2f0; }
+button:not(:disabled):hover { opacity: .85; }
+
+/* Timeline */
+#timeline { max-height: 130px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; }
+.tl-row { display: flex; gap: 6px; align-items: center; font-size: 10px; padding: 2px 5px; background: #0f131d; border-radius: 4px; }
+.tl-time { color: #86948a; min-width: 46px; font-family: monospace; }
+.tl-arrow { color: #4cd7f6; }
+
+/* Error chart */
+#err-canvas { width: 100%; height: 80px; display: block; }
+
+/* Log */
+#log { font-family: monospace; font-size: 10px; color: #57606a; max-height: 70px; overflow-y: auto; line-height: 1.5; }
+
+/* Map overlays */
+.map-badge { position: absolute; top: 10px; left: 10px; z-index: 1000; background: rgba(9,14,23,.9); border: 1px solid #252a34; border-radius: 8px; padding: 6px 12px; font-size: 11px; pointer-events: none; display: flex; gap: 14px; }
+.map-legend { position: absolute; bottom: 10px; left: 10px; z-index: 1000; background: rgba(9,14,23,.88); border: 1px solid #252a34; border-radius: 8px; padding: 8px 12px; pointer-events: none; }
+.legend-row { display: flex; align-items: center; gap: 6px; font-size: 10px; margin: 2px 0; }
+.ln { width: 16px; height: 3px; border-radius: 2px; display: inline-block; }
+
+/* Replay controls */
+.input-row { margin-bottom: 6px; }
+.input-row label { font-size: 10px; color: #86948a; text-transform: uppercase; letter-spacing: .06em; display: block; margin-bottom: 2px; }
+input[type=number] { background: #0f131d; border: 1px solid #252a34; border-radius: 5px; color: #dee2f0; padding: 5px 9px; font-size: 12px; width: 100%; }
+
+/* Tabs */
+.tabs { display: flex; gap: 0; border-bottom: 1px solid #252a34; margin-bottom: 10px; }
+.tab { font-size: 10px; font-weight: 700; letter-spacing: .07em; padding: 6px 12px; cursor: pointer; color: #86948a; border-bottom: 2px solid transparent; background: none; border-radius: 0; width: auto; margin: 0; }
+.tab.active { color: #4edea3; border-bottom-color: #4edea3; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>&#x1F6F0; IDR MVP — Live Navigation Dashboard</h1>
+  <div class="header-status">
+    <div class="hdr-badge">
+      <span id="hdrConnDot" class="conn-dot"></span>
+      <span id="hdrClients">0 clients</span>
+    </div>
+    <div class="hdr-badge" id="hdrModePill" style="color:#86948a">
+      <span id="hdrMode">WAITING</span>
+    </div>
+    <div class="hdr-badge">
+      <span id="hdrImuRate">IMU — Hz</span>
+    </div>
+    <div class="hdr-badge">
+      <span id="hdrBlackout" style="color:#86948a">GNSS: OK</span>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- ── SIDEBAR ── -->
+  <div class="sidebar">
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('live')">LIVE</button>
+      <button class="tab" onclick="showTab('replay')">REPLAY</button>
+      <button class="tab" onclick="showTab('perf')">PERF</button>
+    </div>
+
+    <!-- ── LIVE TAB ── -->
+    <div id="tab-live" class="tab-panel active">
+
+      <!-- Navigation Mode -->
+      <div class="card">
+        <h3>Navigation Mode</h3>
+        <div id="modePill" class="mode-pill mode-WAITING_FOR_FIX" style="margin-bottom:7px">
+          <span style="width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block"></span>
+          <span id="modeLabel">WAITING FOR FIX</span>
+        </div>
+        <div style="font-size:11px;color:#86948a" id="modeDesc">Waiting for data...</div>
+      </div>
+
+      <!-- Connection Status -->
+      <div class="card">
+        <h3>Connection &amp; Rates</h3>
+        <div class="conn-row"><span class="conn-key">Phone clients</span><span class="conn-val v-cyan" id="cClients">—</span></div>
+        <div class="conn-row"><span class="conn-key">IMU rate</span><span class="conn-val v-green" id="cImuRate">—</span></div>
+        <div class="conn-row"><span class="conn-key">GNSS rate</span><span class="conn-val v-green" id="cGnssRate">—</span></div>
+        <div class="conn-row"><span class="conn-key">Total IMU</span><span class="conn-val v-muted" id="cTotalImu">—</span></div>
+        <div class="conn-row"><span class="conn-key">Total GNSS</span><span class="conn-val v-muted" id="cTotalGnss">—</span></div>
+        <div class="conn-row"><span class="conn-key">GNSS suppressed</span><span class="conn-val v-yellow" id="cSuppressed">—</span></div>
+        <div class="conn-row"><span class="conn-key">Errors</span><span class="conn-val v-red" id="cErrors">—</span></div>
+      </div>
+
+      <!-- Navigation Metrics -->
+      <div class="card">
+        <h3>Navigation</h3>
+        <div class="metrics">
+          <div class="metric"><div class="label">Speed</div><div class="value v-cyan" id="mSpeed">—</div><div style="font-size:9px;color:#86948a">km/h</div></div>
+          <div class="metric"><div class="label">Heading</div><div class="value v-green" id="mHeading">—</div><div style="font-size:9px;color:#86948a">deg</div></div>
+          <div class="metric"><div class="label">Lat</div><div class="value v-muted" id="mLat" style="font-size:11px">—</div></div>
+          <div class="metric"><div class="label">Lon</div><div class="value v-muted" id="mLon" style="font-size:11px">—</div></div>
+          <div class="metric"><div class="label">Uncertainty</div><div class="value v-yellow" id="mUncert">—</div><div style="font-size:9px;color:#86948a">m</div></div>
+          <div class="metric"><div class="label">Alignment</div><div class="value v-green" id="mAlign">—</div></div>
+        </div>
+      </div>
+
+      <!-- GNSS Blackout Controls -->
+      <div class="card">
+        <h3>GNSS Blackout Simulation</h3>
+        <div style="font-size:11px;color:#86948a;margin-bottom:8px">Suppresses GNSS from the engine — IMU continues, DR activates.</div>
+        <button class="btn-yellow" id="btnBlackoutStart" onclick="startBlackout()">&#x26A1; Start GNSS Blackout</button>
+        <button class="btn-green" id="btnBlackoutStop" onclick="stopBlackout()" disabled>&#x2714; Restore GNSS</button>
+        <div style="font-size:11px;color:#86948a;margin-top:6px" id="blackoutStatus">Status: GNSS ACTIVE</div>
+      </div>
+
+      <!-- Mode Transitions -->
+      <div class="card">
+        <h3>Mode Transitions</h3>
+        <div id="timeline"><div style="font-size:10px;color:#86948a">No transitions yet</div></div>
+      </div>
+
+    </div><!-- end tab-live -->
+
+    <!-- ── REPLAY TAB ── -->
+    <div id="tab-replay" class="tab-panel">
+
+      <div class="card">
+        <h3>Dataset Replay</h3>
+        <div class="input-row"><label>Blackout Start (s)</label><input type="number" id="cfgStart" value="120"></div>
+        <div class="input-row"><label>Blackout Duration (s)</label><input type="number" id="cfgDur" value="30"></div>
+        <div class="input-row"><label>Speedup Factor</label><input type="number" id="cfgSpeedup" value="8"></div>
+        <div class="input-row"><label>Max Rows (blank=all)</label><input type="number" id="cfgMaxRows" value=""></div>
+        <button class="btn-blue" id="btnReplayStart" onclick="startReplay()">&#9654; Start Replay</button>
+        <button class="btn-grey" id="btnReplayStop" onclick="stopReplay()" disabled>&#9632; Stop</button>
+        <div id="replayStatus" style="font-size:10px;color:#86948a;margin-top:6px">Press Start Replay</div>
+      </div>
+
+      <!-- Error Chart -->
+      <div class="card">
+        <h3>Position Error vs Time</h3>
+        <canvas id="err-canvas"></canvas>
+      </div>
+
+    </div><!-- end tab-replay -->
+
+    <!-- ── PERF TAB ── -->
+    <div id="tab-perf" class="tab-panel">
+      <div class="card">
+        <h3>Live Performance</h3>
+        <div class="conn-row"><span class="conn-key">IMU latency (avg)</span><span class="conn-val v-cyan" id="pImuLat">—</span></div>
+        <div class="conn-row"><span class="conn-key">GNSS latency (avg)</span><span class="conn-val v-cyan" id="pGnssLat">—</span></div>
+        <div class="conn-row"><span class="conn-key">Update rate</span><span class="conn-val v-green" id="pRate">—</span></div>
+        <div class="conn-row"><span class="conn-key">Session log</span><span class="conn-val v-muted" id="pSessionLog">—</span></div>
+        <div class="conn-row"><span class="conn-key">Dropped events</span><span class="conn-val v-yellow" id="pDropped">—</span></div>
+        <button class="btn-grey" onclick="loadPerf()" style="width:auto;padding:5px 12px;margin-top:8px;font-size:10px">Refresh</button>
+      </div>
+      <div class="card">
+        <h3>Status Log</h3>
+        <div id="log">Ready.</div>
+      </div>
+    </div><!-- end tab-perf -->
+
+  </div><!-- end sidebar -->
+
+  <!-- ── MAP ── -->
+  <div class="map-area">
+    <div id="map"></div>
+    <div class="map-badge">
+      <span id="mapMode">Mode: —</span>
+      <span id="mapTime">T: —</span>
+      <span id="mapGnss" style="color:#4edea3">GNSS: —</span>
+      <span id="mapBlackout" style="color:#ffb95f;display:none">BLACKOUT ACTIVE</span>
+    </div>
+    <div class="map-legend">
+      <div class="legend-row"><span class="ln" style="background:#4edea3"></span>GNSS Reference</div>
+      <div class="legend-row"><span class="ln" style="background:#4cd7f6"></span>Engine Estimate</div>
+      <div class="legend-row"><span class="ln" style="background:#ffb95f;opacity:.6"></span>Blackout window</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ── Tabs ─────────────────────────────────────────────────────────────────────
+function showTab(id) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ── Map ──────────────────────────────────────────────────────────────────────
+const map = L.map('map', { zoomControl: true, attributionControl: false });
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+map.setView([0, 0], 2);
+
+const refLine  = L.polyline([], { color: '#4edea3', weight: 2, opacity: .65 }).addTo(map);
+const estLine  = L.polyline([], { color: '#4cd7f6', weight: 3, opacity: .9 }).addTo(map);
+const liveTrack = L.polyline([], { color: '#7c5cd8', weight: 3, opacity: .85 }).addTo(map);
+
+const vehicleIcon = L.divIcon({
+  className: '',
+  html: '<div id="vehicleMarkerEl" style="width:12px;height:12px;border-radius:50%;background:#4cd7f6;border:3px solid #003640;box-shadow:0 0 0 4px rgba(76,215,246,.25);"></div>',
+  iconSize: [12, 12], iconAnchor: [6, 6]
+});
+const vehicleMarker = L.marker([0, 0], { icon: vehicleIcon }).addTo(map);
+let mapInit = false;
+let lastLat = null, lastLon = null;
+
+// ── Mode display ─────────────────────────────────────────────────────────────
+const MODE_MAP = {
+  'GNSS_AIDED':      { label: 'GNSS AIDED',      desc: 'GNSS fix active.',               cls: 'mode-GNSS_AIDED' },
+  'GNSS_INS_FUSED':  { label: 'GNSS + INS FUSED', desc: 'GNSS and IMU fusion active.',    cls: 'mode-GNSS_INS_FUSED' },
+  'DEAD_RECKONING':  { label: 'DEAD RECKONING',   desc: 'GNSS lost — INS navigation.',    cls: 'mode-DEAD_RECKONING' },
+  'REACQUISITION':   { label: 'GNSS RECOVERY',    desc: 'GNSS returning — staged fusion.', cls: 'mode-REACQUISITION' },
+  'GNSS_DEGRADED':   { label: 'GNSS DEGRADED',    desc: 'Low accuracy GNSS.',             cls: 'mode-GNSS_DEGRADED' },
+  'WAITING_FOR_FIX': { label: 'WAITING',          desc: 'Awaiting first GNSS fix.',       cls: 'mode-WAITING_FOR_FIX' },
+};
+let lastMode = null, transitions = [];
+let lastNavTimestamp = 0;
+
+function updateMode(raw) {
+  const info = MODE_MAP[raw] || { label: raw || '—', desc: '', cls: 'mode-default' };
+  document.getElementById('modeLabel').textContent = info.label;
+  document.getElementById('modeDesc').textContent = info.desc;
+  const pill = document.getElementById('modePill');
+  pill.className = 'mode-pill ' + info.cls;
+  document.getElementById('hdrMode').textContent = info.label;
+  document.getElementById('hdrModePill').style.color = pill.style.color;
+
+  if (raw !== lastMode) {
+    transitions.push({ t: lastNavTimestamp, from: lastMode, to: raw });
+    renderTimeline();
+    lastMode = raw;
+  }
+}
+
+function renderTimeline() {
+  const el = document.getElementById('timeline');
+  if (!transitions.length) return;
+  el.innerHTML = transitions.slice(-12).reverse().map(r =>
+    `<div class="tl-row"><span class="tl-time">${r.t.toFixed(1)}s</span>
+     <span style="color:#86948a;font-size:9px">${r.from || 'START'}</span>
+     <span class="tl-arrow">→</span>
+     <span style="color:#4cd7f6;font-size:10px;font-weight:700">${r.to}</span></div>`
+  ).join('');
+}
+
+// ── Telemetry polling (200ms) ─────────────────────────────────────────────────
+let blackoutActive = false;
+
+async function pollTelemetry() {
+  try {
+    const r = await fetch('/api/live_telemetry');
+    if (!r.ok) return;
+    const d = await r.json();
+    const tel = d.telemetry;
+    const nav = d.navigation;
+
+    // Header
+    const clients = tel.ws_clients_connected || 0;
+    document.getElementById('hdrClients').textContent = clients + ' client' + (clients === 1 ? '' : 's');
+    const connDot = document.getElementById('hdrConnDot');
+    connDot.className = 'conn-dot' + (clients > 0 ? ' connected' : '');
+
+    // Connection card
+    document.getElementById('cClients').textContent = clients;
+    document.getElementById('cImuRate').textContent = tel.imu_rate_hz + ' Hz';
+    document.getElementById('cGnssRate').textContent = tel.gnss_rate_hz + ' Hz';
+    document.getElementById('cTotalImu').textContent = tel.total_imu_events;
+    document.getElementById('cTotalGnss').textContent = tel.total_gnss_events;
+    document.getElementById('cSuppressed').textContent = tel.total_gnss_suppressed;
+    document.getElementById('cErrors').textContent = tel.total_errors;
+    document.getElementById('hdrImuRate').textContent = 'IMU ' + tel.imu_rate_hz + ' Hz';
+
+    // Blackout state
+    blackoutActive = tel.gnss_blackout_active;
+    const bbEl = document.getElementById('hdrBlackout');
+    const mapBbEl = document.getElementById('mapBlackout');
+    if (blackoutActive) {
+      bbEl.style.color = '#ffb95f';
+      bbEl.textContent = 'GNSS: BLACKOUT ' + (tel.gnss_blackout_duration_s || 0) + 's';
+      mapBbEl.style.display = 'inline';
+      connDot.className = 'conn-dot blackout';
+    } else {
+      bbEl.style.color = '#4edea3';
+      bbEl.textContent = 'GNSS: OK';
+      mapBbEl.style.display = 'none';
+    }
+    document.getElementById('blackoutStatus').textContent =
+      'Status: ' + (blackoutActive ? 'BLACKOUT ACTIVE (' + (tel.gnss_blackout_duration_s || 0) + 's)' : 'GNSS ACTIVE');
+    document.getElementById('btnBlackoutStart').disabled = blackoutActive;
+    document.getElementById('btnBlackoutStop').disabled = !blackoutActive;
+
+    // Session log
+    document.getElementById('pSessionLog').textContent = tel.session_log_active ? tel.session_log_path : 'OFF';
+
+    // Navigation state
+    const mode = nav.mode || nav.gnss_state;
+    updateMode(mode);
+    lastNavTimestamp = nav.timestamp || lastNavTimestamp;
+    document.getElementById('mapMode').textContent = 'Mode: ' + (mode || '—');
+
+    const spd = nav.speed_mps != null ? (nav.speed_mps * 3.6).toFixed(1) : '—';
+    document.getElementById('mSpeed').textContent = spd;
+    document.getElementById('hdrImuRate').textContent = 'IMU ' + tel.imu_rate_hz + ' Hz';
+
+    const hdg = nav.heading_deg != null ? nav.heading_deg.toFixed(1) : '—';
+    document.getElementById('mHeading').textContent = hdg;
+    document.getElementById('mUncert').textContent = nav.uncertainty_m != null ? nav.uncertainty_m.toFixed(1) : '—';
+    document.getElementById('mAlign').textContent = nav.alignment_confidence != null ? nav.alignment_confidence.toFixed(2) : '—';
+
+    const pos = nav.position;
+    if (pos && pos.latitude != null) {
+      const lat = pos.latitude, lon = pos.longitude;
+      document.getElementById('mLat').textContent = lat.toFixed(6);
+      document.getElementById('mLon').textContent = lon.toFixed(6);
+      document.getElementById('mapTime').textContent = 'T: ' + (nav.timestamp || 0).toFixed(1) + 's';
+      document.getElementById('mapGnss').textContent = 'GNSS: ' + (nav.gnss_status || '—');
+      document.getElementById('mapGnss').style.color = (nav.gnss_status === 'CONNECTED') ? '#4edea3' : '#ffb4ab';
+
+      // Update vehicle marker on map
+      if (!mapInit || Math.abs(lat - (lastLat || 0)) > 0.000001 || Math.abs(lon - (lastLon || 0)) > 0.000001) {
+        const ll = [lat, lon];
+        if (!mapInit) { map.setView(ll, 16); mapInit = true; }
+        vehicleMarker.setLatLng(ll);
+        liveTrack.addLatLng(ll);
+        lastLat = lat; lastLon = lon;
+      }
+    }
+
+  } catch (_) {}
+}
+
+// ── Blackout controls ─────────────────────────────────────────────────────────
+async function startBlackout() {
+  try {
+    const r = await fetch('/api/blackout/start', { method: 'POST', headers: {'Content-Type':'application/json'}, body: '{}' });
+    const d = await r.json();
+    appendLog('Blackout started: ' + d.message);
+  } catch(e) { appendLog('ERROR: ' + e.message); }
+}
+
+async function stopBlackout() {
+  try {
+    const r = await fetch('/api/blackout/stop', { method: 'POST' });
+    const d = await r.json();
+    appendLog('Blackout stopped: ' + d.message);
+  } catch(e) { appendLog('ERROR: ' + e.message); }
+}
+
+// ── Log ───────────────────────────────────────────────────────────────────────
+function appendLog(msg) {
+  const el = document.getElementById('log');
+  el.textContent = new Date().toLocaleTimeString() + '  ' + msg + '\n' + el.textContent;
+}
+
+// ── Performance tab ───────────────────────────────────────────────────────────
+async function loadPerf() {
+  try {
+    const r = await fetch('Data/mvp_performance.json');
+    if (!r.ok) { appendLog('No mvp_performance.json yet'); return; }
+    const p = await r.json();
+    document.getElementById('pImuLat').textContent = (p.avg_imu_latency_ms || '—') + ' ms';
+    document.getElementById('pGnssLat').textContent = (p.avg_gnss_latency_ms || '—') + ' ms';
+    document.getElementById('pRate').textContent = (p.avg_update_rate_hz || '—') + ' Hz';
+    document.getElementById('pDropped').textContent = (p.dropped_events || 0);
+    appendLog('Performance loaded from mvp_performance.json');
+  } catch(e) { appendLog('perf load error: ' + e.message); }
+}
+
+// ── Replay WebSocket ──────────────────────────────────────────────────────────
+let replayWs = null;
+const errData = [];
+
+function startReplay() {
+  stopReplay();
+  refLine.setLatLngs([]); estLine.setLatLngs([]); errData.length = [];
+  transitions.length = 0; lastMode = null;
+  document.getElementById('timeline').innerHTML = '<div style="font-size:10px;color:#86948a">No transitions yet</div>';
+
+  const cfg = {
+    dataset: 'Data/S-S1.csv',
+    outage_start: parseFloat(document.getElementById('cfgStart').value) || 120,
+    outage_duration: parseFloat(document.getElementById('cfgDur').value) || 30,
+    speedup: parseFloat(document.getElementById('cfgSpeedup').value) || 8,
+    max_rows: parseInt(document.getElementById('cfgMaxRows').value) || null,
+    gnss_speed_unit: 'mps',
+  };
+
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  replayWs = new WebSocket(`${proto}://${location.host}/ws/replay`);
+  replayWs.onopen = () => {
+    replayWs.send(JSON.stringify(cfg));
+    document.getElementById('replayStatus').textContent = 'Replaying...';
+    document.getElementById('btnReplayStart').disabled = true;
+    document.getElementById('btnReplayStop').disabled = false;
+    showTab('replay');
+    appendLog('Replay started');
+  };
+  replayWs.onmessage = (evt) => {
+    const d = JSON.parse(evt.data);
+    if (d.event === 'done') {
+      const s = d.summary || {};
+      document.getElementById('replayStatus').textContent =
+        `Done! Drift: ${(s.outage_drift_pct||0).toFixed(2)}%  Error: ${(s.outage_final_error_m||0).toFixed(1)}m`;
+      document.getElementById('btnReplayStart').disabled = false;
+      document.getElementById('btnReplayStop').disabled = true;
+      appendLog('Replay done: drift=' + (s.outage_drift_pct||0).toFixed(2) + '%');
+      return;
+    }
+    if (d.event === 'error') { appendLog('Replay error: ' + d.message); return; }
+    handleReplayFrame(d);
+  };
+  replayWs.onerror = () => { appendLog('WS error — is server running?'); resetReplayButtons(); };
+  replayWs.onclose = () => { resetReplayButtons(); };
+}
+
+function stopReplay() {
+  if (replayWs) { replayWs.close(); replayWs = null; }
+  resetReplayButtons();
+}
+
+function resetReplayButtons() {
+  document.getElementById('btnReplayStart').disabled = false;
+  document.getElementById('btnReplayStop').disabled = true;
+}
+
+function handleReplayFrame(d) {
+  lastNavTimestamp = d.timestamp || 0;
+  updateMode(d.mode || d.gnss_state);
+
+  if (d.position && d.position.latitude) {
+    const ll = [d.position.latitude, d.position.longitude];
+    if (!mapInit) { map.setView(ll, 16); mapInit = true; }
+    vehicleMarker.setLatLng(ll);
+    estLine.addLatLng(ll);
+    if (d.gnss_available) refLine.addLatLng(ll);
+  }
+
+  if (d.position_error_m != null) {
+    errData.push({ t: lastNavTimestamp, e: d.position_error_m, outage: !d.gnss_available });
+    if (errData.length > 800) errData.shift();
+    drawErrorChart();
+  }
+
+  const spd = d.speed_mps != null ? (d.speed_mps * 3.6).toFixed(1) : '—';
+  document.getElementById('mSpeed').textContent = spd;
+  document.getElementById('mHeading').textContent = d.heading_deg != null ? d.heading_deg.toFixed(1) : '—';
+  document.getElementById('mUncert').textContent = d.uncertainty_m != null ? d.uncertainty_m.toFixed(1) : '—';
+  document.getElementById('mapMode').textContent = 'Mode: ' + (d.mode || '—');
+  document.getElementById('mapTime').textContent = 'T: ' + lastNavTimestamp.toFixed(1) + 's';
+}
+
+// ── Error chart ───────────────────────────────────────────────────────────────
+function drawErrorChart() {
+  const canvas = document.getElementById('err-canvas');
+  const w = canvas.offsetWidth, h = canvas.offsetHeight || 80;
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#0f131d'; ctx.fillRect(0, 0, w, h);
+  if (errData.length < 2) return;
+
+  const maxE = Math.max(...errData.map(d => d.e), 1);
+  const n = errData.length;
+
+  // Outage shading
+  let inOu = false, ouStart = 0;
+  ctx.fillStyle = 'rgba(255,185,95,.12)';
+  for (let i = 0; i < n; i++) {
+    if (!inOu && errData[i].outage) { inOu = true; ouStart = i/n*w; }
+    if (inOu && !errData[i].outage) { ctx.fillRect(ouStart, 0, i/n*w - ouStart, h); inOu = false; }
+  }
+  if (inOu) ctx.fillRect(ouStart, 0, w - ouStart, h);
+
+  ctx.strokeStyle = '#4cd7f6'; ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    const x = i/n*w, y = h - (errData[i].e / maxE) * (h-5) - 2;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+}
+
+// ── Start polling ─────────────────────────────────────────────────────────────
+setInterval(pollTelemetry, 250);
+pollTelemetry();
+loadPerf();
+
+appendLog('Dashboard loaded. Connect Android phone to ws://<server>:8000/ws/sensor');
+</script>
+</body>
+</html>

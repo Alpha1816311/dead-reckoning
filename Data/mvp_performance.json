@@ -1,0 +1,39 @@
+{
+  "events_processed": 5700,
+  "dropped_events": 0,
+  "wall_elapsed_s": 7.434,
+  "avg_update_rate_hz": 403.61,
+  "avg_imu_latency_ms": 1.333,
+  "max_imu_latency_ms": 8.173,
+  "p95_imu_latency_ms": 2.793,
+  "avg_gnss_latency_ms": 0.284,
+  "max_gnss_latency_ms": 4.735,
+  "avg_event_latency_ms": 0.836,
+  "mode_transitions": [
+    {
+      "sim_time_s": 0.0,
+      "from": null,
+      "to": "GNSS_AIDED"
+    },
+    {
+      "sim_time_s": 0.1,
+      "from": "GNSS_AIDED",
+      "to": "GNSS_INS_FUSED"
+    },
+    {
+      "sim_time_s": 123.0,
+      "from": "GNSS_INS_FUSED",
+      "to": "DEAD_RECKONING"
+    },
+    {
+      "sim_time_s": 150.1,
+      "from": "DEAD_RECKONING",
+      "to": "REACQUISITION"
+    },
+    {
+      "sim_time_s": 150.5,
+      "from": "REACQUISITION",
+      "to": "GNSS_INS_FUSED"
+    }
+  ]
+}
