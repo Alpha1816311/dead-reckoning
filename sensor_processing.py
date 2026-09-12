@@ -86,6 +86,7 @@ class ProcessedIMU:
     gravity_phone: np.ndarray
     linear_accel_phone: np.ndarray
     filtered_linear_accel_phone: np.ndarray
+    filtered_gyro_phone: np.ndarray
     vibration_rms: float
     is_stationary: bool
     motion_state: MotionState
@@ -114,6 +115,7 @@ class RobustIMUPreprocessor:
         self.accel_bias: np.ndarray = np.zeros(3, dtype=float)
         self.filtered_linear: np.ndarray | None = None
         self.previous_filtered: np.ndarray | None = None
+        self.filtered_gyro: np.ndarray | None = None
         self.filter_mode = "balanced"
         self.linear_magnitudes: deque[float] = deque(maxlen=20)
         self.gyro_magnitudes: deque[float] = deque(maxlen=20)
@@ -196,8 +198,16 @@ class RobustIMUPreprocessor:
         if clipped_norm > self.shock_limit_mps2:
             clipped *= self.shock_limit_mps2 / clipped_norm
 
-        # 5. Low-Pass Filter Linear Acceleration
+        # 5. Low-Pass Filter Linear Acceleration and Gyroscope
         signal_alpha = 1.0 - math.exp(-2.0 * math.pi * self.signal_cutoff_hz * dt)
+        # Gyroscope low-pass: 5 Hz cutoff — removes high-freq vibration noise
+        # while preserving vehicle turning rates (typically < 2 Hz)
+        gyro_alpha = 1.0 - math.exp(-2.0 * math.pi * 5.0 * dt)
+        if self.filtered_gyro is None:
+            self.filtered_gyro = gyro.copy()
+        else:
+            self.filtered_gyro = self.filtered_gyro + gyro_alpha * (gyro - self.filtered_gyro)
+
         if self.filtered_linear is None:
             # Zero out negligible initial residual floating-point noise
             initial_filtered = clipped.copy()
@@ -257,6 +267,7 @@ class RobustIMUPreprocessor:
             gravity_phone=self.gravity_phone.copy(),
             linear_accel_phone=linear,
             filtered_linear_accel_phone=self.filtered_linear.copy(),
+            filtered_gyro_phone=self.filtered_gyro.copy(),
             vibration_rms=vibration_rms,
             is_stationary=is_stationary,
             motion_state=motion_state,

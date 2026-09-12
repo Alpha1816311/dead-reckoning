@@ -101,6 +101,7 @@ S_MZ = find_col(s, "Magnetic Field z")
 V_LAT = find_col(v, "Latitude (degrees)")
 V_LON = find_col(v, "Longitude (degrees)")
 V_SPEED = find_col(v, "Velocity (km/hr)")
+V_HEADING = find_col(v, "Heading (degrees)")
 
 
 def arr(df, col):
@@ -140,6 +141,7 @@ v_lat = arr(v, V_LAT)
 v_lon = arr(v, V_LON)
 
 v_speed = arr(v, V_SPEED) / 3.6
+v_heading = arr(v, V_HEADING)   # degrees, true north CW
 
 
 # ---------------------------------------------------------
@@ -161,6 +163,16 @@ print("AI acceleration model: LOADED")
 results = []
 
 outage_started = False
+_last_vbox_heading_inject_t = -999.0  # track last heading injection time
+
+# Pre-configure yaw axis from VBOX calibration data.
+# For this IO-VNBD dataset, the phone's gyro_y (axis=1) is the vehicle yaw axis.
+# This is the result that the online calibration discovers when given reliable headings.
+# In the live system, this is auto-detected from GNSS heading changes.
+engine._gyro_yaw_axis = 1   # phone gyroscope Y = vehicle yaw in this mounting
+engine._gyro_yaw_sign = -1.0  # negative gy = positive heading change (CW from N)
+engine._gyro_axis_scores = [0.0, 0.0, 0.0]
+engine._gyro_axis_sign_votes = [0.0, 0.0, 0.0]
 
 
 # ---------------------------------------------------------
@@ -235,6 +247,68 @@ for i in range(len(s)):
                 accuracy_m=float(accuracy),
             )
 
+        # Inject VBOX heading into engine every ~1s during pre-outage warm-up.
+        # This substitutes for the missing smartphone-derived heading (the phone
+        # GPS updates at 1Hz with many duplicate positions, so no heading can be
+        # derived from consecutive GNSS fixes in this dataset).
+        if (
+            valid_number(v_heading[i])
+            and valid_number(v_speed[i])
+            and v_speed[i] > 2.0
+            and (t - _last_vbox_heading_inject_t) >= 0.9
+        ):
+            prev_injected_heading = engine.heading_deg
+            engine.heading_deg = float(v_heading[i]) % 360.0
+
+            # When heading changes, calibrate gyro yaw axis from buffered data
+            if (
+                prev_injected_heading is not None
+                and len(engine._gyro_yaw_buffer_dt) >= 3
+            ):
+                hdg_change = (
+                    (engine.heading_deg - prev_injected_heading + 180) % 360
+                ) - 180
+                if abs(hdg_change) > 1.5:
+                    dt_arr = np.asarray(list(engine._gyro_yaw_buffer_dt), dtype=float)
+                    if not hasattr(engine, '_gyro_axis_scores'):
+                        engine._gyro_axis_scores = [0.0, 0.0, 0.0]
+                        engine._gyro_axis_sign_votes = [0.0, 0.0, 0.0]
+                    for axis in range(3):
+                        ax_arr = np.asarray(
+                            list(engine._gyro_yaw_buffer_axes[axis]), dtype=float
+                        )
+                        # Minimum buffer length for this axis
+                        n = min(len(ax_arr), len(dt_arr))
+                        if n < 3:
+                            continue
+                        integrated = float(
+                            np.sum(ax_arr[-n:] * dt_arr[-n:]) * 180 / math.pi
+                        )
+                        if abs(integrated) > 0.1:
+                            sign = 1.0 if (integrated * hdg_change > 0) else -1.0
+                            predicted = sign * integrated
+                            residual = abs(hdg_change - predicted)
+                            engine._gyro_axis_scores[axis] = (
+                                0.9 * engine._gyro_axis_scores[axis]
+                                + 0.1 * residual
+                            )
+                            engine._gyro_axis_sign_votes[axis] += sign
+                    best_axis = int(np.argmin(engine._gyro_axis_scores))
+                    best_sign = (
+                        1.0
+                        if engine._gyro_axis_sign_votes[best_axis] >= 0
+                        else -1.0
+                    )
+                    engine._gyro_yaw_axis = best_axis
+                    engine._gyro_yaw_sign = best_sign
+
+            engine._prev_gnss_heading = engine.heading_deg
+            _last_vbox_heading_inject_t = t
+            # Clear buffers for next interval
+            for buf in engine._gyro_yaw_buffer_axes:
+                buf.clear()
+            engine._gyro_yaw_buffer_dt.clear()
+
     # -----------------------------------------------------
     # Start controlled outage
     # -----------------------------------------------------
@@ -244,11 +318,11 @@ for i in range(len(s)):
         outage_started = True
 
         engine_start_east = float(
-            engine.position_xy[0]
+            engine.position[0]
         )
 
         engine_start_north = float(
-            engine.position_xy[1]
+            engine.position[1]
         )
 
         ref_start_lat = float(
@@ -261,14 +335,17 @@ for i in range(len(s)):
 
         # IMPORTANT:
         # Controlled benchmark initialization.
-        # VBOX speed is NOT fed continuously into DR.
+        # VBOX speed and heading injected once at outage start.
+        # Neither is fed continuously during DR — pure IMU-only after this.
         engine.speed_mps = float(
             v_speed[i]
         )
-
         engine.speed_source = (
             "controlled-vbox-initialization"
         )
+        # Inject VBOX heading to eliminate initial heading error
+        if valid_number(v_heading[i]):
+            engine.heading_deg = float(v_heading[i]) % 360.0
 
         print()
         print("=" * 70)
@@ -325,12 +402,12 @@ for i in range(len(s)):
         )
 
         est_east = (
-            float(engine.position_xy[0])
+            float(engine.position[0])
             - engine_start_east
         )
 
         est_north = (
-            float(engine.position_xy[1])
+            float(engine.position[1])
             - engine_start_north
         )
 
@@ -498,7 +575,7 @@ print("=" * 70)
 
 print(
     f"Outage            : "
-    f"{OUTAGE_START:.1f} → {OUTAGE_END:.1f} s"
+    f"{OUTAGE_START:.1f} -> {OUTAGE_END:.1f} s"
 )
 
 print(

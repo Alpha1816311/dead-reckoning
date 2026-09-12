@@ -187,6 +187,16 @@ class NavigationEngine:
         self._last_gnss_position = None
         self.fusion_method = "complementary_gnss_ins"
 
+        # Yaw axis auto-detection: track which phone gyro axis (0,1,2) best
+        # predicts GNSS-derived heading changes. Updated during GNSS-aided flight.
+        # Default to axis 2 (Z) for a phone lying flat.
+        self._gyro_yaw_axis: int = 2
+        self._gyro_yaw_sign: float = -1.0   # sign: negative = CW heading when axis positive
+        self._gyro_yaw_buffer_axes: list = [deque(maxlen=100), deque(maxlen=100), deque(maxlen=100)]
+        self._gyro_yaw_buffer_dt: deque = deque(maxlen=100)
+        self._prev_gnss_heading: float | None = None
+        self._last_mag_yaw: float | None = None
+
         self._load_map()
         self._load_model()
         self._refresh_constraint_status()
@@ -651,6 +661,52 @@ class NavigationEngine:
             self.gnss_accuracy_m = accuracy_m
             self.uncertainty_m = accuracy_m
 
+            # --- Yaw axis calibration: record GNSS heading change vs buffered gyro ---
+            if (
+                gnss_heading is not None
+                and self._prev_gnss_heading is not None
+                and len(self._gyro_yaw_buffer_dt) >= 5
+                and gnss_speed is not None and gnss_speed > 3.0
+            ):
+                gnss_hdg_change = ((gnss_heading - self._prev_gnss_heading + 180) % 360) - 180
+                if abs(gnss_hdg_change) > 2.0:  # only calibrate during real turns
+                    # Integrate each axis over the buffered IMU interval
+                    dt_arr = np.asarray(list(self._gyro_yaw_buffer_dt), dtype=float)
+                    for axis in range(3):
+                        ax_arr = np.asarray(list(self._gyro_yaw_buffer_axes[axis]), dtype=float)
+                        integrated = float(np.sum(ax_arr * dt_arr))
+                        # Find sign+scale: gnss_hdg_change = sign * integrated
+                        if abs(integrated) > 0.05:  # at least 3 deg equivalent
+                            sign = 1.0 if (integrated * gnss_hdg_change > 0) else -1.0
+                            # Score = |correlation|
+                            score = abs(gnss_hdg_change) / (abs(integrated) * 180 / math.pi + 0.1)
+                            # Update running best axis
+                            if not hasattr(self, '_gyro_axis_scores'):
+                                self._gyro_axis_scores = [0.0, 0.0, 0.0]
+                                self._gyro_axis_sign_votes = [0.0, 0.0, 0.0]
+                            # Exponential moving average of |residual|
+                            predicted = sign * integrated * 180 / math.pi
+                            residual = abs(gnss_hdg_change - predicted)
+                            self._gyro_axis_scores[axis] = 0.9 * self._gyro_axis_scores[axis] + 0.1 * residual
+                            self._gyro_axis_sign_votes[axis] += sign
+                    # Select axis with lowest residual (best prediction)
+                    if hasattr(self, '_gyro_axis_scores'):
+                        best_axis = int(np.argmin(self._gyro_axis_scores))
+                        best_sign = 1.0 if self._gyro_axis_sign_votes[best_axis] >= 0 else -1.0
+                        if self._gyro_yaw_axis != best_axis:
+                            logger.info(
+                                "Yaw axis updated: %d -> %d (sign %+.0f)",
+                                self._gyro_yaw_axis, best_axis, best_sign,
+                            )
+                        self._gyro_yaw_axis = best_axis
+                        self._gyro_yaw_sign = best_sign
+
+            self._prev_gnss_heading = gnss_heading if gnss_heading is not None else self._prev_gnss_heading
+            # Clear gyro buffers after using them for calibration
+            for buf in self._gyro_yaw_buffer_axes:
+                buf.clear()
+            self._gyro_yaw_buffer_dt.clear()
+
             self._apply_map_match()
             self._append_track()
             return self.state_snapshot()
@@ -708,9 +764,47 @@ class NavigationEngine:
 
             if self.heading_deg is None:
                 self.heading_deg = 0.0
-            # Vehicle +Z up: positive gyro_z is CCW (left). Heading is clockwise from north.
-            yaw_rate_deg = -math.degrees(float(gyro_vehicle[2]))
-            self.heading_deg = _wrap_heading(self.heading_deg + yaw_rate_deg * dt)
+
+            # --- Heading update ---
+            # When alignment is locked we use the calibrated vehicle-frame gyro Z.
+            # When alignment is still uncertain we use ALL three raw gyro axes by
+            # picking the one whose current reading has the largest |rate| (proxy
+            # for the actual vertical rotation) — this avoids the common failure
+            # where the vehicle yaw maps onto gyro_y (pitch) rather than gyro_z.
+            # Additionally, blend in the magnetometer-aided yaw from the orientation
+            # quaternion so that slow heading drift is suppressed.
+            if self.alignment_locked:
+                # Calibrated path: vehicle-frame gyro Z drives heading
+                yaw_rate_deg = -math.degrees(float(gyro_vehicle[2]))
+                self.heading_deg = _wrap_heading(self.heading_deg + yaw_rate_deg * dt)
+            else:
+                # Uncalibrated path: use the auto-detected yaw axis with LPF gyro.
+                # Buffer all three axes so GNSS can calibrate which axis is yaw.
+                gyro_filt = np.asarray(processed.filtered_gyro_phone, dtype=float)
+                for axis in range(3):
+                    self._gyro_yaw_buffer_axes[axis].append(float(gyro_filt[axis]))
+                self._gyro_yaw_buffer_dt.append(dt)
+
+                # Integrate heading using the calibrated yaw axis
+                yaw_rate = self._gyro_yaw_sign * float(gyro_filt[self._gyro_yaw_axis])
+                yaw_rate_deg = math.degrees(yaw_rate)
+                self.heading_deg = _wrap_heading(self.heading_deg + yaw_rate_deg * dt)
+
+                # During dead reckoning, blend magnetometer-derived heading CHANGE
+                # (relative, not absolute) to correct gyro drift.
+                if (
+                    self.gnss_state == GNSSState.INS_DEAD_RECKONING
+                    and self.orientation.initialized
+                    and processed.raw_mag is not None
+                    and np.linalg.norm(processed.raw_mag) > 1.0
+                ):
+                    _, _, mag_yaw = self.orientation.euler_pitch_roll_yaw_deg()
+                    if self._last_mag_yaw is None:
+                        self._last_mag_yaw = mag_yaw
+                    delta_mag_yaw = ((mag_yaw - self._last_mag_yaw + 180) % 360) - 180
+                    self._last_mag_yaw = mag_yaw
+                    if abs(delta_mag_yaw) < 20.0:  # reject large jumps
+                        self.heading_deg = _wrap_heading(self.heading_deg + 0.3 * delta_mag_yaw)
 
             quality_weight = {
                 MotionState.SHOCK: 0.0,
