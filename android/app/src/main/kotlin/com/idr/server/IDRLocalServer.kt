@@ -17,7 +17,8 @@ class IDRLocalServer(
     port: Int,
     private val assets: AssetManager,
     private val engine: IDRNavigationEngine,
-    private val recorder: SessionRecorder
+    private val recorder: SessionRecorder,
+    private val onExportRequest: (() -> Unit)? = null
 ) : NanoHTTPD(port) {
 
     // Track history for the map path (sent to UI as `state.track`)
@@ -152,6 +153,21 @@ class IDRLocalServer(
             }
 
             // ---------------------------------------------------------------
+            // SESSION EXPORT — triggers native Android share sheet via callback
+            // This is the HTTP fallback path; the primary path is Android.exportSession()
+            // ---------------------------------------------------------------
+            uri == "/session/export" && method == Method.POST -> {
+                if (recorder.recordCount == 0 && recorder.getSessionFile() == null) {
+                    newFixedLengthResponse(Response.Status.OK, "application/json",
+                        """{"ok":false,"error":"NO SESSION DATA AVAILABLE TO EXPORT"}""")
+                } else {
+                    onExportRequest?.invoke()
+                    newFixedLengthResponse(Response.Status.OK, "application/json",
+                        """{"ok":true,"records":${recorder.recordCount}}""")
+                }
+            }
+
+            // ---------------------------------------------------------------
             // MOTION MODE
             // ---------------------------------------------------------------
             uri == "/mode/vehicle" && method == Method.POST -> {
@@ -241,12 +257,20 @@ class IDRLocalServer(
         // Magnetometer
         val magStatus = if (state.hasMag) "ACTIVE" else "UNAVAILABLE"
 
+        // Speed: emit null when UNAVAILABLE so the UI can show "—" rather than a fake number.
+        // For STATIONARY always emit 0.  For GNSS/INERTIAL emit the real value.
+        val speedSourceLabel = state.speedSource.name  // "GNSS", "INERTIAL", "STATIONARY", "UNAVAILABLE"
+        val isUnavailable = state.speedSource == IDRNavigationEngine.SpeedSource.UNAVAILABLE
+        val speedKmhJson  = if (isUnavailable) "null" else String.format("%.1f", state.speedMps * 3.6)
+        val speedMpsJson  = if (isUnavailable) "null" else String.format("%.2f", state.speedMps)
+
         return """{
   "mode":"$modeLabel",
   "gnss_status":"$gnssStatus",
   "gnss_state":"${if (inBlackout) "SIMULATED_OUTAGE_LOST" else gnssStatus}",
-  "speed_kmh":${String.format("%.1f", state.speedMps * 3.6)},
-  "speed_mps":${String.format("%.2f", state.speedMps)},
+  "speed_kmh":$speedKmhJson,
+  "speed_mps":$speedMpsJson,
+  "speed_source":"$speedSourceLabel",
   "heading_deg":${String.format("%.1f", state.headingDeg)},
   "position":$posJson,
   "latitude":${if (hasPosition) state.latitude else "null"},

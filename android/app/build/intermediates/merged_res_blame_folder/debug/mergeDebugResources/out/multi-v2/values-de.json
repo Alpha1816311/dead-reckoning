@@ -4,7 +4,7 @@
             "outputFile": "com.idr.mobile.app-mergeDebugResources-9:/values-de/values-de.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\rksha\\.gradle\\caches\\transforms-4\\0bd1552c1ae23167e7694b19183f896b\\transformed\\core-1.13.1\\res\\values-de\\values-de.xml",
+                    "source": "C:\\Users\\rksha\\.gradle\\caches\\8.11.1\\transforms\\1b4084f2d9284397f0f3bb57a36ac0be\\transformed\\core-1.13.1\\res\\values-de\\values-de.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9",
                         "startColumns": "4,4,4,4,4,4,4,4",

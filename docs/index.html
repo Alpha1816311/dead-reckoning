@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IDR Fusion — Indoor Dead-Reckoning Navigation</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --border: #2a2d3e;
+      --text: #e8eaf0;
+      --muted: #8b90a7;
+      --accent: #4f9cf9;
+      --green: #34d399;
+      --yellow: #fbbf24;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+      font-size: 15px;
+      line-height: 1.65;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    header .logo {
+      width: 42px; height: 42px;
+      background: var(--accent);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 700; color: #fff;
+    }
+    header h1 { font-size: 20px; font-weight: 700; }
+    header p  { font-size: 13px; color: var(--muted); }
+
+    /* ── hero ── */
+    .hero {
+      max-width: 780px;
+      margin: 56px auto 0;
+      padding: 0 24px;
+      text-align: center;
+    }
+    .hero h2 {
+      font-size: clamp(26px, 5vw, 40px);
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 16px;
+    }
+    .hero h2 span { color: var(--accent); }
+    .hero p {
+      font-size: 16px;
+      color: var(--muted);
+      max-width: 560px;
+      margin: 0 auto 32px;
+    }
+
+    /* ── CTA button ── */
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      padding: 14px 32px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      transition: opacity .15s;
+      text-decoration: none;
+    }
+    .btn-primary:hover { opacity: .88; text-decoration: none; }
+    .btn-primary svg { width: 20px; height: 20px; fill: #fff; }
+
+    .apk-note {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 10px;
+    }
+
+    /* ── feature pills ── */
+    .pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin: 40px auto 0;
+      max-width: 680px;
+    }
+    .pill {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .pill b { color: var(--text); }
+
+    /* ── screenshots ── */
+    .screenshots {
+      max-width: 900px;
+      margin: 56px auto 0;
+      padding: 0 24px;
+    }
+    .screenshots h3 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .screen-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+    .screen-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .screen-mock {
+      background: #111827;
+      height: 180px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .screen-mock .icon { font-size: 40px; }
+    .screen-mock .label {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+    .screen-card p {
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .screen-card p b { color: var(--text); display: block; margin-bottom: 2px; }
+
+    /* ── how it works ── */
+    .how {
+      max-width: 780px;
+      margin: 56px auto 0;
+      padding: 0 24px;
+    }
+    .how h3 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .step {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 18px;
+    }
+    .step-num {
+      min-width: 28px;
+      height: 28px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; color: #fff;
+      flex-shrink: 0;
+    }
+    .step-body b { display: block; margin-bottom: 3px; font-size: 15px; }
+    .step-body p { font-size: 13px; color: var(--muted); }
+
+    /* ── install instructions ── */
+    .install {
+      max-width: 780px;
+      margin: 56px auto 0;
+      padding: 0 24px;
+    }
+    .install h3 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .install ol {
+      list-style: decimal;
+      padding-left: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .install li { font-size: 14px; }
+    .install li b { color: var(--text); }
+    .install li span { color: var(--muted); }
+    .code {
+      display: inline-block;
+      background: #1e2130;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 2px 8px;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 12px;
+      color: var(--green);
+    }
+
+    /* ── badge row ── */
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin: 56px auto 0;
+      max-width: 780px;
+      padding: 0 24px;
+    }
+    .badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 13px;
+    }
+    .badge .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      flex-shrink: 0;
+    }
+    .badge .dot.yellow { background: var(--yellow); }
+
+    /* ── footer ── */
+    footer {
+      margin: 72px auto 0;
+      padding: 24px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+      max-width: 780px;
+    }
+
+    @media (max-width: 520px) {
+      .hero h2 { font-size: 26px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">I</div>
+  <div>
+    <h1>IDR Fusion</h1>
+    <p>Indoor Dead-Reckoning Navigation · SIH 2025 MVP</p>
+  </div>
+</header>
+
+<!-- ── HERO ── -->
+<section class="hero">
+  <h2>Navigate anywhere —<br><span>no GPS required</span></h2>
+  <p>
+    IDR Fusion fuses IMU + GNSS on-device to deliver continuous position tracking
+    even in tunnels, basements, and GPS-denied environments.
+    Runs entirely offline — no cloud, no server, no subscription.
+  </p>
+
+  <a class="btn-primary" href="apk/IDR-Fusion-SIH-MVP.apk" download>
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 16l-5-5 1.41-1.41L11 13.17V4h2v9.17l2.59-2.58L17 11l-5 5zm-7 2h14v2H5v-2z"/>
+    </svg>
+    Download APK  (Android 8.0+)
+  </a>
+  <p class="apk-note">~4 MB · debug build · version 2.0-MVP</p>
+</section>
+
+<!-- ── FEATURE PILLS ── -->
+<div class="pills">
+  <span class="pill"><b>100% offline</b> — no internet needed after install</span>
+  <span class="pill"><b>Sensor fusion</b> — Accel + Gyro + Mag + GNSS</span>
+  <span class="pill"><b>Dead-reckoning</b> — continues through GNSS blackouts</span>
+  <span class="pill"><b>Live map</b> — OpenStreetMap rendered on-device</span>
+  <span class="pill"><b>Session export</b> — CSV via Android share sheet</span>
+  <span class="pill"><b>GNSS outage simulation</b> — test DR accuracy</span>
+</div>
+
+<!-- ── SCREENSHOTS ── -->
+<section class="screenshots">
+  <h3>App screens</h3>
+  <div class="screen-grid">
+    <div class="screen-card">
+      <div class="screen-mock">
+        <div class="icon">🗺️</div>
+        <div class="label">Navigate</div>
+      </div>
+      <p><b>Live Navigation</b>Real-time position, heading, speed and track history on an OSM map.</p>
+    </div>
+    <div class="screen-card">
+      <div class="screen-mock">
+        <div class="icon">📡</div>
+        <div class="label">GNSS Outage</div>
+      </div>
+      <p><b>GNSS Outage Test</b>Simulate signal loss and watch the DR engine maintain trajectory.</p>
+    </div>
+    <div class="screen-card">
+      <div class="screen-mock">
+        <div class="icon">⚙️</div>
+        <div class="label">Calibration</div>
+      </div>
+      <p><b>Sensor Calibration</b>Walk a known distance to calibrate the step/stride model.</p>
+    </div>
+    <div class="screen-card">
+      <div class="screen-mock">
+        <div class="icon">🔬</div>
+        <div class="label">Pipeline</div>
+      </div>
+      <p><b>Fusion Pipeline</b>Live view of the Kalman filter states — IMU, GNSS, DR mode.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── HOW IT WORKS ── -->
+<section class="how">
+  <h3>How IDR Fusion works</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <b>Sensor ingestion</b>
+        <p>Accelerometer + Gyroscope at ~100 Hz from Android hardware sensors. Magnetometer for heading bootstrap.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <b>GNSS fusion</b>
+        <p>GPS/Network provider at 2 Hz. Extended Kalman Filter tightly couples IMU pre-integration with GNSS position.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <b>Dead-reckoning fallback</b>
+        <p>When GNSS signal is lost, the DR engine propagates position purely from IMU data — no fix required.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <b>On-device only</b>
+        <p>All computation happens on the phone. No data leaves the device. Works in airplane mode.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── INSTALL INSTRUCTIONS ── -->
+<section class="install">
+  <h3>Installation instructions</h3>
+  <ol>
+    <li>
+      <b>Download the APK</b>
+      <span>Tap the blue "Download APK" button above. Chrome may warn — tap <em>Download anyway</em>.</span>
+    </li>
+    <li>
+      <b>Allow unknown sources</b>
+      <span>Android → <em>Settings → Apps → Special app access → Install unknown apps → Chrome → Allow</em>.</span>
+    </li>
+    <li>
+      <b>Install</b>
+      <span>Open the downloaded <span class="code">IDR-Fusion-SIH-MVP.apk</span> from your notifications or Downloads folder and tap <em>Install</em>.</span>
+    </li>
+    <li>
+      <b>Grant permissions</b>
+      <span>Allow <em>Location (Fine)</em> when prompted — required for GNSS. All sensors start automatically.</span>
+    </li>
+    <li>
+      <b>Done</b>
+      <span>The IDR Fusion Navigate screen opens immediately. Walk outside for GNSS fix, then go indoors to test DR.</span>
+    </li>
+  </ol>
+</section>
+
+<!-- ── STATUS BADGES ── -->
+<div class="badges">
+  <div class="badge"><div class="dot"></div>Runs fully offline</div>
+  <div class="badge"><div class="dot"></div>Android 8.0+ (API 26)</div>
+  <div class="badge"><div class="dot"></div>No Google Play required</div>
+  <div class="badge"><div class="dot yellow"></div>SIH 2025 — Smart India Hackathon</div>
+  <div class="badge"><div class="dot"></div>MIT License</div>
+</div>
+
+<!-- ── FOOTER ── -->
+<footer>
+  IDR Fusion · Smart India Hackathon 2025 MVP ·
+  <a href="https://github.com/rkshaan/idr">GitHub</a>
+  <br><br>
+  Made with IBM Bob
+</footer>
+
+</body>
+</html>

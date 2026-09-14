@@ -1,10 +1,11 @@
 package com.idr.navigation
 
 import android.content.Context
-import android.os.SystemClock
 import org.json.JSONObject
+import java.io.BufferedReader
 import java.io.BufferedWriter
 import java.io.File
+import java.io.FileReader
 import java.io.FileWriter
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -85,7 +86,86 @@ class SessionRecorder(private val context: Context) {
         }
     }
 
+    /**
+     * Returns a content:// shareable URI for the current/last session file.
+     * If the session is still recording, flushes first.
+     * Returns null if there is no session data.
+     */
     fun getSessionFile(): File? = sessionFile
+
+    /**
+     * Converts the recorded NDJSON session to a CSV file and returns it.
+     * The CSV is written next to the NDJSON as IDR_Session_YYYYMMDD_HHMMSS.csv
+     * All fields come from the real recorded data — no values are invented.
+     * Returns null if no session file exists or conversion fails.
+     */
+    fun exportAsCsv(): File? {
+        val src: File
+        synchronized(lock) {
+            val f = sessionFile ?: return null
+            if (!f.exists()) return null
+            // Flush if still recording so we don't miss the last batch
+            if (recording.get()) {
+                try { writer?.flush() } catch (_: Exception) {}
+            }
+            src = f
+        }
+
+        val csvName = src.name.replace(".ndjson", ".csv")
+        val csvFile = File(src.parentFile, csvName)
+
+        val header = "wall_ms,timestamp,ax,ay,az,gx,gy,gz,mx,my,mz," +
+            "gnss_lat,gnss_lon,gnss_speed_mps,gnss_accuracy_m," +
+            "nav_lat,nav_lon,nav_speed_mps,nav_heading_deg,nav_mode," +
+            "gnss_blackout,blackout_seconds\n"
+
+        try {
+            BufferedWriter(FileWriter(csvFile, false)).use { out ->
+                out.write(header)
+                BufferedReader(FileReader(src)).use { lines ->
+                    var line = lines.readLine()
+                    while (line != null) {
+                        if (line.isBlank()) { line = lines.readLine(); continue }
+                        try {
+                            val j = JSONObject(line)
+                            val row = buildCsvRow(j)
+                            out.write(row)
+                            out.newLine()
+                        } catch (_: Exception) {
+                            // Skip malformed lines — never invent data
+                        }
+                        line = lines.readLine()
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            return null
+        }
+        return csvFile
+    }
+
+    private fun buildCsvRow(j: JSONObject): String {
+        fun optStr(key: String): String = if (j.has(key) && !j.isNull(key)) j.opt(key)?.toString() ?: "" else ""
+        return listOf(
+            optStr("wall_ms"),
+            optStr("timestamp"),
+            optStr("ax"), optStr("ay"), optStr("az"),
+            optStr("gx"), optStr("gy"), optStr("gz"),
+            optStr("mx"), optStr("my"), optStr("mz"),
+            optStr("gnss_lat"), optStr("gnss_lon"),
+            optStr("gnss_speed_mps"), optStr("gnss_accuracy_m"),
+            optStr("nav_lat"), optStr("nav_lon"),
+            optStr("nav_speed_mps"), optStr("nav_heading_deg"),
+            csvEscape(optStr("nav_mode")),
+            optStr("gnss_blackout"), optStr("blackout_seconds")
+        ).joinToString(",")
+    }
+
+    private fun csvEscape(s: String): String {
+        return if (s.contains(',') || s.contains('"') || s.contains('\n'))
+            "\"${s.replace("\"", "\"\"")}\""
+        else s
+    }
 
     private fun buildJsonLine(r: SessionRecord): String {
         val obj = JSONObject()

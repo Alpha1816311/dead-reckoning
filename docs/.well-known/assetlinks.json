@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.idr.mobile",
+      "sha256_cert_fingerprints": [
+        "D6:59:11:E7:9B:57:06:49:0B:B1:89:39:4A:00:80:54:64:58:E0:92:71:E4:E8:D0:27:74:B3:18:60:5D:88:A5"
+      ]
+    }
+  }
+]

@@ -13,6 +13,7 @@ import android.hardware.SensorManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -88,8 +89,12 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
         super.onCreate(savedInstanceState)
         recorder = SessionRecorder(this)
 
-        // Start embedded HTTP server before anything else
-        server = IDRLocalServer(SERVER_PORT, assets, engine, recorder)
+        // Start embedded HTTP server before anything else.
+        // Pass onExportRequest so the /session/export HTTP endpoint can
+        // trigger the native Android share sheet (HTTP fallback path).
+        server = IDRLocalServer(SERVER_PORT, assets, engine, recorder) {
+            runOnUiThread { doExportSession() }
+        }
         try {
             server.start()
         } catch (e: Exception) {
@@ -105,11 +110,56 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
         // GNSS will be requested after we check/request the permission.
         startImuSensors()
         requestLocationPermissionAndStartGnss()
+
+        // Handle Android App Link deep-link that launched the app cold.
+        // https://rkshaan.github.io/idr  →  navigate screen (already the default)
+        handleDeepLink(intent)
+    }
+
+    /**
+     * Called when the app is already running (singleTop) and a new
+     * Android App Link intent arrives — e.g. user taps URL while app
+     * is in the foreground or background.
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleDeepLink(intent)
+    }
+
+    /**
+     * Route an incoming App Link intent to the correct screen.
+     *
+     * Current mapping:
+     *   https://rkshaan.github.io/idr        -> /navigate  (navigate screen)
+     *   https://rkshaan.github.io/idr/{any}  -> /navigate  (any sub-path -> same screen)
+     *
+     * The navigation engine, sensors, GNSS, DR, and calibration are all
+     * on-device.  This routing only affects which WebView page is shown;
+     * it does NOT require a network connection.
+     */
+    private fun handleDeepLink(intent: Intent) {
+        if (intent.action != Intent.ACTION_VIEW) return
+        val uri: Uri = intent.data ?: return
+        if (uri.host != "rkshaan.github.io") return
+        val path = uri.path ?: return
+        if (!path.startsWith("/idr")) return
+
+        // The app already loads /navigate on launch — if it is already
+        // showing the navigate page, do nothing.  Otherwise reload it so
+        // a background → foreground tap always lands on the correct screen.
+        val currentUrl = webView.url ?: ""
+        if (!currentUrl.contains("/navigate")) {
+            webView.loadUrl("http://localhost:$SERVER_PORT/navigate")
+        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun setupWebView() {
         webView = WebView(this).apply {
+            // Register the Android bridge BEFORE the page loads so the
+            // JavaScript object is available synchronously on first access.
+            addJavascriptInterface(AndroidBridge(), "Android")
             settings.apply {
                 javaScriptEnabled = true
                 domStorageEnabled = true
@@ -122,7 +172,7 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
             }
             webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView?, url: String?) {
-                    // Inject Android bridge for export control
+                    // Inject helper JS aliases after the page is ready
                     injectAndroidBridge()
                 }
             }
@@ -139,11 +189,12 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
      * Inject a minimal JavaScript bridge so the export button can call
      * native Android functions.  The main navigation state flows through
      * the embedded HTTP server — no bridge needed for that.
+     *
+     * addJavascriptInterface must be called BEFORE the page loads so the
+     * object is available synchronously.  We call it during setupWebView()
+     * so by the time onPageFinished fires the object already exists.
      */
     private fun injectAndroidBridge() {
-        // Add the Android interface object
-        webView.addJavascriptInterface(AndroidBridge(), "Android")
-
         val js = """
 (function() {
   if (window._idrBridgeInjected) return;
@@ -166,6 +217,7 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
     inner class AndroidBridge {
         @android.webkit.JavascriptInterface
         fun exportSession() {
+            // Must not run on the WebView JS thread — dispatch to UI thread
             runOnUiThread { doExportSession() }
         }
 
@@ -250,24 +302,43 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
     // SESSION EXPORT
     // ---------------------------------------------------------------
     private fun doExportSession() {
-        val file = recorder.getSessionFile() ?: run {
-            Toast.makeText(this, "No session file to export", Toast.LENGTH_SHORT).show()
+        // Check if any session data exists (recording or already stopped)
+        if (recorder.recordCount == 0 && recorder.getSessionFile() == null) {
+            Toast.makeText(this, "NO SESSION DATA AVAILABLE TO EXPORT", Toast.LENGTH_LONG).show()
+            webView.evaluateJavascript(
+                "if(typeof showToast==='function') showToast('warning','NO SESSION DATA AVAILABLE TO EXPORT');", null
+            )
             return
         }
-        if (!file.exists()) {
-            Toast.makeText(this, "Session file not found", Toast.LENGTH_SHORT).show()
+
+        // Convert NDJSON → CSV on-device (no fake data, only real recorded telemetry)
+        val csvFile = recorder.exportAsCsv()
+        if (csvFile == null || !csvFile.exists()) {
+            Toast.makeText(this, "NO SESSION DATA AVAILABLE TO EXPORT", Toast.LENGTH_LONG).show()
+            webView.evaluateJavascript(
+                "if(typeof showToast==='function') showToast('error','EXPORT FAILED — NO RECORDED DATA');", null
+            )
             return
         }
+
         try {
-            val uri = FileProvider.getUriForFile(this, "${packageName}.provider", file)
+            val uri = FileProvider.getUriForFile(this, "${packageName}.provider", csvFile)
             val intent = Intent(Intent.ACTION_SEND).apply {
-                type = "application/json"
+                type = "text/csv"
                 putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_SUBJECT, csvFile.name)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            startActivity(Intent.createChooser(intent, "Export IDR Session"))
+            startActivity(Intent.createChooser(intent, "Export IDR Session Log"))
+            webView.evaluateJavascript(
+                "if(typeof showToast==='function') showToast('check_circle','SESSION EXPORTED SUCCESSFULLY');", null
+            )
         } catch (e: Exception) {
-            Toast.makeText(this, "Export failed: ${e.message}", Toast.LENGTH_SHORT).show()
+            android.util.Log.e("IDR", "Export failed", e)
+            Toast.makeText(this, "EXPORT FAILED: ${e.message}", Toast.LENGTH_LONG).show()
+            webView.evaluateJavascript(
+                "if(typeof showToast==='function') showToast('error','EXPORT FAILED: ${e.message?.replace("'", "\\'")}');", null
+            )
         }
     }
 
@@ -377,6 +448,8 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
         super.onDestroy()
     }
 
+    @Deprecated("Deprecated in Java")
+    @Suppress("DEPRECATION")
     override fun onBackPressed() {
         if (webView.canGoBack()) webView.goBack() else super.onBackPressed()
     }

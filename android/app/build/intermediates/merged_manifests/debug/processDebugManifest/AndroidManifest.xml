@@ -49,6 +49,28 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!--
+                Android App Link — autoVerify=true tells Android to fetch
+                https://rkshaan.github.io/.well-known/assetlinks.json and
+                verify the SHA-256 fingerprint of this app.  Once verified,
+                Chrome/Android opens this activity directly without the
+                "Open with…" disambiguation dialog.
+
+                URL:  https://rkshaan.github.io/idr
+                      https://rkshaan.github.io/idr/*
+            -->
+            <intent-filter android:autoVerify="true" >
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="rkshaan.github.io"
+                    android:pathPrefix="/idr"
+                    android:scheme="https" />
+            </intent-filter>
         </activity>
 
         <!-- FileProvider for session export -->

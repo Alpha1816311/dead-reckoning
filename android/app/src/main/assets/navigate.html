@@ -233,14 +233,31 @@ tailwind.config = {
       transform: translateY(-1px);
     }
 
+    /* =========================================================
+       MOBILE RESPONSIVE FIXES
+       ========================================================= */
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      min-height: max(884px, 100dvh);
+      min-height: 100dvh;
+      overflow-x: hidden;
+    }
+
+    /* Ensure no element exceeds screen width */
+    .truncate-mobile {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
     }
   </style>
 
 </head>
 
-<body class="bg-surface font-body-md text-body-md text-on-surface flex flex-col min-h-screen">
+<body class="bg-surface font-body-md text-body-md text-on-surface flex flex-col min-h-screen" style="overflow-x:hidden;">
 
   <!-- =========================================================
        HEADER
@@ -250,100 +267,36 @@ tailwind.config = {
     class="fixed top-0 inset-x-0 z-50 bg-surface-container-lowest/85 backdrop-blur-xl pt-safe shadow-[0_1px_8px_rgba(0,0,0,0.4)]"
   >
 
-    <div class="h-16 px-gutter-mobile flex items-center justify-between">
+    <div class="h-16 px-3 flex items-center justify-between gap-2 min-w-0">
 
-      <div class="flex items-center gap-telemetry-gap">
-        <div class="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-on-primary font-bold text-[11px]">IDR</div>
-<div class="flex flex-col">
+      <div class="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+        <div class="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-on-primary font-bold text-[11px] shrink-0">IDR</div>
+        <div class="flex flex-col min-w-0">
 
-          <div class="flex items-center gap-1.5">
-
-            <span
-              class="font-label-caps text-label-caps text-primary tracking-wider uppercase"
-            >
-              IDR FUSION
-            </span>
-
-            <span
-              class="font-label-caps text-label-caps text-on-surface-variant"
-            >
-              |
-            </span>
-
-            <span
-              class="font-headline-sm text-headline-sm text-on-surface tracking-tight leading-none"
-            >
-              Navigate
-            </span>
-
+          <div class="flex items-center gap-1 min-w-0">
+            <span class="font-label-caps text-label-caps text-primary tracking-wider uppercase shrink-0">IDR FUSION</span>
+            <span class="font-label-caps text-label-caps text-on-surface-variant shrink-0">|</span>
+            <span class="font-headline-sm text-headline-sm text-on-surface tracking-tight leading-none truncate">Navigate</span>
           </div>
 
-          <div class="flex items-center gap-2 mt-0.5">
-
-            <div class="flex items-center gap-1">
-
-              <span
-                class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"
-              ></span>
-
-              <span
-                class="font-label-caps text-label-caps text-primary uppercase"
-              >
-                LIVE INS
-              </span>
-
-            </div>
-
-            <span
-              class="text-outline font-label-caps text-label-caps"
-            >
-              •
-            </span>
-
-            <!-- LIVE GNSS STATUS -->
-
-            <span
-              id="gnssFixSummary"
-              class="font-label-caps text-label-caps text-secondary uppercase"
-            >
-              GNSS STATUS —
-            </span>
-
+          <div class="flex items-center gap-1.5 mt-0.5 min-w-0">
+            <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0"></span>
+            <span class="font-label-caps text-label-caps text-primary uppercase shrink-0">LIVE INS</span>
+            <span class="text-outline font-label-caps text-label-caps shrink-0">•</span>
+            <span id="gnssFixSummary" class="font-label-caps text-label-caps text-secondary uppercase truncate">GNSS —</span>
           </div>
 
         </div>
-
       </div>
 
-      <div class="flex items-center gap-2">
-
+      <div class="flex items-center gap-2 shrink-0">
         <div class="hidden sm:flex flex-col items-end mr-1">
-
-        <span
-          id="utcClock"
-          class="font-metric-sm text-metric-sm text-on-surface"
-        >
-          —
-        </span>
-
-        <span
-          class="font-label-caps text-label-caps text-on-surface-variant"
-        >
-          UTC TELEMETRY
-        </span>
-
-      </div>
-
-        <div
-          class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"
-        >
-          <span
-            class="material-symbols-outlined text-on-primary text-[18px]"
-          >
-            person
-          </span>
+          <span id="utcClock" class="font-metric-sm text-metric-sm text-on-surface">—</span>
+          <span class="font-label-caps text-label-caps text-on-surface-variant">UTC</span>
         </div>
-
+        <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0">
+          <span class="material-symbols-outlined text-on-primary text-[18px]">person</span>
+        </div>
       </div>
 
     </div>
@@ -356,7 +309,8 @@ tailwind.config = {
        ========================================================= -->
 
   <main
-    class="flex-1 flex flex-col relative w-full pt-16 pb-20 bg-surface"
+    class="flex-1 flex flex-col relative w-full pt-16 pb-24 bg-surface"
+    style="overflow-x:hidden;"
   >
 
     <div class="flex flex-col w-full pb-6 gap-3">
@@ -780,9 +734,9 @@ tailwind.config = {
               </span>
 
               <span
-                class="font-label-caps text-[10px] text-primary"
+                class="font-label-caps text-[10px] text-primary truncate"
               >
-                NON-HOLONOMIC CONSTRAINT ACTIVE
+                NHC ACTIVE
               </span>
 
             </div>
@@ -850,9 +804,9 @@ tailwind.config = {
               </span>
 
               <span
-                class="font-label-caps text-label-caps text-on-surface-variant"
+                class="font-label-caps text-label-caps text-on-surface-variant truncate"
               >
-                TRIGGER INSTANTANEOUS DEAD RECKONING FAILOVER
+                TRIGGER DEAD RECKONING FAILOVER
               </span>
 
             </div>
@@ -883,101 +837,52 @@ tailwind.config = {
     data-active-classes="text-primary bg-surface-container-high/60"
   >
 
-    <div class="flex justify-around items-center h-20 px-2">
+    <div class="flex justify-around items-center h-16 px-1">
 
       <a
         aria-current="page"
-        class="flex flex-col items-center justify-center flex-1 h-touch-target-min py-1 px-1 rounded-lg transition-colors text-primary bg-surface-container-high/60"
+        class="flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-lg transition-colors text-primary bg-surface-container-high/60"
         data-path="navigate"
         href="/navigate"
       >
-
-        <span class="material-symbols-outlined text-[22px]">
-          navigation
-        </span>
-
-        <span
-          class="font-label-caps text-label-caps uppercase mt-1"
-        >
-          NAVIGATE
-        </span>
-
+        <span class="material-symbols-outlined text-[22px]">navigation</span>
+        <span class="font-label-caps text-[10px] uppercase mt-0.5 tracking-tight">NAV</span>
       </a>
 
-
       <a
-        class="flex flex-col items-center justify-center flex-1 h-touch-target-min py-1 px-1 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors"
+        class="flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors"
         data-path="outage-mode"
         href="/outage"
       >
-
-        <span class="material-symbols-outlined text-[22px]">
-          warning
-        </span>
-
-        <span
-          class="font-label-caps text-label-caps uppercase mt-1"
-        >
-          OUTAGE
-        </span>
-
+        <span class="material-symbols-outlined text-[22px]">warning</span>
+        <span class="font-label-caps text-[10px] uppercase mt-0.5 tracking-tight">OUTAGE</span>
       </a>
 
-
       <a
-        class="flex flex-col items-center justify-center flex-1 h-touch-target-min py-1 px-1 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors"
+        class="flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors"
         data-path="calibration"
         href="/calibration"
       >
-
-        <span class="material-symbols-outlined text-[22px]">
-          explore
-        </span>
-
-        <span
-          class="font-label-caps text-label-caps uppercase mt-1"
-        >
-          CALIBRATE
-        </span>
-
+        <span class="material-symbols-outlined text-[22px]">explore</span>
+        <span class="font-label-caps text-[10px] uppercase mt-0.5 tracking-tight">CAL</span>
       </a>
 
-
       <a
-        class="flex flex-col items-center justify-center flex-1 h-touch-target-min py-1 px-1 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors"
+        class="flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors"
         data-path="pipeline-status"
         href="/pipeline"
       >
-
-        <span class="material-symbols-outlined text-[22px]">
-          memory
-        </span>
-
-        <span
-          class="font-label-caps text-label-caps uppercase mt-1"
-        >
-          PIPELINE
-        </span>
-
+        <span class="material-symbols-outlined text-[22px]">memory</span>
+        <span class="font-label-caps text-[10px] uppercase mt-0.5 tracking-tight">PIPELINE</span>
       </a>
 
-
       <a
-        class="flex flex-col items-center justify-center flex-1 h-touch-target-min py-1 px-1 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors"
+        class="flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors"
         data-path="settings"
         href="/settings"
       >
-
-        <span class="material-symbols-outlined text-[22px]">
-          settings
-        </span>
-
-        <span
-          class="font-label-caps text-label-caps uppercase mt-1"
-        >
-          SETTINGS
-        </span>
-
+        <span class="material-symbols-outlined text-[22px]">settings</span>
+        <span class="font-label-caps text-[10px] uppercase mt-0.5 tracking-tight">SETTINGS</span>
       </a>
 
     </div>

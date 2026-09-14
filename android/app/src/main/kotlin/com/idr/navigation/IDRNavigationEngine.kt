@@ -33,6 +33,15 @@ class IDRNavigationEngine {
 
     enum class FilterMode { STRICT, BALANCED, RAW }
 
+    /**
+     * Where the current speed estimate came from.
+     * GNSS       — fresh Android Location.speed or haversine over two GNSS fixes
+     * INERTIAL   — dead-reckoning via IMU integration (only if genuine IMU velocity exists)
+     * STATIONARY — device is confidently stationary (speed = 0.0)
+     * UNAVAILABLE — no trustworthy speed estimate yet
+     */
+    enum class SpeedSource { GNSS, INERTIAL, STATIONARY, UNAVAILABLE }
+
     data class CalibrationResult(
         val status: String,       // NOT_CALIBRATED, CALIBRATING, CALIBRATED
         val accelBias: DoubleArray = DoubleArray(3),
@@ -75,7 +84,9 @@ class IDRNavigationEngine {
         val nhcEnabled: Boolean = true,
         val mountingCalibrated: Boolean = false,
         // Derived
-        val isStationary: Boolean = false
+        val isStationary: Boolean = false,
+        // Speed provenance — always set so UI can trust/display source
+        val speedSource: SpeedSource = SpeedSource.UNAVAILABLE
     )
 
     // ---------------------------------------------------------------
@@ -85,6 +96,7 @@ class IDRNavigationEngine {
     @Volatile private var posLon: Double = 0.0
     @Volatile private var headingDeg: Double = 0.0
     @Volatile private var speedMps: Double = 0.0
+    @Volatile private var speedSource: SpeedSource = SpeedSource.UNAVAILABLE
     @Volatile private var mode: NavMode = NavMode.INITIALIZING
     @Volatile private var initialized: Boolean = false
     @Volatile private var gnssBlackedOut: Boolean = false
@@ -198,6 +210,7 @@ class IDRNavigationEngine {
         imuCount = 0
         drDistanceM = 0.0
         speedMps = 0.0
+        speedSource = SpeedSource.UNAVAILABLE
         headingDeg = 0.0
         imuTsWindow.clear()
         gnssTsWindow.clear()
@@ -343,8 +356,10 @@ class IDRNavigationEngine {
         // Dead reckoning position integration (when GNSS is blacked out)
         // -----------------------------------------------------------------------
         if (mode == NavMode.DEAD_RECKONING) {
-            if (isStationary || (nhcEnabled && isStationary)) {
-                speedMps *= 0.95 // decay toward zero
+            if (isStationary) {
+                // Device is confidently stationary — zero speed, don't preserve stale DR speed
+                speedMps = 0.0
+                speedSource = SpeedSource.STATIONARY
             } else {
                 val forwardAccel = lax * sin(Math.toRadians(headingDeg)) +
                                    lay * cos(Math.toRadians(headingDeg))
@@ -354,6 +369,8 @@ class IDRNavigationEngine {
                     if (motionMode == MotionMode.VEHICLE) 55.0 else 10.0)
                 // NHC: constrain speed decay when no accel
                 if (nhcEnabled && aMag < 0.2) speedMps *= 0.98
+                // Speed source is inertial during dead reckoning (only if we have a real speed)
+                speedSource = if (speedMps > 0.0) SpeedSource.INERTIAL else SpeedSource.STATIONARY
             }
 
             // NHC: for vehicle mode, zero out lateral/vertical drift
@@ -362,6 +379,9 @@ class IDRNavigationEngine {
             val hRad = Math.toRadians(headingDeg)
             posLat += Math.toDegrees(dist * cos(hRad) / EARTH_R)
             posLon += Math.toDegrees(dist * sin(hRad) / (EARTH_R * cos(Math.toRadians(posLat))))
+        } else if (mode != NavMode.DEAD_RECKONING && isStationary && speedMps < 0.05) {
+            // Outside DR mode: if device is stationary, reflect that in speed source
+            speedSource = SpeedSource.STATIONARY
         }
     }
 
@@ -401,11 +421,31 @@ class IDRNavigationEngine {
                 val gw = if (acc < 5.0) 0.65 else if (acc < 15.0) 0.35 else 0.15
                 headingDeg = blendHeading(headingDeg, course, gw)
 
-                // Speed blend
+                // Speed from GNSS: prefer Android Location.speed (Doppler-based),
+                // fall back to haversine-derived speed.  Mark source as GNSS.
                 val sp = speedMpsRaw ?: gnssSpd
                 speedHistory.addLast(sp.coerceIn(0.0, 60.0))
                 if (speedHistory.size > SPEED_HIST) speedHistory.removeFirst()
                 speedMps = speedHistory.average()
+                speedSource = SpeedSource.GNSS
+            } else if (dist <= 2.0) {
+                // GNSS fix arrived but device hasn't moved appreciably:
+                // if Android reports speed via Doppler, use it directly.
+                if (speedMpsRaw != null) {
+                    // Stationary threshold: Doppler speed < 0.15 m/s
+                    if (speedMpsRaw < 0.15) {
+                        speedMps = 0.0
+                        speedHistory.clear()
+                        speedSource = SpeedSource.STATIONARY
+                    } else {
+                        speedHistory.addLast(speedMpsRaw.coerceIn(0.0, 60.0))
+                        if (speedHistory.size > SPEED_HIST) speedHistory.removeFirst()
+                        speedMps = speedHistory.average()
+                        speedSource = SpeedSource.GNSS
+                    }
+                }
+                // Otherwise keep existing speed estimate — don't update from a
+                // stationary haversine pair (produces false speed from GPS noise)
             }
         }
         prevGnssLat = latitude; prevGnssLon = longitude; prevGnssTs = timestamp
@@ -445,6 +485,14 @@ class IDRNavigationEngine {
         blackoutStartTs = currentTs
         if (mode == NavMode.GNSS_INS_FUSED || mode == NavMode.REACQUISITION) {
             mode = NavMode.DEAD_RECKONING; drDistanceM = 0.0
+            // When entering DR: if we have a GNSS-derived speed keep it as the
+            // initial inertial estimate; if speed is unknown mark UNAVAILABLE
+            // so the UI doesn't display a stale or invented number.
+            if (speedSource == SpeedSource.UNAVAILABLE) {
+                speedMps = 0.0
+            } else if (speedSource == SpeedSource.GNSS || speedSource == SpeedSource.INERTIAL) {
+                speedSource = SpeedSource.INERTIAL
+            }
         }
     }
 
@@ -465,10 +513,24 @@ class IDRNavigationEngine {
             CalibState.CALIBRATING    -> "CALIBRATING"
             CalibState.CALIBRATED     -> "CALIBRATED"
         }
+        // Determine effective speed source for this snapshot:
+        // If we are not yet initialized (no GNSS fix yet), speed is always UNAVAILABLE.
+        // If stationary is detected outside DR mode, reflect STATIONARY.
+        val effectiveSource = when {
+            !initialized -> SpeedSource.UNAVAILABLE
+            stationaryState && speedMps < 0.05 -> SpeedSource.STATIONARY
+            else -> speedSource
+        }
+        val effectiveSpeedMps = when (effectiveSource) {
+            SpeedSource.UNAVAILABLE -> null
+            SpeedSource.STATIONARY  -> 0.0
+            else -> speedMps
+        }
         return NavigationState(
             timestamp = nowTs,
             latitude = posLat, longitude = posLon,
-            speedMps = speedMps, headingDeg = headingDeg,
+            speedMps = effectiveSpeedMps ?: 0.0,
+            headingDeg = headingDeg,
             mode = mode,
             imuHz = estimateRate(imuTsWindow),
             gnssHz = estimateRate(gnssTsWindow),
@@ -488,7 +550,8 @@ class IDRNavigationEngine {
             filterMode = filterMode,
             nhcEnabled = nhcEnabled,
             mountingCalibrated = mountingCalibrated,
-            isStationary = stationaryState
+            isStationary = stationaryState,
+            speedSource = effectiveSource
         )
     }
 

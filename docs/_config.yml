@@ -1,0 +1,4 @@
+# GitHub Pages configuration
+# Serves the docs/ folder as https://rkshaan.github.io/idr
+# No Jekyll processing needed — pure static HTML.
+theme: ~

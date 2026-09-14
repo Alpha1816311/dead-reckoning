@@ -200,13 +200,26 @@
 </label>
 </div>
 </div>
+<!-- Session Status Row -->
+<div class="flex items-center justify-between bg-surface-container p-3 rounded-lg">
+<div class="flex flex-col gap-0.5">
+  <span class="font-label-caps text-[10px] text-on-surface-variant uppercase">Session Recording</span>
+  <div class="flex items-center gap-2">
+    <span class="font-metric-sm text-xs font-bold" id="sessionRecordingStatus">—</span>
+    <span class="font-label-caps text-[10px] text-on-surface-variant">RECORDS: <span id="sessionRecordCount">—</span></span>
+  </div>
+</div>
+<div class="flex gap-2">
+  <button class="px-3 py-1.5 rounded bg-primary text-on-primary font-label-caps text-[10px] font-bold uppercase" id="btnStartSession" onclick="startSession()" type="button">START</button>
+  <button class="px-3 py-1.5 rounded bg-surface-container-high text-on-surface font-label-caps text-[10px] font-bold uppercase" id="btnStopSession" onclick="stopSession()" type="button">STOP</button>
+</div>
+</div>
 <!-- Action Buttons -->
 <div class="flex flex-col sm:flex-row gap-2 pt-1">
-<button class="w-full sm:flex-1 h-touch-target-min rounded-lg bg-surface-container-high hover:bg-surface-bright text-on-surface flex items-center justify-center gap-2 font-headline-sm text-xs font-semibold transition-colors" onclick="exportData()" type="button">
+<button class="w-full sm:flex-1 h-touch-target-min rounded-lg bg-primary hover:bg-primary/80 text-on-primary flex items-center justify-center gap-2 font-headline-sm text-xs font-semibold transition-colors" id="btnExportLog" onclick="exportLog()" type="button">
 <span class="material-symbols-outlined text-[18px]">file_download</span>
-<span>EXPORT REPLAY DATA (.CSV / .NMEA)</span>
+<span>EXPORT LOG</span>
 </button>
-
 </div>
 </section>
 <!-- Visual Confirmation Floating Toast Notification (Hidden by default) -->
@@ -322,27 +335,79 @@
     await refreshSettingsState();
     showToast('check_circle', 'Live backend status refreshed.');
   };
-  window.exportData = async function() {
+  // ---------------------------------------------------------------
+  // SESSION RECORDING CONTROLS
+  // ---------------------------------------------------------------
+  window.startSession = async function() {
     try {
-      const response = await fetch('/navigation/state', {cache:'no-store'});
-      if (!response.ok) throw new Error('State unavailable');
-      const state = await response.json();
-      const rows = Object.entries(state).map(([key,value]) => {
-        const safe = typeof value === 'object' ? JSON.stringify(value).replaceAll('"','""') : String(value ?? '').replaceAll('"','""');
-        return `"${key}","${safe}"`;
-      });
-      const csv = 'field,value\n' + rows.join('\n');
-      const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = 'idr_navigation_state.csv';
-      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-      showToast('file_download', 'Current navigation state exported as CSV.');
-    } catch (error) {
-      console.error(error); showToast('error', 'Could not export live navigation state.');
+      const r = await fetch('/session/start', {method:'POST', cache:'no-store'});
+      if (!r.ok) throw new Error(await r.text());
+      const j = await r.json();
+      showToast('fiber_manual_record', 'Recording started: ' + j.name);
+      refreshSessionStatus();
+    } catch (e) {
+      console.error(e); showToast('error', 'Could not start session: ' + e.message);
     }
   };
+
+  window.stopSession = async function() {
+    try {
+      const r = await fetch('/session/stop', {method:'POST', cache:'no-store'});
+      if (!r.ok) throw new Error(await r.text());
+      const j = await r.json();
+      showToast('stop_circle', 'Session stopped. Records: ' + j.records);
+      refreshSessionStatus();
+    } catch (e) {
+      console.error(e); showToast('error', 'Could not stop session: ' + e.message);
+    }
+  };
+
+  async function refreshSessionStatus() {
+    try {
+      const r = await fetch('/session/status', {cache:'no-store'});
+      if (!r.ok) return;
+      const j = await r.json();
+      const recEl = document.getElementById('sessionRecordingStatus');
+      const cntEl = document.getElementById('sessionRecordCount');
+      if (recEl) {
+        recEl.textContent = j.recording ? 'RECORDING' : (j.records > 0 ? 'STOPPED' : 'NO SESSION');
+        recEl.className = 'font-metric-sm text-xs font-bold ' + (j.recording ? 'text-primary' : (j.records > 0 ? 'text-secondary' : 'text-on-surface-variant'));
+      }
+      if (cntEl) cntEl.textContent = String(j.records ?? 0);
+    } catch (_) {}
+  }
+
+  // ---------------------------------------------------------------
+  // EXPORT LOG — calls the Android native bridge
+  // Falls back to HTTP endpoint if bridge is unavailable
+  // ---------------------------------------------------------------
+  window.exportLog = async function() {
+    // Preferred path: call Android native bridge which triggers share sheet
+    if (typeof Android !== 'undefined' && typeof Android.exportSession === 'function') {
+      Android.exportSession();
+      return;
+    }
+    // Fallback: call the server export endpoint (triggers native share via server→MainActivity callback)
+    try {
+      const r = await fetch('/session/export', {method:'POST', cache:'no-store'});
+      const j = await r.json();
+      if (j.ok) {
+        showToast('check_circle', 'SESSION EXPORTED SUCCESSFULLY');
+      } else {
+        showToast('error', j.error || 'EXPORT FAILED');
+      }
+    } catch (e) {
+      console.error(e);
+      showToast('error', 'NO SESSION DATA AVAILABLE TO EXPORT');
+    }
+  };
+
+  // Keep legacy name so any other pages that call exportData() still work
+  window.exportData = window.exportLog;
+
   refreshSettingsState();
+  refreshSessionStatus();
   setInterval(refreshSettingsState, 1000);
+  setInterval(refreshSessionStatus, 1000);
 })();
 </script></main><nav class="fixed bottom-0 inset-x-0 z-50 pb-safe bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_-1px_12px_rgba(0,0,0,0.5)]" data-active-classes="text-primary bg-surface-container-high/60"><div class="grid grid-cols-5 items-center h-20 px-1"><a class="flex flex-col items-center justify-center h-touch-target-min py-1 px-1 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors" data-path="navigate" href="/navigate"><span class="material-symbols-outlined text-[22px]">navigation</span><span class="font-label-caps text-[10px] leading-tight uppercase mt-1 tracking-tight truncate max-w-full">Navigate</span></a><a class="flex flex-col items-center justify-center h-touch-target-min py-1 px-1 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors" data-path="outage-mode" href="/outage"><span class="material-symbols-outlined text-[22px]">warning</span><span class="font-label-caps text-[10px] leading-tight uppercase mt-1 tracking-tight truncate max-w-full">Outage</span></a><a class="flex flex-col items-center justify-center h-touch-target-min py-1 px-1 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors" data-path="calibration" href="/calibration"><span class="material-symbols-outlined text-[22px]">explore</span><span class="font-label-caps text-[10px] leading-tight uppercase mt-1 tracking-tight truncate max-w-full">Calibrate</span></a><a class="flex flex-col items-center justify-center h-touch-target-min py-1 px-1 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors" data-path="pipeline-status" href="/pipeline"><span class="material-symbols-outlined text-[22px]">memory</span><span class="font-label-caps text-[10px] leading-tight uppercase mt-1 tracking-tight truncate max-w-full">Pipeline</span></a><a aria-current="page" class="flex flex-col items-center justify-center h-touch-target-min py-1 px-1 rounded-lg transition-colors text-primary bg-surface-container-high/60" data-path="settings" href="/settings"><span class="material-symbols-outlined text-[22px]">settings</span><span class="font-label-caps text-[10px] leading-tight uppercase mt-1 tracking-tight truncate max-w-full">Settings</span></a></div></nav></body></html>
