@@ -1,0 +1,166 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.idr.mobile"
+4    android:versionCode="2"
+5    android:versionName="2.0-mvp" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="26"
+9        android:targetSdkVersion="35" />
+10
+11    <uses-permission android:name="android.permission.INTERNET" />
+11-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:2:5-67
+11-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:2:22-64
+12    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+12-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:3:5-79
+12-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:3:22-76
+13    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+13-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:4:5-81
+13-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:4:22-78
+14    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+14-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:5:5-86
+14-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:5:22-83
+15
+16    <uses-feature
+16-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:7:5-98
+17        android:name="android.hardware.sensor.accelerometer"
+17-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:7:19-71
+18        android:required="true" />
+18-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:7:72-95
+19    <uses-feature
+19-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:8:5-99
+20        android:name="android.hardware.sensor.gyroscope"
+20-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:8:19-67
+21        android:required="true" />
+21-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:8:73-96
+22    <uses-feature
+22-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:9:5-100
+23        android:name="android.hardware.location.gps"
+23-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:9:19-63
+24        android:required="false" />
+24-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:9:73-97
+25
+26    <permission
+26-->[androidx.core:core:1.13.1] C:\Users\rksha\.gradle\caches\transforms-4\0bd1552c1ae23167e7694b19183f896b\transformed\core-1.13.1\AndroidManifest.xml:22:5-24:47
+27        android:name="com.idr.mobile.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+27-->[androidx.core:core:1.13.1] C:\Users\rksha\.gradle\caches\transforms-4\0bd1552c1ae23167e7694b19183f896b\transformed\core-1.13.1\AndroidManifest.xml:23:9-81
+28        android:protectionLevel="signature" />
+28-->[androidx.core:core:1.13.1] C:\Users\rksha\.gradle\caches\transforms-4\0bd1552c1ae23167e7694b19183f896b\transformed\core-1.13.1\AndroidManifest.xml:24:9-44
+29
+30    <uses-permission android:name="com.idr.mobile.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+30-->[androidx.core:core:1.13.1] C:\Users\rksha\.gradle\caches\transforms-4\0bd1552c1ae23167e7694b19183f896b\transformed\core-1.13.1\AndroidManifest.xml:26:5-97
+30-->[androidx.core:core:1.13.1] C:\Users\rksha\.gradle\caches\transforms-4\0bd1552c1ae23167e7694b19183f896b\transformed\core-1.13.1\AndroidManifest.xml:26:22-94
+31
+32    <application
+32-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:11:5-41:19
+33        android:allowBackup="false"
+33-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:12:9-36
+34        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+34-->[androidx.core:core:1.13.1] C:\Users\rksha\.gradle\caches\transforms-4\0bd1552c1ae23167e7694b19183f896b\transformed\core-1.13.1\AndroidManifest.xml:28:18-86
+35        android:debuggable="true"
+36        android:extractNativeLibs="false"
+37        android:hardwareAccelerated="true"
+37-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:16:9-43
+38        android:label="IDR Fusion"
+38-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:13:9-35
+39        android:networkSecurityConfig="@xml/network_security_config"
+39-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:17:9-69
+40        android:theme="@style/AppTheme"
+40-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:14:9-40
+41        android:usesCleartextTraffic="true" >
+41-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:15:9-44
+42        <activity
+42-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:19:9-28:20
+43            android:name="com.idr.mobile.MainActivity"
+43-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:20:13-41
+44            android:exported="true"
+44-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:22:13-36
+45            android:launchMode="singleTop"
+45-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:23:13-43
+46            android:screenOrientation="portrait" >
+46-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:21:13-49
+47            <intent-filter>
+47-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:24:13-27:29
+48                <action android:name="android.intent.action.MAIN" />
+48-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:25:17-69
+48-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:25:25-66
+49
+50                <category android:name="android.intent.category.LAUNCHER" />
+50-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:26:17-77
+50-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:26:27-74
+51            </intent-filter>
+52        </activity>
+53
+54        <!-- FileProvider for session export -->
+55        <provider
+56            android:name="androidx.core.content.FileProvider"
+56-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:32:13-62
+57            android:authorities="com.idr.mobile.provider"
+57-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:33:13-60
+58            android:exported="false"
+58-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:34:13-37
+59            android:grantUriPermissions="true" >
+59-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:35:13-47
+60            <meta-data
+60-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:36:13-38:63
+61                android:name="android.support.FILE_PROVIDER_PATHS"
+61-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:37:17-67
+62                android:resource="@xml/file_provider_paths" />
+62-->C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\AndroidManifest.xml:38:17-60
+63        </provider>
+64        <provider
+64-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\rksha\.gradle\caches\transforms-4\3da7d9572d7302fa69d97a515b67a9af\transformed\profileinstaller-1.3.0\AndroidManifest.xml:24:9-32:20
+65            android:name="androidx.startup.InitializationProvider"
+65-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\rksha\.gradle\caches\transforms-4\3da7d9572d7302fa69d97a515b67a9af\transformed\profileinstaller-1.3.0\AndroidManifest.xml:25:13-67
+66            android:authorities="com.idr.mobile.androidx-startup"
+66-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\rksha\.gradle\caches\transforms-4\3da7d9572d7302fa69d97a515b67a9af\transformed\profileinstaller-1.3.0\AndroidManifest.xml:26:13-68
+67            android:exported="false" >
+67-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\rksha\.gradle\caches\transforms-4\3da7d9572d7302fa69d97a515b67a9af\transformed\profileinstaller-1.3.0\AndroidManifest.xml:27:13-37
+68            <meta-data
+68-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\rksha\.gradle\caches\transforms-4\3da7d9572d7302fa69d97a515b67a9af\transformed\profileinstaller-1.3.0\AndroidManifest.xml:29:13-31:52
+69                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+69-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\rksha\.gradle\caches\transforms-4\3da7d9572d7302fa69d97a515b67a9af\transformed\profileinstaller-1.3.0\AndroidManifest.xml:30:17-85
+70                android:value="androidx.startup" />
+70-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\rksha\.gradle\caches\transforms-4\3da7d9572d7302fa69d97a515b67a9af\transformed\profileinstaller-1.3.0\AndroidManifest.xml:31:17-49
+71        </provider>
+72
+73        <receiver
+73-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\rksha\.gradle\caches\transforms-4\3da7d9572d7302fa69d97a515b67a9af\transformed\profileinstaller-1.3.0\AndroidManifest.xml:34:9-52:20
+74            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+74-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\rksha\.gradle\caches\transforms-4\3da7d9572d7302fa69d97a515b67a9af\transformed\profileinstaller-1.3.0\AndroidManifest.xml:35:13-76
+75            android:directBootAware="false"
+75-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\rksha\.gradle\caches\transforms-4\3da7d9572d7302fa69d97a515b67a9af\transformed\profileinstaller-1.3.0\AndroidManifest.xml:36:13-44
+76            android:enabled="true"
+76-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\rksha\.gradle\caches\transforms-4\3da7d9572d7302fa69d97a515b67a9af\transformed\profileinstaller-1.3.0\AndroidManifest.xml:37:13-35
+77            android:exported="true"
+77-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\rksha\.gradle\caches\transforms-4\3da7d9572d7302fa69d97a515b67a9af\transformed\profileinstaller-1.3.0\AndroidManifest.xml:38:13-36
+78            android:permission="android.permission.DUMP" >
+78-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\rksha\.gradle\caches\transforms-4\3da7d9572d7302fa69d97a515b67a9af\transformed\profileinstaller-1.3.0\AndroidManifest.xml:39:13-57
+79            <intent-filter>
+79-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\rksha\.gradle\caches\transforms-4\3da7d9572d7302fa69d97a515b67a9af\transformed\profileinstaller-1.3.0\AndroidManifest.xml:40:13-42:29
+80                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+80-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\rksha\.gradle\caches\transforms-4\3da7d9572d7302fa69d97a515b67a9af\transformed\profileinstaller-1.3.0\AndroidManifest.xml:41:17-91
+80-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\rksha\.gradle\caches\transforms-4\3da7d9572d7302fa69d97a515b67a9af\transformed\profileinstaller-1.3.0\AndroidManifest.xml:41:25-88
+81            </intent-filter>
+82            <intent-filter>
+82-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\rksha\.gradle\caches\transforms-4\3da7d9572d7302fa69d97a515b67a9af\transformed\profileinstaller-1.3.0\AndroidManifest.xml:43:13-45:29
+83                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+83-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\rksha\.gradle\caches\transforms-4\3da7d9572d7302fa69d97a515b67a9af\transformed\profileinstaller-1.3.0\AndroidManifest.xml:44:17-85
+83-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\rksha\.gradle\caches\transforms-4\3da7d9572d7302fa69d97a515b67a9af\transformed\profileinstaller-1.3.0\AndroidManifest.xml:44:25-82
+84            </intent-filter>
+85            <intent-filter>
+85-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\rksha\.gradle\caches\transforms-4\3da7d9572d7302fa69d97a515b67a9af\transformed\profileinstaller-1.3.0\AndroidManifest.xml:46:13-48:29
+86                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+86-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\rksha\.gradle\caches\transforms-4\3da7d9572d7302fa69d97a515b67a9af\transformed\profileinstaller-1.3.0\AndroidManifest.xml:47:17-88
+86-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\rksha\.gradle\caches\transforms-4\3da7d9572d7302fa69d97a515b67a9af\transformed\profileinstaller-1.3.0\AndroidManifest.xml:47:25-85
+87            </intent-filter>
+88            <intent-filter>
+88-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\rksha\.gradle\caches\transforms-4\3da7d9572d7302fa69d97a515b67a9af\transformed\profileinstaller-1.3.0\AndroidManifest.xml:49:13-51:29
+89                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+89-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\rksha\.gradle\caches\transforms-4\3da7d9572d7302fa69d97a515b67a9af\transformed\profileinstaller-1.3.0\AndroidManifest.xml:50:17-95
+89-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\rksha\.gradle\caches\transforms-4\3da7d9572d7302fa69d97a515b67a9af\transformed\profileinstaller-1.3.0\AndroidManifest.xml:50:25-92
+90            </intent-filter>
+91        </receiver>
+92    </application>
+93
+94</manifest>

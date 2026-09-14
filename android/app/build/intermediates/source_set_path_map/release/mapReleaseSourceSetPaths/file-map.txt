@@ -1,0 +1,14 @@
+com.idr.mobile.app-core-1.13.1-0 C:\Users\rksha\.gradle\caches\transforms-4\0bd1552c1ae23167e7694b19183f896b\transformed\core-1.13.1\res
+com.idr.mobile.app-core-ktx-1.13.1-1 C:\Users\rksha\.gradle\caches\transforms-4\1325aef193731dd7bc225181c4df53d0\transformed\core-ktx-1.13.1\res
+com.idr.mobile.app-startup-runtime-1.1.1-2 C:\Users\rksha\.gradle\caches\transforms-4\20a4e242262a6a9e04774883fabf5631\transformed\startup-runtime-1.1.1\res
+com.idr.mobile.app-annotation-experimental-1.4.0-3 C:\Users\rksha\.gradle\caches\transforms-4\27dfb65022c05e696ad5342dbcafdb72\transformed\annotation-experimental-1.4.0\res
+com.idr.mobile.app-core-runtime-2.2.0-4 C:\Users\rksha\.gradle\caches\transforms-4\31f90ede90034c56880a889046929ab8\transformed\core-runtime-2.2.0\res
+com.idr.mobile.app-profileinstaller-1.3.0-5 C:\Users\rksha\.gradle\caches\transforms-4\3da7d9572d7302fa69d97a515b67a9af\transformed\profileinstaller-1.3.0\res
+com.idr.mobile.app-lifecycle-runtime-2.6.2-6 C:\Users\rksha\.gradle\caches\transforms-4\6237d722e1f4ab518670422ddc83fbd7\transformed\lifecycle-runtime-2.6.2\res
+com.idr.mobile.app-pngs-7 C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\build\generated\res\pngs\release
+com.idr.mobile.app-resValues-8 C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\build\generated\res\resValues\release
+com.idr.mobile.app-packageReleaseResources-9 C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\build\intermediates\incremental\release\packageReleaseResources\merged.dir
+com.idr.mobile.app-packageReleaseResources-10 C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\build\intermediates\incremental\release\packageReleaseResources\stripped.dir
+com.idr.mobile.app-release-11 C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\build\intermediates\merged_res\release\mergeReleaseResources
+com.idr.mobile.app-main-12 C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\main\res
+com.idr.mobile.app-release-13 C:\Users\rksha\OneDrive\Desktop\IDR_Project\android\app\src\release\res

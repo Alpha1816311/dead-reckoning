@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Session files stored in external app-specific directory -->
+    <external-files-path name="session_files" path="." />
+    <!-- Fallback: internal files directory -->
+    <files-path name="internal_files" path="." />
+</paths>

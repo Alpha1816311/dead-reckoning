@@ -11,16 +11,30 @@ android {
         applicationId "com.idr.mobile"
         minSdk 26
         targetSdk 35
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "2.0-mvp"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            // Proguard disabled for MVP — keeping full symbols for debugging
+        }
+    }
+
+    packaging {
+        resources {
+            excludes += ["/META-INF/{AL2.0,LGPL2.1}"]
+        }
     }
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
 }
 
 dependencies {
     implementation "androidx.core:core-ktx:1.13.1"
+    // FileProvider (part of androidx.core — already included above)
     implementation "com.squareup.okhttp3:okhttp:4.12.0"
 }

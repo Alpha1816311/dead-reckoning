@@ -1,0 +1,2038 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+
+<head>
+  <meta charset="utf-8">
+
+  <meta
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    name="viewport"
+  >
+
+  <link href="https://fonts.googleapis.com" rel="preconnect">
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap"
+    rel="stylesheet"
+  >
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+    rel="stylesheet"
+  >
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+    rel="stylesheet"
+  >
+  <!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+<!-- Original Stitch Tailwind Configuration -->
+<script id="tailwind-config">
+tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        "inverse-surface": "#dee2f0",
+        "inverse-primary": "#006c49",
+        "surface": "#0f131d",
+        "on-surface-variant": "#bbcabf",
+        "on-background": "#dee2f0",
+        "on-secondary-fixed": "#001f26",
+        "on-secondary": "#003640",
+        "on-tertiary": "#472a00",
+        "tertiary-fixed-dim": "#ffb95f",
+        "surface-bright": "#343944",
+        "on-primary-container": "#00422b",
+        "secondary-fixed-dim": "#4cd7f6",
+        "primary-container": "#10b981",
+        "secondary": "#4cd7f6",
+        "on-error-container": "#ffdad6",
+        "on-tertiary-fixed-variant": "#653e00",
+        "outline": "#86948a",
+        "surface-variant": "#30353f",
+        "on-error": "#690005",
+        "secondary-fixed": "#acedff",
+        "surface-container-high": "#252a34",
+        "surface-container-lowest": "#090e17",
+        "inverse-on-surface": "#2c303b",
+        "secondary-container": "#03b5d3",
+        "on-primary-fixed": "#002113",
+        "surface-container-highest": "#30353f",
+        "background": "#0f131d",
+        "surface-container-low": "#171c25",
+        "surface-container": "#1b2029",
+        "on-primary-fixed-variant": "#005236",
+        "on-tertiary-fixed": "#2a1700",
+        "on-tertiary-container": "#523200",
+        "tertiary-container": "#e29100",
+        "on-secondary-fixed-variant": "#004e5c",
+        "tertiary": "#ffb95f",
+        "primary": "#4edea3",
+        "primary-fixed-dim": "#4edea3",
+        "error-container": "#93000a",
+        "surface-dim": "#0f131d",
+        "tertiary-fixed": "#ffddb8",
+        "outline-variant": "#3c4a42",
+        "on-secondary-container": "#00424e",
+        "on-surface": "#dee2f0",
+        "surface-tint": "#4edea3",
+        "error": "#ffb4ab",
+        "primary-fixed": "#6ffbbe",
+        "on-primary": "#003824"
+      },
+
+      borderRadius: {
+        DEFAULT: "0.25rem",
+        lg: "0.5rem",
+        xl: "0.75rem",
+        full: "9999px"
+      },
+
+      spacing: {
+        "telemetry-gap": "0.5rem",
+        "gutter-automotive": "1.5rem",
+        "card-padding-md": "1rem",
+        "card-padding-sm": "0.75rem",
+        "gutter-mobile": "0.75rem",
+        "touch-target-min": "3rem",
+        "gutter-tablet": "1rem",
+        "card-padding-lg": "1.5rem"
+      },
+
+      fontFamily: {
+        "body-sm": ["Inter"],
+        "metric-display": ["JetBrains Mono"],
+        "metric-sm": ["JetBrains Mono"],
+        "metric-display-mobile": ["JetBrains Mono"],
+        "body-md": ["Inter"],
+        "headline-md": ["Inter"],
+        "label-caps": ["JetBrains Mono"],
+        "metric-md": ["JetBrains Mono"],
+        "body-lg": ["Inter"],
+        "headline-sm": ["Inter"],
+        "metric-large": ["JetBrains Mono"],
+        "headline-lg": ["Inter"],
+        "headline-lg-mobile": ["Inter"]
+      },
+
+      fontSize: {
+        "body-sm": ["12px", {
+          lineHeight: "16px",
+          fontWeight: "400"
+        }],
+        "metric-display": ["36px", {
+          lineHeight: "40px",
+          letterSpacing: "-0.04em",
+          fontWeight: "700"
+        }],
+        "metric-sm": ["12px", {
+          lineHeight: "16px",
+          fontWeight: "600"
+        }],
+        "metric-display-mobile": ["36px", {
+          lineHeight: "40px",
+          letterSpacing: "-0.04em",
+          fontWeight: "700"
+        }],
+        "body-md": ["14px", {
+          lineHeight: "20px",
+          fontWeight: "400"
+        }],
+        "headline-sm": ["16px", {
+          lineHeight: "24px",
+          fontWeight: "600"
+        }],
+        "metric-md": ["14px", {
+          lineHeight: "20px",
+          fontWeight: "700"
+        }],
+        "metric-large": ["20px", {
+          lineHeight: "24px",
+          fontWeight: "700"
+        }],
+        "headline-lg": ["24px", {
+          lineHeight: "32px",
+          fontWeight: "700"
+        }],
+        "headline-lg-mobile": ["26px", {
+          lineHeight: "32px",
+          letterSpacing: "-0.02em",
+          fontWeight: "700"
+        }]
+      }
+    }
+  }
+};
+</script>
+
+  <!-- Leaflet -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  >
+
+  <style>
+    /* =========================================================
+       REAL OSM ROAD MAP
+       Replaces only the old vector-road visualization.
+       ========================================================= */
+
+    #navigationMap {
+      width: 100%;
+      height: 100%;
+      border-radius: 0.75rem;
+      overflow: hidden;
+    }
+
+    #navigationMap .leaflet-control-zoom {
+      display: none;
+    }
+
+    #navigationMap .leaflet-control-attribution {
+      font-size: 8px;
+      background: rgba(255, 255, 255, 0.75);
+    }
+
+    .leaflet-container {
+      font-family: Inter, sans-serif;
+      background: #e8e8e8;
+    }
+
+    /* Vehicle position marker */
+    .vehicle-marker {
+      width: 34px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .vehicle-marker-inner {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: #1976d2;
+      border: 3px solid white;
+      box-shadow: 0 2px 7px rgba(0, 0, 0, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .vehicle-marker-inner::after {
+      content: "";
+      width: 0;
+      height: 0;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-bottom: 12px solid white;
+      transform: translateY(-1px);
+    }
+
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+
+</head>
+
+<body class="bg-surface font-body-md text-body-md text-on-surface flex flex-col min-h-screen">
+
+  <!-- =========================================================
+       HEADER
+       ========================================================= -->
+
+  <header
+    class="fixed top-0 inset-x-0 z-50 bg-surface-container-lowest/85 backdrop-blur-xl pt-safe shadow-[0_1px_8px_rgba(0,0,0,0.4)]"
+  >
+
+    <div class="h-16 px-gutter-mobile flex items-center justify-between">
+
+      <div class="flex items-center gap-telemetry-gap">
+
+        <img
+          alt="IDR Fusion Logo"
+          class="h-8 w-auto object-contain"
+          src="https://lh3.googleusercontent.com/aida/AEtjO1XaUzhLvDQZ7jrLWXl8gv9oV-4OnMNZVklefwzvFGqQdsbW1GcOQoT2JQ48AuQBYyLFMa0cw7AlRVMotQXj-kCiivQU4IUytFMpGHGw1TDSD5L7kWxAEEVJbb0V_CXMV6me8UXmhzjVDav1JDFA9PEOyFvZEjN2UjmdVCXE2ol-otCRHsbTdtZpJMpWVJ3ZxjC4enbGoK-ndNdQHJJJVboWNjgXmvzk5Opf6NdIzhaTsxKGvsFuLdkD_0J6"
+        >
+
+        <div class="flex flex-col">
+
+          <div class="flex items-center gap-1.5">
+
+            <span
+              class="font-label-caps text-label-caps text-primary tracking-wider uppercase"
+            >
+              IDR FUSION
+            </span>
+
+            <span
+              class="font-label-caps text-label-caps text-on-surface-variant"
+            >
+              |
+            </span>
+
+            <span
+              class="font-headline-sm text-headline-sm text-on-surface tracking-tight leading-none"
+            >
+              Navigate
+            </span>
+
+          </div>
+
+          <div class="flex items-center gap-2 mt-0.5">
+
+            <div class="flex items-center gap-1">
+
+              <span
+                class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"
+              ></span>
+
+              <span
+                class="font-label-caps text-label-caps text-primary uppercase"
+              >
+                100HZ INS
+              </span>
+
+            </div>
+
+            <span
+              class="text-outline font-label-caps text-label-caps"
+            >
+              ΓÇó
+            </span>
+
+            <!-- LIVE GNSS STATUS -->
+
+            <span
+              id="gnssFixSummary"
+              class="font-label-caps text-label-caps text-secondary uppercase"
+            >
+              GNSS STATUS ΓÇö
+            </span>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="flex items-center gap-2">
+
+        <div class="hidden sm:flex flex-col items-end mr-1">
+
+          <span
+            class="font-metric-sm text-metric-sm text-on-surface"
+          >
+            14:28:09.4 Z
+          </span>
+
+          <span
+            class="font-label-caps text-label-caps text-on-surface-variant"
+          >
+            UTC TELEMETRY
+          </span>
+
+        </div>
+
+        <div
+          class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"
+        >
+          <span
+            class="material-symbols-outlined text-on-primary text-[18px]"
+          >
+            person
+          </span>
+        </div>
+
+      </div>
+
+    </div>
+
+  </header>
+
+
+  <!-- =========================================================
+       MAIN
+       ========================================================= -->
+
+  <main
+    class="flex-1 flex flex-col relative w-full pt-16 pb-20 bg-surface"
+  >
+
+    <div class="flex flex-col w-full pb-6 gap-3">
+
+      <!-- =====================================================
+           TOP OPERATIONAL TELEMETRY HEADER
+           ===================================================== -->
+
+      <div class="px-gutter-mobile flex flex-col gap-2">
+
+        <div
+          class="bg-surface-container-low p-card-padding-sm rounded-xl flex flex-col gap-2 shadow-md"
+        >
+
+          <div class="flex items-center justify-between gap-2">
+
+            <div
+              class="flex items-center gap-1.5 px-2.5 py-1 bg-primary/10 rounded-full"
+            >
+
+              <span
+                class="w-2 h-2 rounded-full bg-primary animate-ping"
+              ></span>
+
+              <span
+                id="fusionStatus"
+                class="font-label-caps text-label-caps text-primary uppercase font-bold tracking-wider"
+              >
+                GNSS + INS FUSION
+              </span>
+
+            </div>
+
+            <div
+              class="flex items-center gap-1 px-2 py-0.5 bg-surface-container rounded-full text-secondary"
+            >
+
+              <span class="material-symbols-outlined text-[14px]">
+                insights
+              </span>
+
+              <span
+                id="confidenceValue"
+                class="font-metric-sm text-metric-sm"
+              >
+                ΓÇö CONF
+              </span>
+
+            </div>
+
+          </div>
+
+
+          <!-- Street & Corridor Context -->
+
+          <div
+            class="flex items-center justify-between bg-surface-container px-3 py-2 rounded-lg"
+          >
+
+            <div class="flex items-center gap-2 min-w-0">
+
+              <span
+                class="material-symbols-outlined text-primary text-[20px] shrink-0"
+              >
+                navigation
+              </span>
+
+              <div class="flex flex-col min-w-0">
+
+                <span
+                  class="font-headline-sm text-headline-sm text-on-surface truncate"
+                >
+                  LIVE NAVIGATION
+                </span>
+
+                <span
+                  class="font-label-caps text-label-caps text-on-surface-variant"
+                >
+                  POSITION TRACKING ACTIVE
+                </span>
+
+              </div>
+
+            </div>
+
+            <div
+              class="flex items-center gap-1 shrink-0 bg-primary/15 text-primary px-2 py-1 rounded"
+            >
+
+              <span class="material-symbols-outlined text-[14px]">
+                tune
+              </span>
+
+              <span
+                class="font-label-caps text-label-caps font-semibold"
+              >
+                MAP STATUS ΓÇö
+              </span>
+
+            </div>
+
+          </div>
+
+
+          <!-- Dynamic Telemetry Chips -->
+
+          <div class="grid grid-cols-3 gap-1.5">
+
+            <div
+              class="bg-surface-container-high px-2 py-1.5 rounded flex flex-col items-center justify-center text-center"
+            >
+
+              <span
+                class="font-label-caps text-label-caps text-on-surface-variant"
+              >
+                CONSTELLATION
+              </span>
+
+              <span
+                class="font-metric-sm text-metric-sm text-secondary truncate"
+              >
+                SATELLITES ΓÇö
+              </span>
+
+            </div>
+
+            <div
+              class="bg-surface-container-high px-2 py-1.5 rounded flex flex-col items-center justify-center text-center"
+            >
+
+              <span
+                class="font-label-caps text-label-caps text-on-surface-variant"
+              >
+                DILUTION (HDOP)
+              </span>
+
+              <span
+                class="font-metric-sm text-metric-sm text-primary"
+              >
+                HDOP ΓÇö
+              </span>
+
+            </div>
+
+            <div
+              class="bg-surface-container-high px-2 py-1.5 rounded flex flex-col items-center justify-center text-center"
+            >
+
+              <span
+                class="font-label-caps text-label-caps text-on-surface-variant"
+              >
+                KALMAN RATE
+              </span>
+
+              <span
+                class="font-metric-sm text-metric-sm text-on-surface"
+              >
+                IMU / FUSION ΓÇö
+              </span>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- =====================================================
+           MAIN NAVIGATION MAP
+           ===================================================== -->
+
+      <div class="px-gutter-mobile">
+
+        <div
+          class="relative w-full h-[320px] rounded-xl overflow-hidden bg-surface-container-lowest shadow-xl flex flex-col justify-between p-3"
+        >
+
+          <!-- REAL OSM ROAD MAP -->
+
+          <div
+            id="navigationMap"
+            class="absolute inset-0"
+          ></div>
+
+
+          <!-- Next Maneuver HUD Card -->
+
+          <div
+            class="relative z-10 flex items-center gap-2.5 bg-surface-container/90 backdrop-blur-md p-2.5 rounded-lg max-w-[85%] shadow-lg"
+          >
+
+            <div
+              class="w-9 h-9 rounded-md bg-secondary flex items-center justify-center text-on-secondary shrink-0"
+            >
+
+              <span class="material-symbols-outlined text-[24px]">
+                turn_slight_right
+              </span>
+
+            </div>
+
+            <div class="flex flex-col min-w-0">
+
+              <div class="flex items-center gap-1">
+
+                <span
+                  class="font-metric-md text-metric-md text-on-surface"
+                >
+                  TRACKING
+                </span>
+
+                <span
+                  class="font-label-caps text-label-caps text-on-surface-variant"
+                >
+                  ΓÇó LIVE
+                </span>
+
+              </div>
+
+              <span
+                class="font-body-sm text-body-sm text-secondary truncate"
+              >
+                GNSS / IMU POSITION STREAM
+              </span>
+
+            </div>
+
+          </div>
+
+
+          <!-- Tactical Map Controls -->
+
+          <div class="relative z-10 self-end flex flex-col gap-2">
+
+            <button
+              aria-label="Recenter Heading"
+              class="w-10 h-10 rounded-lg bg-surface-container-high/90 text-on-surface flex items-center justify-center active:scale-95 transition-transform"
+              id="recenterBtn"
+            >
+
+              <span class="material-symbols-outlined text-[20px]">
+                explore
+              </span>
+
+            </button>
+
+            <button
+              aria-label="Toggle corridor perspective"
+              class="w-10 h-10 rounded-lg bg-surface-container-high/90 text-on-surface flex items-center justify-center active:scale-95 transition-transform"
+              id="zoomCorridorBtn"
+            >
+
+              <span class="material-symbols-outlined text-[20px]">
+                layers
+              </span>
+
+            </button>
+
+          </div>
+
+
+          <!-- Map Matching & Mode Badges -->
+
+          <div
+            class="relative z-10 flex items-center justify-between w-full pt-1"
+          >
+
+            <div
+              class="flex items-center gap-1.5 px-2.5 py-1 bg-surface-container-lowest/90 backdrop-blur rounded-md"
+            >
+
+              <span
+                class="w-1.5 h-1.5 rounded-full bg-primary"
+              ></span>
+
+              <span
+                id="mapValue"
+                class="font-label-caps text-label-caps text-primary"
+              >
+                MAP MATCH ΓÇö
+              </span>
+
+            </div>
+
+            <span
+              id="headingValue"
+              class="font-label-caps text-label-caps text-on-surface-variant bg-surface-container-lowest/80 px-2 py-1 rounded"
+            >
+              HEADING ΓÇö
+            </span>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- =====================================================
+           DRIVING TELEMETRY
+           ===================================================== -->
+
+      <div class="px-gutter-mobile flex flex-col gap-3">
+
+
+        <!-- Primary Speed & Limit -->
+
+        <div
+          class="bg-surface-container p-card-padding-md rounded-xl flex items-center justify-between shadow-md"
+        >
+
+          <div class="flex items-baseline gap-2">
+
+            <span
+              class="font-metric-display text-metric-display-mobile text-on-surface tracking-tighter"
+              id="speedValue"
+            >
+              64
+            </span>
+
+            <div class="flex flex-col">
+
+              <span
+                class="font-label-caps text-label-caps text-secondary font-bold"
+              >
+                KM / H
+              </span>
+
+              <span
+                class="font-body-sm text-body-sm text-on-surface-variant"
+              >
+                GROUND VEL
+              </span>
+
+            </div>
+
+          </div>
+
+
+          <!-- Road Sign Speed Limit -->
+
+          <div class="flex items-center gap-3">
+
+            <div class="flex flex-col items-end">
+
+              <span
+                class="font-label-caps text-label-caps text-primary font-semibold"
+              >
+                LEGAL THRESHOLD
+              </span>
+
+              <span
+                class="font-metric-sm text-metric-sm text-on-surface-variant"
+              >
+                HEADROOM +16
+              </span>
+
+            </div>
+
+            <div
+              class="w-11 h-11 rounded-full bg-surface-container-highest flex flex-col items-center justify-center shadow-inner"
+            >
+
+              <span
+                class="font-label-caps text-[9px] leading-none text-error font-extrabold uppercase"
+              >
+                LIMIT
+              </span>
+
+              <span
+                class="font-metric-md text-metric-md text-on-surface font-black leading-tight"
+              >
+                80
+              </span>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- ===================================================
+             SENSOR & PIPELINE GRID
+             =================================================== -->
+
+        <div class="grid grid-cols-2 gap-2">
+
+
+          <!-- Accuracy -->
+
+          <div
+            class="bg-surface-container-low p-card-padding-sm rounded-lg flex flex-col justify-between h-20 shadow-sm"
+          >
+
+            <div class="flex items-center justify-between">
+
+              <span
+                class="font-label-caps text-label-caps text-on-surface-variant uppercase"
+              >
+                Position Accuracy
+              </span>
+
+              <span
+                class="material-symbols-outlined text-primary text-[16px]"
+              >
+                gps_fixed
+              </span>
+
+            </div>
+
+            <div>
+
+              <span
+                id="accuracyValue"
+                class="font-metric-large text-metric-large text-primary"
+              >
+                ΓÇö
+              </span>
+
+              <span
+                class="font-label-caps text-label-caps text-on-surface-variant ml-0.5"
+              >
+                m (95% CI)
+              </span>
+
+            </div>
+
+          </div>
+
+
+          <!-- IMU Kalman Filter -->
+
+          <div
+            class="bg-surface-container-low p-card-padding-sm rounded-lg flex flex-col justify-between h-20 shadow-sm"
+          >
+
+            <div class="flex items-center justify-between">
+
+              <span
+                class="font-label-caps text-label-caps text-on-surface-variant uppercase"
+              >
+                IMU Kalman Filter
+              </span>
+
+              <span
+                class="w-2 h-2 rounded-full bg-secondary"
+              ></span>
+
+            </div>
+
+            <div class="flex flex-col">
+
+              <span
+                class="font-metric-sm text-metric-sm text-on-surface font-semibold"
+              >
+                Active Filter
+              </span>
+
+              <span
+                class="font-label-caps text-[10px] text-secondary"
+              >
+                VIBRATION REJECT: ON
+              </span>
+
+            </div>
+
+          </div>
+
+
+          <!-- Vehicle Kinematics -->
+
+          <div
+            class="bg-surface-container-low p-card-padding-sm rounded-lg flex flex-col justify-between h-20 shadow-sm"
+          >
+
+            <div class="flex items-center justify-between">
+
+              <span
+                class="font-label-caps text-label-caps text-on-surface-variant uppercase"
+              >
+                Vehicle Kinematics
+              </span>
+
+              <span
+                class="material-symbols-outlined text-secondary text-[16px]"
+              >
+                minor_crash
+              </span>
+
+            </div>
+
+            <div class="flex flex-col">
+
+              <span
+                id="nhcValue"
+                class="font-metric-sm text-metric-sm text-on-surface font-semibold"
+              >
+                NHC ΓÇö
+              </span>
+
+              <span
+                class="font-label-caps text-[10px] text-primary"
+              >
+                NON-HOLONOMIC CONSTRAINT ACTIVE
+              </span>
+
+            </div>
+
+          </div>
+
+
+          <!-- Edge Compute -->
+
+          <div
+            class="bg-surface-container-low p-card-padding-sm rounded-lg flex flex-col justify-between h-20 shadow-sm"
+          >
+
+            <div class="flex items-center justify-between">
+
+              <span
+                class="font-label-caps text-label-caps text-on-surface-variant uppercase"
+              >
+                Compute Core
+              </span>
+
+              <span
+                class="material-symbols-outlined text-tertiary text-[16px]"
+              >
+                developer_board
+              </span>
+
+            </div>
+
+            <div class="flex flex-col">
+
+              <span
+                class="font-metric-sm text-metric-sm text-on-surface font-semibold"
+              >
+                EDGE PROCESSING
+              </span>
+
+              <span
+                class="font-label-caps text-[10px] text-tertiary"
+              >
+                AI INFERENCE ΓÇó READY
+              </span>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- Telemetry Confidence -->
+
+        <div
+          class="px-1 flex items-center justify-between text-on-surface-variant"
+        >
+
+          <div class="flex items-center gap-1.5 min-w-0">
+
+            <span
+              class="w-1.5 h-1.5 rounded-full bg-primary shrink-0"
+            ></span>
+
+            <span
+              class="font-body-sm text-body-sm truncate"
+            >
+              Live navigation state ΓÇó GNSS / IMU fusion
+            </span>
+
+          </div>
+
+          <span
+            class="font-label-caps text-label-caps shrink-0 ml-2"
+          >
+            LIVE
+          </span>
+
+        </div>
+
+
+        <!-- ===================================================
+             GNSS OUTAGE SIMULATION
+             =================================================== -->
+
+        <button
+          class="w-full h-touch-target-min bg-surface-container-high hover:bg-surface-variant active:scale-[0.98] transition-all rounded-xl px-4 flex items-center justify-between shadow-lg"
+          id="simTunnelBtn"
+        >
+
+          <div class="flex items-center gap-3">
+
+            <div
+              class="w-8 h-8 rounded-lg bg-tertiary-container/30 flex items-center justify-center text-tertiary"
+            >
+
+              <span class="material-symbols-outlined text-[20px]">
+                graph_4
+              </span>
+
+            </div>
+
+            <div class="flex flex-col text-left">
+
+              <span
+                class="font-headline-sm text-[15px] text-on-surface font-semibold"
+              >
+                Simulate GNSS Tunnel Outage
+              </span>
+
+              <span
+                class="font-label-caps text-label-caps text-on-surface-variant"
+              >
+                TRIGGER INSTANTANEOUS DEAD RECKONING FAILOVER
+              </span>
+
+            </div>
+
+          </div>
+
+          <span
+            class="material-symbols-outlined text-on-surface-variant text-[20px]"
+          >
+            arrow_forward
+          </span>
+
+        </button>
+
+      </div>
+
+    </div>
+
+  </main>
+
+
+  <!-- =========================================================
+       BOTTOM NAVIGATION
+       ========================================================= -->
+
+  <nav
+    class="fixed bottom-0 inset-x-0 z-50 pb-safe bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_-1px_12px_rgba(0,0,0,0.5)]"
+    data-active-classes="text-primary bg-surface-container-high/60"
+  >
+
+    <div class="flex justify-around items-center h-20 px-2">
+
+      <a
+        aria-current="page"
+        class="flex flex-col items-center justify-center flex-1 h-touch-target-min py-1 px-1 rounded-lg transition-colors text-primary bg-surface-container-high/60"
+        data-path="navigate"
+        href="/navigate"
+      >
+
+        <span class="material-symbols-outlined text-[22px]">
+          navigation
+        </span>
+
+        <span
+          class="font-label-caps text-label-caps uppercase mt-1"
+        >
+          NAVIGATE
+        </span>
+
+      </a>
+
+
+      <a
+        class="flex flex-col items-center justify-center flex-1 h-touch-target-min py-1 px-1 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors"
+        data-path="outage-mode"
+        href="/outage"
+      >
+
+        <span class="material-symbols-outlined text-[22px]">
+          warning
+        </span>
+
+        <span
+          class="font-label-caps text-label-caps uppercase mt-1"
+        >
+          OUTAGE
+        </span>
+
+      </a>
+
+
+      <a
+        class="flex flex-col items-center justify-center flex-1 h-touch-target-min py-1 px-1 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors"
+        data-path="calibration"
+        href="/calibrate"
+      >
+
+        <span class="material-symbols-outlined text-[22px]">
+          explore
+        </span>
+
+        <span
+          class="font-label-caps text-label-caps uppercase mt-1"
+        >
+          CALIBRATE
+        </span>
+
+      </a>
+
+
+      <a
+        class="flex flex-col items-center justify-center flex-1 h-touch-target-min py-1 px-1 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors"
+        data-path="pipeline-status"
+        href="/pipeline"
+      >
+
+        <span class="material-symbols-outlined text-[22px]">
+          memory
+        </span>
+
+        <span
+          class="font-label-caps text-label-caps uppercase mt-1"
+        >
+          PIPELINE
+        </span>
+
+      </a>
+
+
+      <a
+        class="flex flex-col items-center justify-center flex-1 h-touch-target-min py-1 px-1 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors"
+        data-path="settings"
+        href="/settings"
+      >
+
+        <span class="material-symbols-outlined text-[22px]">
+          settings
+        </span>
+
+        <span
+          class="font-label-caps text-label-caps uppercase mt-1"
+        >
+          SETTINGS
+        </span>
+
+      </a>
+
+    </div>
+
+  </nav>
+
+
+  <!-- =========================================================
+       LEAFLET
+       ========================================================= -->
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+
+  <!-- =========================================================
+       DASHBOARD JAVASCRIPT
+       ========================================================= -->
+
+  <script>
+
+    (function initDashboard() {
+
+      // ========================================================
+      // REAL OSM ROAD MAP
+      // ========================================================
+
+      const navigationMap = L.map('navigationMap', {
+        zoomControl: false,
+        attributionControl: true,
+        zoomAnimation: true,
+        markerZoomAnimation: true
+      }).setView(
+        [12.9716, 77.5946],
+        17
+      );
+
+
+      // OpenStreetMap road tiles
+
+      L.tileLayer(
+        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        {
+          maxZoom: 19,
+          attribution: '&copy; OpenStreetMap contributors'
+        }
+      ).addTo(navigationMap);
+
+
+      // ========================================================
+      // VEHICLE MARKER
+      // ========================================================
+
+      const vehicleIcon = L.divIcon({
+
+        className: '',
+
+        html: `
+          <div class="vehicle-marker">
+            <div class="vehicle-marker-inner"></div>
+          </div>
+        `,
+
+        iconSize: [34, 34],
+
+        iconAnchor: [17, 17]
+
+      });
+
+
+      const vehicleMarker = L.marker(
+        [12.9716, 77.5946],
+        {
+          icon: vehicleIcon,
+          zIndexOffset: 1000
+        }
+      ).addTo(navigationMap);
+
+
+      // ========================================================
+      // NAVIGATION PATH
+      // ========================================================
+
+      const navigationPath = L.polyline(
+        [
+          [12.9716, 77.5946]
+        ],
+        {
+          color: '#1976d2',
+          weight: 5,
+          opacity: 0.9,
+          lineCap: 'round',
+          lineJoin: 'round'
+        }
+      ).addTo(navigationMap);
+
+
+      let mapCentered = true;
+
+
+      // ========================================================
+      // UPDATE VEHICLE POSITION
+      // ========================================================
+
+      function updateMapPosition(latitude, longitude) {
+
+        const lat = Number(latitude);
+        const lon = Number(longitude);
+
+        if (
+          !Number.isFinite(lat) ||
+          !Number.isFinite(lon)
+        ) {
+          return;
+        }
+
+        const position = [lat, lon];
+
+        vehicleMarker.setLatLng(position);
+
+        navigationPath.addLatLng(position);
+
+
+        if (mapCentered) {
+
+          navigationMap.setView(
+            position,
+            navigationMap.getZoom(),
+            {
+              animate: true
+            }
+          );
+
+        }
+
+      }
+
+
+      // ========================================================
+      // EXISTING UI ELEMENTS
+      // ========================================================
+
+      const simBtn =
+        document.getElementById('simTunnelBtn');
+
+      const speedVal =
+        document.getElementById('speedValue');
+
+
+      // ========================================================
+      // DEMO STATE
+      // ========================================================
+
+      let demoTimer = null;
+
+      let demoPhase = "idle";
+
+      let demoTick = 0;
+
+      let demoTime = 1000;
+
+      let demoLat = 12.9716;
+
+      let demoLon = 77.5946;
+
+
+      // ========================================================
+      // GET NAVIGATION STATE
+      // ========================================================
+
+      async function getState() {
+
+        const response =
+          await fetch('/navigation/state');
+
+        if (!response.ok) {
+
+          throw new Error(
+            'Navigation state unavailable'
+          );
+
+        }
+
+        return response.json();
+
+      }
+
+
+      // ========================================================
+      // UPDATE UI ELEMENT IF PRESENT
+      // ========================================================
+
+      function updateIfPresent(id, value) {
+
+        const element =
+          document.getElementById(id);
+
+        if (element) {
+
+          element.textContent = value;
+
+        }
+
+      }
+
+
+      // ========================================================
+      // UPDATE SCREEN
+      // ========================================================
+
+      function updateScreen(state) {
+
+        if (!state) {
+          return;
+        }
+
+
+        // ------------------------------------------------------
+        // REAL MAP POSITION
+        // ------------------------------------------------------
+
+       const position = state.position || {};
+
+        if (
+          position.latitude != null &&
+          position.longitude != null
+        ) {
+          updateMapPosition(
+            position.latitude,
+            position.longitude
+          );
+        }
+
+        if (
+          Array.isArray(state.track) &&
+          state.track.length > 0
+        ) {
+          navigationPath.setLatLngs(state.track);
+        }
+
+
+        // ------------------------------------------------------
+        // SPEED
+        // ------------------------------------------------------
+
+        if (speedVal) {
+
+          speedVal.textContent =
+            Math.round(
+              Number(state.speed_kmh || 0)
+            );
+
+        }
+
+
+        // ------------------------------------------------------
+        // GNSS STATE
+        // ------------------------------------------------------
+
+        updateIfPresent(
+          'gnssState',
+          state.gnss_status || 'ΓÇö'
+        );
+
+
+        // ------------------------------------------------------
+        // NAVIGATION MODE
+        // ------------------------------------------------------
+
+        updateIfPresent(
+          'navigationMode',
+          state.mode || 'ΓÇö'
+        );
+
+
+        // ------------------------------------------------------
+        // HEADING
+        // ------------------------------------------------------
+
+        updateIfPresent(
+          'headingValue',
+
+          state.heading_deg == null
+
+            ? 'HEADING ΓÇö'
+
+            : `HEADING ${
+                Math.round(
+                  Number(state.heading_deg)
+                )
+              }┬░`
+        );
+
+
+        // ------------------------------------------------------
+        // POSITION ACCURACY
+        // ------------------------------------------------------
+
+        updateIfPresent(
+          'accuracyValue',
+
+          state.uncertainty_m == null
+
+            ? 'ΓÇö'
+
+            : `┬▒ ${
+                Number(
+                  state.uncertainty_m
+                ).toFixed(1)
+              }`
+        );
+
+
+        // ------------------------------------------------------
+        // NHC
+        // ------------------------------------------------------
+
+        updateIfPresent(
+          'nhcValue',
+          state.nhc_status || 'ΓÇö'
+        );
+
+
+        // ------------------------------------------------------
+        // MAP STATUS
+        // ------------------------------------------------------
+
+        updateIfPresent(
+          'mapValue',
+          state.map_status || 'ΓÇö'
+        );
+
+
+        // ------------------------------------------------------
+        // FUSION STATUS
+        // ------------------------------------------------------
+
+        updateIfPresent(
+          'fusionStatus',
+          state.mode || 'ΓÇö'
+        );
+
+
+        // ------------------------------------------------------
+        // CONFIDENCE
+        //
+        // Backend currently provides uncertainty in metres,
+        // not a statistical percentage.
+        // ------------------------------------------------------
+
+        updateIfPresent(
+
+          'confidenceValue',
+
+          state.uncertainty_m == null
+
+            ? 'ΓÇö CONF'
+
+            : `┬▒${
+                Number(
+                  state.uncertainty_m
+                ).toFixed(1)
+              }m`
+
+        );
+
+
+        // ------------------------------------------------------
+        // GNSS / DEAD RECKONING VISUAL STATE
+        // ------------------------------------------------------
+
+        const stateName =
+          String(
+            state.gnss_state || ''
+          );
+
+        const modeName =
+          String(
+            state.mode || ''
+          );
+
+
+        if (
+
+          stateName.includes('LOST') ||
+
+          stateName.includes(
+            'DEAD_RECKONING'
+          ) ||
+
+          modeName.includes(
+            'DEAD RECKONING'
+          )
+
+        ) {
+
+          if (simBtn) {
+
+            simBtn.classList.add(
+              'bg-tertiary-container/40'
+            );
+
+          }
+
+        } else {
+
+          if (simBtn) {
+
+            simBtn.classList.remove(
+              'bg-tertiary-container/40'
+            );
+
+          }
+
+        }
+
+
+        // ------------------------------------------------------
+        // HEADER GNSS STATUS
+        // ------------------------------------------------------
+
+        updateIfPresent(
+          'gnssFixSummary',
+          state.gnss_status ||
+          'GNSS STATUS ΓÇö'
+        );
+
+      }
+
+
+      // ========================================================
+      // REFRESH NAVIGATION STATE
+      // ========================================================
+
+      async function refreshState() {
+
+        try {
+
+          const state =
+            await getState();
+
+          updateScreen(state);
+
+        } catch (error) {
+
+          console.error(
+            'Navigation state error:',
+            error
+          );
+
+        }
+
+      }
+
+
+      // ========================================================
+      // API HELPER
+      // ========================================================
+
+      async function api(
+        path,
+        options = {}
+      ) {
+
+        const response =
+          await fetch(
+            path,
+            {
+              headers: {
+                'Content-Type':
+                  'application/json'
+              },
+
+              ...options
+            }
+          );
+
+
+        if (!response.ok) {
+
+          throw new Error(
+            `${
+              response.status
+            } ${
+              await response.text()
+            }`
+          );
+
+        }
+
+
+        return response.json();
+
+      }
+
+
+      // ========================================================
+      // STOP DEMO
+      // ========================================================
+
+      function stopDemo() {
+
+        if (demoTimer) {
+
+          clearInterval(
+            demoTimer
+          );
+
+          demoTimer = null;
+
+        }
+
+        demoPhase = "idle";
+
+      }
+
+
+      // ========================================================
+      // SEND DEMO SENSOR PACKET
+      // ========================================================
+
+      async function sendDemoPacket() {
+
+        demoTime += 0.1;
+
+        demoTick++;
+
+
+        // ------------------------------------------------------
+        // CONTINUOUS IMU STREAM
+        // ------------------------------------------------------
+
+        await api(
+          '/sensor/imu',
+          {
+            method: 'POST',
+
+            body: JSON.stringify({
+
+              timestamp: demoTime,
+
+              ax: 0,
+
+              ay: 0,
+
+              az: 9.80665,
+
+              gx: 0,
+
+              gy: 0,
+
+              gz: 0
+
+            })
+
+          }
+        );
+
+
+        // ------------------------------------------------------
+        // GNSS AVAILABLE DURING NORMAL PHASE
+        // During outage GNSS deliberately stops.
+        // ------------------------------------------------------
+
+        if (
+
+          demoPhase !== "outage" &&
+
+          demoTick % 10 === 0
+
+        ) {
+
+          demoLon +=
+
+            (8.0 * 1.0) /
+
+            (
+              111320 *
+              Math.cos(
+                demoLat *
+                Math.PI /
+                180
+              )
+            );
+
+
+          await api(
+            '/sensor/gnss',
+            {
+              method: 'POST',
+
+              body: JSON.stringify({
+
+                timestamp: demoTime,
+
+                latitude: demoLat,
+
+                longitude: demoLon,
+
+                speed: 8,
+
+                accuracy: 5
+
+              })
+
+            }
+          );
+
+        }
+
+
+        // ------------------------------------------------------
+        // 5 SEC GNSS-AIDED NAVIGATION
+        // THEN ~8 SEC GNSS OUTAGE
+        // ------------------------------------------------------
+
+        if (demoTick === 50) {
+
+          demoPhase = "outage";
+
+          console.log(
+            'GNSS signal lost ΓÇö dead reckoning active'
+          );
+
+        }
+
+
+        // ------------------------------------------------------
+        // GNSS RETURNS
+        // ------------------------------------------------------
+
+        if (demoTick === 130) {
+
+          demoPhase = "recovery";
+
+          console.log(
+            'GNSS restored ΓÇö reacquisition active'
+          );
+
+        }
+
+
+        // ------------------------------------------------------
+        // GNSS DURING RECOVERY
+        // ------------------------------------------------------
+
+        if (
+
+          demoPhase === "recovery" &&
+
+          demoTick % 10 === 0
+
+        ) {
+
+          demoLon +=
+
+            (8.0 * 1.0) /
+
+            (
+              111320 *
+              Math.cos(
+                demoLat *
+                Math.PI /
+                180
+              )
+            );
+
+
+          await api(
+            '/sensor/gnss',
+            {
+              method: 'POST',
+
+              body: JSON.stringify({
+
+                timestamp: demoTime,
+
+                latitude: demoLat,
+
+                longitude: demoLon,
+
+                speed: 8,
+
+                accuracy: 5
+
+              })
+
+            }
+          );
+
+        }
+
+
+        // ------------------------------------------------------
+        // FINISH DEMO
+        // ------------------------------------------------------
+
+        if (demoTick >= 175) {
+
+          stopDemo();
+
+          console.log(
+            'Navigation demonstration complete'
+          );
+
+        }
+
+      }
+
+
+      // ========================================================
+      // START NAVIGATION DEMO
+      // ========================================================
+
+      async function startNavigationDemo() {
+
+        if (demoTimer) {
+
+          stopDemo();
+
+        }
+
+
+        // ------------------------------------------------------
+        // CLEAN NAVIGATION STATE
+        // ------------------------------------------------------
+
+        await api(
+          '/demo/reset',
+          {
+            method: 'POST'
+          }
+        );
+
+
+        demoTick = 0;
+
+        demoTime = 1000;
+
+        demoLat = 12.9716;
+
+        demoLon = 77.5946;
+
+
+        // ------------------------------------------------------
+        // INITIAL GNSS FIX
+        // ------------------------------------------------------
+
+        await api(
+          '/sensor/gnss',
+          {
+            method: 'POST',
+
+            body: JSON.stringify({
+
+              timestamp: demoTime,
+
+              latitude: demoLat,
+
+              longitude: demoLon,
+
+              speed: 8,
+
+              accuracy: 5
+
+            })
+
+          }
+        );
+
+
+        demoPhase = "normal";
+
+
+        // ------------------------------------------------------
+        // 10 HZ DEMONSTRATION SENSOR STREAM
+        // ------------------------------------------------------
+
+        demoTimer =
+          setInterval(
+            () => {
+
+              sendDemoPacket()
+                .catch(
+                  error => {
+
+                    console.error(
+                      'Demo packet error:',
+                      error
+                    );
+
+                  }
+                );
+
+            },
+            100
+          );
+
+      }
+
+
+      // ========================================================
+      // GNSS OUTAGE BUTTON — REAL BLACKOUT (standalone mode)
+      // ========================================================
+
+      var blackoutActive = false;
+
+      if (simBtn) {
+        simBtn.addEventListener('click', async () => {
+          try {
+            if (!blackoutActive) {
+              blackoutActive = true;
+              simBtn.classList.add('bg-tertiary-container/40');
+              // Change button label
+              var label = simBtn.querySelector('.font-headline-sm');
+              if (label) label.textContent = 'RESTORE GNSS';
+              var sub = simBtn.querySelector('.font-label-caps');
+              if (sub) sub.textContent = 'SIMULATED OUTAGE ACTIVE — TAP TO RESTORE';
+              await fetch('/gnss/blackout', {method:'POST'});
+            } else {
+              blackoutActive = false;
+              simBtn.classList.remove('bg-tertiary-container/40');
+              var label2 = simBtn.querySelector('.font-headline-sm');
+              if (label2) label2.textContent = 'Simulate GNSS Tunnel Outage';
+              var sub2 = simBtn.querySelector('.font-label-caps');
+              if (sub2) sub2.textContent = 'TRIGGER INSTANTANEOUS DEAD RECKONING FAILOVER';
+              await fetch('/gnss/restore', {method:'POST'});
+            }
+          } catch(e) { console.error('Blackout toggle error:', e); }
+        });
+      }
+
+      // ========================================================
+      // UPDATE FUSION STATUS CHIP
+      // ========================================================
+      function updateFusionChip(state) {
+        var chip = document.getElementById('fusionStatus');
+        if (!chip) return;
+        var mode = (state.mode || '').toUpperCase();
+        if (mode.includes('DEAD') || mode.includes('IDR')) {
+          chip.textContent = 'GNSS OUTAGE — IDR ACTIVE';
+          chip.className = chip.className.replace(/text-\w+/g, '').replace(/bg-\w+/g, '');
+          chip.classList.add('text-tertiary');
+        } else if (mode.includes('REACQ')) {
+          chip.textContent = 'GNSS REACQUISITION';
+          chip.classList.add('text-secondary');
+        } else if (mode.includes('WAIT') || mode.includes('INIT')) {
+          chip.textContent = 'ACQUIRING FIX...';
+        } else {
+          chip.textContent = 'GNSS + INS FUSION';
+          chip.classList.add('text-primary');
+        }
+      }
+
+      // ========================================================
+      // EXTRA UI FIELDS — update sensor values shown in the UI
+      // ========================================================
+      function updateExtraFields(state) {
+        // IMU rate / GNSS rate
+        updateIfPresent('imuRateValue', (state.imu_hz || 0).toFixed(1) + ' Hz');
+        updateIfPresent('gnssRateValue', (state.gnss_hz || 0).toFixed(2) + ' Hz');
+        // Lat/lon if elements exist
+        updateIfPresent('latValue', state.position && state.position.latitude != null ?
+          state.position.latitude.toFixed(6) : '—');
+        updateIfPresent('lonValue', state.position && state.position.longitude != null ?
+          state.position.longitude.toFixed(6) : '—');
+        // Calibration
+        updateIfPresent('calibValue', state.calibration || '—');
+        // Blackout timer
+        if (state.gnss_blackout && state.blackout_seconds > 0) {
+          var sec = state.blackout_seconds;
+          var mm = Math.floor(sec/60).toString().padStart(2,'0');
+          var ss = Math.floor(sec%60).toString().padStart(2,'0');
+          updateIfPresent('blackoutTimer', 'OUTAGE: '+mm+':'+ss);
+        } else {
+          updateIfPresent('blackoutTimer', '');
+        }
+        // DR distance
+        updateIfPresent('drDistValue', (state.dr_dist_m || 0).toFixed(1) + ' m');
+        // Accel values
+        updateIfPresent('accelX', (state.accel_x || 0).toFixed(3));
+        updateIfPresent('accelY', (state.accel_y || 0).toFixed(3));
+        updateIfPresent('accelZ', (state.accel_z || 0).toFixed(3));
+        updateIfPresent('gyroX',  (state.gyro_x || 0).toFixed(4));
+        updateIfPresent('gyroY',  (state.gyro_y || 0).toFixed(4));
+        updateIfPresent('gyroZ',  (state.gyro_z || 0).toFixed(4));
+        // Session recording
+        if (state.recording) {
+          updateIfPresent('sessionStatus', '● REC ' + state.record_count + ' records');
+        } else {
+          updateIfPresent('sessionStatus', 'Not recording');
+        }
+      }
+
+      // ========================================================
+      // PATCH refreshState to also call our extra updaters
+      // ========================================================
+      var _origRefreshState = refreshState;
+      refreshState = async function() {
+        try {
+          var state = await getState();
+          updateScreen(state);
+          updateFusionChip(state);
+          updateExtraFields(state);
+        } catch(e) {
+          console.warn('[IDR] state poll error:', e.message);
+        }
+      };
+
+      // ========================================================
+      // INITIAL STATE
+      // ========================================================
+      refreshState();
+      // ========================================================
+      // KEEP UI SYNCHRONIZED WITH BACKEND — 600ms poll
+      // ========================================================
+      setInterval(refreshState, 600);
+
+      // ========================================================
+      // AUTO-START NAVIGATION when page loads (request from Android)
+      // ========================================================
+      setTimeout(function() {
+        if (window.Android && window.Android.startNavigation) {
+          Android.startNavigation();
+        }
+      }, 800);
+
+    })();
+  </script>
+</body>
+</html>

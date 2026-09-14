@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>IDR Fusion</title>
+<style>
+/* ===== RESET & BASE ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100%;
+  min-height: 100%;
+  overflow-x: hidden;
+  background: #0b0f1a;
+  color: #dde3f0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+#app { display: flex; flex-direction: column; min-height: 100dvh; min-height: 100vh; }
+
+/* ===== HEADER ===== */
+#header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  background: rgba(11,15,26,0.97);
+  border-bottom: 1px solid #1e2436;
+  padding: 10px 14px;
+  padding-top: calc(10px + env(safe-area-inset-top));
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+#header-left { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+#header-title { font-size: 16px; font-weight: 700; color: #4edea3; letter-spacing: 0.08em; text-transform: uppercase; }
+#header-subtitle { font-size: 10px; color: #5a7080; letter-spacing: 0.06em; text-transform: uppercase; }
+#header-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.status-chip {
+  display: flex; align-items: center; gap: 5px;
+  padding: 4px 8px; border-radius: 6px;
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+.chip-green { background: rgba(78,222,163,0.12); color: #4edea3; border: 1px solid rgba(78,222,163,0.25); }
+.chip-orange { background: rgba(255,165,0,0.12); color: #ffb347; border: 1px solid rgba(255,165,0,0.25); }
+.chip-blue { background: rgba(100,180,255,0.12); color: #64b4ff; border: 1px solid rgba(100,180,255,0.25); }
+.chip-dim { background: rgba(90,112,128,0.15); color: #5a7080; border: 1px solid #1e2436; }
+.pulse { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: pulse 1.4s infinite; flex-shrink: 0; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.25} }
+
+/* ===== BOTTOM NAV ===== */
+#bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+  background: rgba(11,15,26,0.98); border-top: 1px solid #1e2436;
+  padding-bottom: env(safe-area-inset-bottom); display: flex;
+}
+.nav-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px; padding: 8px 2px; cursor: pointer; color: #4a5a6a;
+  border: none; background: none; -webkit-tap-highlight-color: transparent; transition: color 0.12s;
+  min-height: 58px;
+}
+.nav-item.active { color: #4edea3; }
+.nav-item:active { opacity: 0.7; }
+.nav-icon { width: 22px; height: 22px; flex-shrink: 0; }
+.nav-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+
+/* ===== SCREENS ===== */
+#main-content {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  padding-top: 60px;
+  padding-bottom: calc(68px + env(safe-area-inset-bottom));
+}
+.screen { display: none; padding: 10px 12px; }
+.screen.active { display: block; }
+
+/* ===== CARDS ===== */
+.card { background: #111827; border: 1px solid #1e2d40; border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+.card-title { font-size: 9px; font-weight: 700; color: #4a6070; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+
+/* ===== METRIC GRID ===== */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+.metric-card { background: #111827; border: 1px solid #1e2d40; border-radius: 10px; padding: 10px; }
+.metric-label { font-size: 9px; font-weight: 700; color: #4a6070; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 3px; }
+.metric-value { font-size: 20px; font-weight: 700; color: #dde3f0; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.metric-unit { font-size: 10px; color: #4a6070; }
+.metric-sub { font-size: 10px; color: #5a7080; margin-top: 2px; }
+
+/* ===== MAP ===== */
+#map-container {
+  position: relative; width: 100%; height: 220px;
+  border-radius: 10px; overflow: hidden; margin-bottom: 10px;
+  border: 1px solid #1e2d40; background: #0d1120;
+}
+#leaflet-map { width: 100%; height: 100%; }
+#map-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+#map-overlay-top {
+  position: absolute; top: 8px; left: 8px; z-index: 500;
+  background: rgba(11,15,26,0.88); border-radius: 6px; padding: 5px 8px;
+  font-size: 10px; color: #4edea3; font-variant-numeric: tabular-nums; pointer-events: none;
+}
+#map-mode-badge {
+  position: absolute; bottom: 8px; left: 8px; z-index: 500;
+  pointer-events: none;
+}
+#map-network-note {
+  position: absolute; bottom: 8px; right: 8px; z-index: 500;
+  background: rgba(11,15,26,0.75); border-radius: 4px; padding: 2px 6px;
+  font-size: 9px; color: #4a6070; pointer-events: none;
+}
+
+/* ===== STATUS TABLE ===== */
+.status-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #141f2e; }
+.status-row:last-child { border-bottom: none; }
+.status-key { font-size: 11px; color: #5a7080; text-transform: uppercase; letter-spacing: 0.05em; }
+.status-val { font-size: 11px; font-weight: 600; color: #dde3f0; text-align: right; }
+.status-val.green { color: #4edea3; }
+.status-val.orange { color: #ffb347; }
+.status-val.blue { color: #64b4ff; }
+.status-val.red { color: #ff6b5a; }
+.status-val.dim { color: #4a6070; }
+
+/* ===== SENSORS ===== */
+.sensor-card { background: #111827; border: 1px solid #1e2d40; border-radius: 10px; padding: 10px; margin-bottom: 8px; }
+.sensor-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+.sensor-name { font-size: 12px; font-weight: 600; color: #dde3f0; }
+.sensor-badge { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 8px; text-transform: uppercase; }
+.badge-live { background: rgba(78,222,163,0.15); color: #4edea3; }
+.badge-dim { background: rgba(74,96,112,0.2); color: #4a6070; }
+.sensor-data { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.sensor-axis { text-align: center; }
+.sensor-axis-label { font-size: 9px; color: #4a6070; text-transform: uppercase; }
+.sensor-axis-value { font-size: 12px; font-weight: 600; color: #8aa8c0; font-variant-numeric: tabular-nums; }
+
+/* ===== BUTTONS ===== */
+.btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; padding: 13px 14px; border-radius: 10px; border: none;
+  font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.1s, transform 0.1s; margin-bottom: 8px;
+}
+.btn:active { opacity: 0.8; transform: scale(0.98); }
+.btn-primary { background: #4edea3; color: #003824; }
+.btn-danger { background: rgba(255,80,60,0.14); color: #ff6b5a; border: 1px solid rgba(255,80,60,0.3); }
+.btn-warning { background: rgba(255,165,0,0.14); color: #ffb347; border: 1px solid rgba(255,165,0,0.3); }
+.btn-outline { background: #111827; color: #dde3f0; border: 1px solid #2a3a50; }
+.btn-ghost { background: rgba(255,255,255,0.04); color: #5a7080; border: 1px solid #1e2d40; }
+.btn:disabled { opacity: 0.38; pointer-events: none; }
+
+/* ===== PROGRESS ===== */
+.progress-bg { background: #1a2030; border-radius: 6px; height: 8px; overflow: hidden; margin: 8px 0; }
+.progress-fill { height: 100%; border-radius: 6px; background: #4edea3; transition: width 0.3s; width: 0%; }
+.timer-display { font-size: 40px; font-weight: 700; color: #ffb347; font-variant-numeric: tabular-nums; text-align: center; padding: 12px 0; letter-spacing: 0.04em; }
+
+/* ===== MODE SELECTOR ===== */
+.mode-selector { display: flex; gap: 8px; margin-bottom: 8px; }
+.mode-option {
+  flex: 1; padding: 11px 6px; border-radius: 8px; border: 2px solid #1e2d40;
+  background: #0e1522; color: #4a6070; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em; text-align: center;
+  cursor: pointer; -webkit-tap-highlight-color: transparent; transition: all 0.12s;
+}
+.mode-option.active { border-color: #4edea3; color: #4edea3; background: rgba(78,222,163,0.07); }
+
+/* ===== PIPELINE ===== */
+.pipe-step { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid #141f2e; }
+.pipe-step:last-child { border-bottom: none; }
+.pipe-dot-col { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; width: 24px; padding-top: 3px; }
+.pipe-dot { width: 10px; height: 10px; border-radius: 50%; background: #4edea3; }
+.pipe-dot.dim { background: #2a3a50; }
+.pipe-line { width: 2px; height: 20px; background: #1e2d40; margin-top: 2px; }
+.pipe-body { flex: 1; min-width: 0; }
+.pipe-title { font-size: 12px; font-weight: 600; color: #dde3f0; }
+.pipe-desc { font-size: 10px; color: #4a6070; margin-top: 2px; }
+.module-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; }
+.mod-check { font-size: 12px; color: #4edea3; flex-shrink: 0; }
+.mod-check.dim { color: #4a6070; }
+.mod-text { font-size: 11px; color: #8aa8c0; }
+
+/* ===== SETTINGS ===== */
+.settings-section { margin-bottom: 16px; }
+.settings-title { font-size: 9px; font-weight: 700; color: #4edea3; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1px solid #1e2d40; }
+
+/* ===== TEST SUMMARY ===== */
+#summary-panel { display: none; }
+.summary-header { text-align: center; padding: 12px 0; }
+.summary-title { font-size: 16px; font-weight: 700; color: #4edea3; text-transform: uppercase; letter-spacing: 0.08em; }
+.summary-note { font-size: 10px; color: #5a7080; margin-top: 4px; }
+.summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+.summary-cell { background: #111827; border: 1px solid #1e2d40; border-radius: 8px; padding: 10px; text-align: center; }
+.summary-cell-label { font-size: 9px; color: #4a6070; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 4px; }
+.summary-cell-value { font-size: 18px; font-weight: 700; color: #dde3f0; font-variant-numeric: tabular-nums; }
+.summary-cell-unit { font-size: 10px; color: #4a6070; }
+
+/* ===== PERMISSION BANNER ===== */
+#perm-banner { display: none; background: rgba(255,100,60,0.09); border: 1px solid rgba(255,100,60,0.28); border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; font-size: 11px; color: #ff8870; text-align: center; }
+
+/* Leaflet override for dark theme */
+.leaflet-container { background: #0d1120 !important; }
+.leaflet-control-attribution { font-size: 8px !important; background: rgba(11,15,26,0.7) !important; color: #4a6070 !important; }
+.leaflet-control-zoom { display: none !important; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ===== HEADER ===== -->
+  <header id="header">
+    <div id="header-left">
+      <div id="header-title">IDR FUSION</div>
+      <div id="header-subtitle">Intelligent Dead Reckoning &mdash; SIH MVP</div>
+    </div>
+    <div id="header-right">
+      <div class="status-chip chip-dim" id="mode-chip">
+        <span class="pulse" id="mode-dot"></span>
+        <span id="mode-chip-text">INIT</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== MAIN ===== -->
+  <main id="main-content">
+
+    <!-- ==================== NAVIGATE ==================== -->
+    <div id="screen-navigate" class="screen active">
+
+      <div id="perm-banner">LOCATION PERMISSION REQUIRED &mdash; Enable Precise Location to use GNSS navigation.</div>
+
+      <!-- Mode Badge -->
+      <div class="card" style="margin-bottom:10px;padding:10px 12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+          <div>
+            <div class="card-title" style="margin-bottom:3px;">Navigation Mode</div>
+            <div id="nav-mode-badge" class="status-chip chip-dim" style="display:inline-flex;">
+              <span class="pulse" id="nav-pulse"></span>
+              <span id="nav-mode-text">INITIALIZING</span>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:9px;color:#4a6070;text-transform:uppercase;letter-spacing:0.07em;">Nav Output</div>
+            <div style="font-size:16px;font-weight:700;color:#dde3f0;font-variant-numeric:tabular-nums;"><span id="val-nav-hz">--</span><span style="font-size:10px;color:#4a6070;"> Hz</span></div>
+          </div>
+        </div>
+        <div style="font-size:10px;color:#5a7080;margin-top:6px;" id="nav-mode-sub">Waiting for sensors...</div>
+      </div>
+
+      <!-- Map -->
+      <div id="map-container">
+        <div id="leaflet-map"></div>
+        <canvas id="map-canvas"></canvas>
+        <div id="map-overlay-top" id="map-coords-display">NO FIX</div>
+        <div id="map-mode-badge"></div>
+        <div id="map-network-note">OSM tiles require internet</div>
+      </div>
+
+      <!-- Position -->
+      <div class="grid-2">
+        <div class="metric-card">
+          <div class="metric-label">Latitude</div>
+          <div class="metric-value" id="val-lat" style="font-size:14px;letter-spacing:-0.01em;">--</div>
+          <div class="metric-sub">&deg; WGS-84</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Longitude</div>
+          <div class="metric-value" id="val-lon" style="font-size:14px;letter-spacing:-0.01em;">--</div>
+          <div class="metric-sub">&deg; WGS-84</div>
+        </div>
+      </div>
+
+      <!-- Speed / Heading / Accuracy -->
+      <div class="grid-3">
+        <div class="metric-card">
+          <div class="metric-label">Speed</div>
+          <div><span class="metric-value" id="val-speed" style="font-size:22px;">--</span><span class="metric-unit"> km/h</span></div>
+          <div class="metric-sub" id="val-speed-src">--</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Heading</div>
+          <div><span class="metric-value" id="val-heading" style="font-size:22px;">--</span><span class="metric-unit">&deg;</span></div>
+          <div class="metric-sub" id="val-heading-card">--</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Accuracy</div>
+          <div><span class="metric-value" id="val-accuracy" style="font-size:18px;">--</span><span class="metric-unit"> m</span></div>
+          <div class="metric-sub" id="val-acc-sub">GNSS</div>
+        </div>
+      </div>
+
+      <!-- GNSS & System Status -->
+      <div class="card">
+        <div class="card-title">GNSS &amp; System Status</div>
+        <div class="status-row"><span class="status-key">GNSS State</span><span class="status-val" id="val-gnss-state">WAITING</span></div>
+        <div class="status-row"><span class="status-key">GNSS Age</span><span class="status-val" id="val-gnss-age">--</span></div>
+        <div class="status-row"><span class="status-key">IMU Rate</span><span class="status-val" id="val-imu-hz">--</span></div>
+        <div class="status-row"><span class="status-key">GNSS Rate</span><span class="status-val" id="val-gnss-hz">--</span></div>
+        <div class="status-row"><span class="status-key">DR Distance</span><span class="status-val" id="val-dr-dist">--</span></div>
+        <div class="status-row"><span class="status-key">Motion State</span><span class="status-val" id="val-motion-state">--</span></div>
+        <div class="status-row"><span class="status-key">Vibration RMS</span><span class="status-val" id="val-vib">--</span></div>
+        <div class="status-row"><span class="status-key">Alignment</span><span class="status-val" id="val-align">--</span></div>
+        <div class="status-row"><span class="status-key">Pitch / Roll</span><span class="status-val" id="val-pitch-roll">--</span></div>
+        <div class="status-row"><span class="status-key">Calibration</span><span class="status-val" id="val-calib-nav">--</span></div>
+      </div>
+
+      <!-- Sensors -->
+      <div class="sensor-card">
+        <div class="sensor-header">
+          <span class="sensor-name">Accelerometer</span>
+          <span class="sensor-badge badge-live" id="badge-accel">LIVE</span>
+        </div>
+        <div class="sensor-data">
+          <div class="sensor-axis"><div class="sensor-axis-label">X</div><div class="sensor-axis-value" id="val-ax">--</div></div>
+          <div class="sensor-axis"><div class="sensor-axis-label">Y</div><div class="sensor-axis-value" id="val-ay">--</div></div>
+          <div class="sensor-axis"><div class="sensor-axis-label">Z</div><div class="sensor-axis-value" id="val-az">--</div></div>
+        </div>
+      </div>
+      <div class="sensor-card">
+        <div class="sensor-header">
+          <span class="sensor-name">Gyroscope</span>
+          <span class="sensor-badge badge-live" id="badge-gyro">LIVE</span>
+        </div>
+        <div class="sensor-data">
+          <div class="sensor-axis"><div class="sensor-axis-label">X</div><div class="sensor-axis-value" id="val-gx">--</div></div>
+          <div class="sensor-axis"><div class="sensor-axis-label">Y</div><div class="sensor-axis-value" id="val-gy">--</div></div>
+          <div class="sensor-axis"><div class="sensor-axis-label">Z</div><div class="sensor-axis-value" id="val-gz">--</div></div>
+        </div>
+      </div>
+      <div class="sensor-card">
+        <div class="sensor-header">
+          <span class="sensor-name">Magnetometer</span>
+          <span class="sensor-badge badge-dim" id="badge-mag">CHECKING</span>
+        </div>
+        <div style="font-size:10px;color:#4a6070;" id="mag-text">Checking hardware availability...</div>
+      </div>
+
+    </div><!-- /navigate -->
+
+    <!-- ==================== OUTAGE ==================== -->
+    <div id="screen-outage" class="screen">
+
+      <div class="card">
+        <div class="card-title">GNSS Outage Demonstration</div>
+        <div style="font-size:11px;color:#5a7080;margin-bottom:10px;">Simulate a GNSS signal loss. The IDR engine continues dead reckoning from IMU data while GNSS is blocked from the fusion layer.</div>
+        <div class="status-row"><span class="status-key">GNSS State</span><span class="status-val green" id="out-gnss-state">HEALTHY</span></div>
+        <div class="status-row"><span class="status-key">Nav Mode</span><span class="status-val" id="out-nav-mode">GNSS + INS FUSION</span></div>
+        <div class="status-row"><span class="status-key">IMU Active</span><span class="status-val green" id="out-imu">YES</span></div>
+        <div class="status-row"><span class="status-key">DR Distance</span><span class="status-val" id="out-dr-dist">-- m</span></div>
+        <div class="status-row"><span class="status-key">Speed Source</span><span class="status-val" id="out-speed-src">--</span></div>
+      </div>
+
+      <div id="outage-timer-card" class="card" style="display:none;text-align:center;">
+        <div class="card-title">Outage Duration</div>
+        <div class="timer-display" id="outage-timer-display">00:00</div>
+        <div style="font-size:10px;color:#ffb347;">Dead reckoning active &mdash; IMU-only navigation</div>
+      </div>
+
+      <button class="btn btn-danger" id="btn-blackout">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+        SIMULATE GNSS OUTAGE
+      </button>
+      <button class="btn btn-primary" id="btn-restore" style="display:none;">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+        RESTORE GNSS
+      </button>
+
+      <div id="restore-notice" class="card" style="display:none;">
+        <div style="color:#4edea3;font-weight:700;font-size:13px;">GNSS RECOVERED</div>
+        <div style="color:#5a7080;font-size:10px;margin-top:3px;">Reacquiring fusion lock...</div>
+      </div>
+
+    </div><!-- /outage -->
+
+    <!-- ==================== CALIBRATE ==================== -->
+    <div id="screen-calibrate" class="screen">
+
+      <div class="card">
+        <div class="card-title">Sensor Calibration</div>
+        <div style="font-size:11px;color:#5a7080;margin-bottom:10px;">Place the phone on a flat, stationary surface. The engine collects 200 IMU samples to estimate accelerometer and gyroscope bias. Keep absolutely still.</div>
+        <div class="status-row"><span class="status-key">Status</span><span class="status-val" id="cal-status-val">NOT CALIBRATED</span></div>
+        <div class="status-row"><span class="status-key">Samples</span><span class="status-val" id="cal-samples-val">0 / 200</span></div>
+      </div>
+
+      <div class="card" id="cal-progress-card" style="display:none;">
+        <div class="card-title">Collection Progress</div>
+        <div class="progress-bg"><div class="progress-fill" id="cal-progress-bar"></div></div>
+        <div style="font-size:10px;color:#5a7080;text-align:center;" id="cal-progress-text">0%</div>
+      </div>
+
+      <div class="card" id="cal-results-card" style="display:none;">
+        <div class="card-title">Estimated Bias (applied to navigation)</div>
+        <div class="status-row"><span class="status-key">Accel X</span><span class="status-val" id="cal-ax">--</span></div>
+        <div class="status-row"><span class="status-key">Accel Y</span><span class="status-val" id="cal-ay">--</span></div>
+        <div class="status-row"><span class="status-key">Accel Z</span><span class="status-val" id="cal-az">--</span></div>
+        <div class="status-row"><span class="status-key">Gyro X</span><span class="status-val" id="cal-gx">--</span></div>
+        <div class="status-row"><span class="status-key">Gyro Y</span><span class="status-val" id="cal-gy">--</span></div>
+        <div class="status-row"><span class="status-key">Gyro Z</span><span class="status-val" id="cal-gz">--</span></div>
+      </div>
+
+      <button class="btn btn-primary" id="btn-calibrate">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/></svg>
+        CALIBRATE WHILE STATIONARY
+      </button>
+
+    </div><!-- /calibrate -->
+
+    <!-- ==================== PIPELINE ==================== -->
+    <div id="screen-pipeline" class="screen">
+
+      <div class="card">
+        <div class="card-title">Processing Pipeline</div>
+        <div class="pipe-step">
+          <div class="pipe-dot-col"><div class="pipe-dot"></div><div class="pipe-line"></div></div>
+          <div class="pipe-body"><div class="pipe-title">Phone Sensors</div><div class="pipe-desc">Accelerometer &middot; Gyroscope &middot; Magnetometer &middot; GPS</div></div>
+        </div>
+        <div class="pipe-step">
+          <div class="pipe-dot-col"><div class="pipe-dot"></div><div class="pipe-line"></div></div>
+          <div class="pipe-body"><div class="pipe-title">Signal Filtering &amp; Vibration Rejection</div><div class="pipe-desc">Adaptive gravity LPF &middot; 8 Hz signal LPF &middot; Spike/shock clamping &middot; Vibration RMS</div></div>
+        </div>
+        <div class="pipe-step">
+          <div class="pipe-dot-col"><div class="pipe-dot"></div><div class="pipe-line"></div></div>
+          <div class="pipe-body"><div class="pipe-title">Bias Estimation &amp; Stationary Detection</div><div class="pipe-desc">200-sample calibration &middot; Zero-velocity detection &middot; Motion state classification</div></div>
+        </div>
+        <div class="pipe-step">
+          <div class="pipe-dot-col"><div class="pipe-dot"></div><div class="pipe-line"></div></div>
+          <div class="pipe-body"><div class="pipe-title">Vehicle Alignment</div><div class="pipe-desc">Gyro yaw-axis auto-detection &middot; GNSS course alignment &middot; Pitch/roll estimation</div></div>
+        </div>
+        <div class="pipe-step">
+          <div class="pipe-dot-col"><div class="pipe-dot"></div><div class="pipe-line"></div></div>
+          <div class="pipe-body"><div class="pipe-title">GNSS + INS Complementary Fusion</div><div class="pipe-desc">Adaptive weighting by accuracy &middot; NHC vehicle constraints &middot; Reacquisition blending</div></div>
+        </div>
+        <div class="pipe-step">
+          <div class="pipe-dot-col"><div class="pipe-dot"></div></div>
+          <div class="pipe-body"><div class="pipe-title">Navigation Output</div><div class="pipe-desc">GNSS available &rarr; GNSS + INS Fused &nbsp;|&nbsp; GNSS lost &rarr; IDR Dead Reckoning</div></div>
+        </div>
+      </div>
+
+      <!-- Active Modules -->
+      <div class="card">
+        <div class="card-title">&#10003; Active Real Modules</div>
+        <div class="module-row"><span class="mod-check">&#10003;</span><span class="mod-text">Android SensorManager (Accel, Gyro, Mag)</span></div>
+        <div class="module-row"><span class="mod-check">&#10003;</span><span class="mod-text">Android LocationManager (GPS + Network)</span></div>
+        <div class="module-row"><span class="mod-check">&#10003;</span><span class="mod-text">Adaptive Gravity LPF + 8Hz Signal Filter</span></div>
+        <div class="module-row"><span class="mod-check">&#10003;</span><span class="mod-text">Spike Detection &amp; Shock Clamping (15 m/s&sup2;)</span></div>
+        <div class="module-row"><span class="mod-check">&#10003;</span><span class="mod-text">Vibration RMS Monitor</span></div>
+        <div class="module-row"><span class="mod-check">&#10003;</span><span class="mod-text">Stationary Detection + Zero-Velocity Clamping</span></div>
+        <div class="module-row"><span class="mod-check">&#10003;</span><span class="mod-text">200-Sample Bias Calibration (Accel + Gyro)</span></div>
+        <div class="module-row"><span class="mod-check">&#10003;</span><span class="mod-text">Gyro Yaw-Axis Auto-Calibration from GNSS</span></div>
+        <div class="module-row"><span class="mod-check">&#10003;</span><span class="mod-text">GNSS + INS Complementary Fusion</span></div>
+        <div class="module-row"><span class="mod-check">&#10003;</span><span class="mod-text">Dead Reckoning (gyro heading + accel integration)</span></div>
+        <div class="module-row"><span class="mod-check">&#10003;</span><span class="mod-text">Non-Holonomic Constraints (vehicle mode)</span></div>
+        <div class="module-row"><span class="mod-check">&#10003;</span><span class="mod-text">Smooth GNSS Reacquisition (6-step ramp)</span></div>
+        <div class="module-row"><span class="mod-check">&#10003;</span><span class="mod-text">GNSS Health States (HEALTHY/DEGRADED/LOST)</span></div>
+        <div class="module-row"><span class="mod-check">&#10003;</span><span class="mod-text">Session Recording (NDJSON export)</span></div>
+        <div class="module-row"><span class="mod-check">&#10003;</span><span class="mod-text">IO-VNBD Benchmark: 7.64% drift (offline dataset)</span></div>
+      </div>
+
+      <!-- AI/ML Status -->
+      <div class="card">
+        <div class="card-title">AI / ML Status</div>
+        <div class="module-row"><span class="mod-check">&#10003;</span><span class="mod-text">Trained speed model exists: <strong style="color:#4edea3;">models/speed_model.joblib</strong> (MAE 0.79 m/s on IO-VNBD)</span></div>
+        <div class="module-row"><span class="mod-check dim">&#9675;</span><span class="mod-text" style="color:#5a7080;">ML model not loaded on Android (JVM/sklearn bridge required &mdash; future module)</span></div>
+        <div class="module-row"><span class="mod-check dim">&#9675;</span><span class="mod-text" style="color:#5a7080;">Speed source on Android: GNSS when available, inertial integration during DR</span></div>
+      </div>
+
+      <!-- Map Matching -->
+      <div class="card">
+        <div class="card-title">Map Matching Status</div>
+        <div class="module-row"><span class="mod-check">&#10003;</span><span class="mod-text">Python engine: full GeoJSON road graph + VehicleMapMatcher (HMM-style scoring)</span></div>
+        <div class="module-row"><span class="mod-check dim">&#9675;</span><span class="mod-text" style="color:#5a7080;">Android: OSM tiles displayed via Leaflet when online (road visualization)</span></div>
+        <div class="module-row"><span class="mod-check dim">&#9675;</span><span class="mod-text" style="color:#5a7080;">Offline road graph snapping on Android: future module (GeoJSON + JVM needed)</span></div>
+      </div>
+
+      <!-- Future Modules -->
+      <div class="card">
+        <div class="card-title">Future / Extensible Modules</div>
+        <div class="module-row"><span class="mod-check dim">&#9675;</span><span class="mod-text" style="color:#5a7080;">Android ML inference (TFLite speed model)</span></div>
+        <div class="module-row"><span class="mod-check dim">&#9675;</span><span class="mod-text" style="color:#5a7080;">Offline road graph map matching on Android</span></div>
+        <div class="module-row"><span class="mod-check dim">&#9675;</span><span class="mod-text" style="color:#5a7080;">Barometer altitude fusion</span></div>
+        <div class="module-row"><span class="mod-check dim">&#9675;</span><span class="mod-text" style="color:#5a7080;">External IMU adapter (edge hardware)</span></div>
+      </div>
+
+      <!-- Live State -->
+      <div class="card">
+        <div class="card-title">Live Pipeline State</div>
+        <div class="status-row"><span class="status-key">Mode</span><span class="status-val" id="pipe-mode">--</span></div>
+        <div class="status-row"><span class="status-key">IMU Rate</span><span class="status-val" id="pipe-imu-hz">--</span></div>
+        <div class="status-row"><span class="status-key">GNSS Rate</span><span class="status-val" id="pipe-gnss-hz">--</span></div>
+        <div class="status-row"><span class="status-key">Nav Output Rate</span><span class="status-val" id="pipe-nav-hz">--</span></div>
+        <div class="status-row"><span class="status-key">Calibration</span><span class="status-val" id="pipe-calib">--</span></div>
+        <div class="status-row"><span class="status-key">Alignment</span><span class="status-val" id="pipe-align">--</span></div>
+        <div class="status-row"><span class="status-key">Motion State</span><span class="status-val" id="pipe-motion">--</span></div>
+        <div class="status-row"><span class="status-key">Vibration RMS</span><span class="status-val" id="pipe-vib">--</span></div>
+        <div class="status-row"><span class="status-key">GNSS Blackout</span><span class="status-val" id="pipe-blackout">NO</span></div>
+      </div>
+
+    </div><!-- /pipeline -->
+
+    <!-- ==================== SETTINGS ==================== -->
+    <div id="screen-settings" class="screen">
+
+      <!-- Test Summary (shown after session stop) -->
+      <div id="summary-panel">
+        <div class="summary-header">
+          <div class="summary-title">Test Summary</div>
+          <div class="summary-note">Ground truth drift: NOT AVAILABLE FOR THIS TEST</div>
+        </div>
+        <div class="summary-grid">
+          <div class="summary-cell"><div class="summary-cell-label">Duration</div><div class="summary-cell-value" id="sum-duration">--</div><div class="summary-cell-unit">seconds</div></div>
+          <div class="summary-cell"><div class="summary-cell-label">Distance</div><div class="summary-cell-value" id="sum-dist">--</div><div class="summary-cell-unit">metres</div></div>
+          <div class="summary-cell"><div class="summary-cell-label">GNSS+INS</div><div class="summary-cell-value" id="sum-gnss-s">--</div><div class="summary-cell-unit">seconds</div></div>
+          <div class="summary-cell"><div class="summary-cell-label">DR Active</div><div class="summary-cell-value" id="sum-dr-s">--</div><div class="summary-cell-unit">seconds</div></div>
+          <div class="summary-cell"><div class="summary-cell-label">Outage Events</div><div class="summary-cell-value" id="sum-outages">--</div><div class="summary-cell-unit">events</div></div>
+          <div class="summary-cell"><div class="summary-cell-label">Recoveries</div><div class="summary-cell-value" id="sum-recoveries">--</div><div class="summary-cell-unit">events</div></div>
+          <div class="summary-cell"><div class="summary-cell-label">Avg IMU</div><div class="summary-cell-value" id="sum-imu-hz">--</div><div class="summary-cell-unit">Hz</div></div>
+          <div class="summary-cell"><div class="summary-cell-label">Avg Nav Out</div><div class="summary-cell-value" id="sum-nav-hz">--</div><div class="summary-cell-unit">Hz</div></div>
+        </div>
+        <div class="card" style="text-align:center;margin-bottom:10px;">
+          <div style="font-size:11px;color:#5a7080;">Samples Recorded: <span style="color:#dde3f0;font-weight:700;" id="sum-records">--</span></div>
+        </div>
+      </div>
+
+      <!-- Motion Mode -->
+      <div class="settings-section">
+        <div class="settings-title">Motion Mode</div>
+        <div class="mode-selector">
+          <div class="mode-option" id="mode-vehicle" onclick="setMotionMode('VEHICLE')">
+            <div style="font-size:18px;margin-bottom:3px;">&#128663;</div>VEHICLE
+          </div>
+          <div class="mode-option" id="mode-pedestrian" onclick="setMotionMode('PEDESTRIAN')">
+            <div style="font-size:18px;margin-bottom:3px;">&#128694;</div>PEDESTRIAN
+          </div>
+        </div>
+        <div style="font-size:10px;color:#4a6070;">Vehicle mode enables Non-Holonomic Constraints for reduced lateral drift.</div>
+      </div>
+
+      <!-- Sensor Status -->
+      <div class="settings-section">
+        <div class="settings-title">Sensor Status</div>
+        <div class="card" style="margin-bottom:0;">
+          <div class="status-row"><span class="status-key">Accelerometer</span><span class="status-val green" id="set-accel">LIVE</span></div>
+          <div class="status-row"><span class="status-key">Gyroscope</span><span class="status-val green" id="set-gyro">LIVE</span></div>
+          <div class="status-row"><span class="status-key">Magnetometer</span><span class="status-val dim" id="set-mag">CHECKING</span></div>
+          <div class="status-row"><span class="status-key">GNSS</span><span class="status-val dim" id="set-gnss">SEARCHING</span></div>
+          <div class="status-row"><span class="status-key">Calibration</span><span class="status-val" id="set-calib">NOT CALIBRATED</span></div>
+          <div class="status-row"><span class="status-key">Alignment</span><span class="status-val dim" id="set-align">UNALIGNED</span></div>
+          <div class="status-row"><span class="status-key">Motion Mode</span><span class="status-val" id="set-motion-mode">VEHICLE</span></div>
+        </div>
+      </div>
+
+      <!-- Session -->
+      <div class="settings-section">
+        <div class="settings-title">Session Recording</div>
+        <div class="card" style="margin-bottom:8px;">
+          <div class="status-row"><span class="status-key">Recording</span><span class="status-val" id="set-recording">NO</span></div>
+          <div class="status-row"><span class="status-key">Records</span><span class="status-val" id="set-records">0</span></div>
+        </div>
+        <button class="btn btn-primary" id="btn-start-session">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16"/></svg>
+          START SESSION
+        </button>
+        <button class="btn btn-warning" id="btn-stop-session" style="display:none;">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><rect x="9" y="9" width="6" height="6"/></svg>
+          STOP SESSION
+        </button>
+        <button class="btn btn-outline" id="btn-export">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          EXPORT LOG
+        </button>
+      </div>
+
+      <!-- Navigation Engine -->
+      <div class="settings-section">
+        <div class="settings-title">Navigation Engine</div>
+        <button class="btn btn-primary" id="btn-start-nav">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5,3 19,12 5,21"/></svg>
+          START NAVIGATION
+        </button>
+        <button class="btn btn-ghost" id="btn-stop-nav" style="display:none;">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18"/></svg>
+          STOP NAVIGATION
+        </button>
+      </div>
+
+    </div><!-- /settings -->
+
+  </main>
+
+  <!-- ===== BOTTOM NAV ===== -->
+  <nav id="bottom-nav">
+    <button class="nav-item active" id="nav-navigate" onclick="switchTab('navigate')">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3,11 22,2 13,21 11,13"/></svg>
+      <span class="nav-label">Navigate</span>
+    </button>
+    <button class="nav-item" id="nav-outage" onclick="switchTab('outage')">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+      <span class="nav-label">Outage</span>
+    </button>
+    <button class="nav-item" id="nav-calibrate" onclick="switchTab('calibrate')">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/></svg>
+      <span class="nav-label">Calibrate</span>
+    </button>
+    <button class="nav-item" id="nav-pipeline" onclick="switchTab('pipeline')">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><rect x="14" y="14" width="6" height="6"/></svg>
+      <span class="nav-label">Pipeline</span>
+    </button>
+    <button class="nav-item" id="nav-settings" onclick="switchTab('settings')">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      <span class="nav-label">Settings</span>
+    </button>
+  </nav>
+
+</div>
+
+<!-- Leaflet (loaded async — app works if it fails) -->
+<script>
+(function() {
+  var s = document.createElement('script');
+  s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+  s.onload = function() { initLeaflet(); };
+  s.onerror = function() { console.warn('[IDR] Leaflet unavailable — canvas map active'); };
+  document.head.appendChild(s);
+  var l = document.createElement('link');
+  l.rel = 'stylesheet';
+  l.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+  document.head.appendChild(l);
+})();
+</script>
+
+<script>
+'use strict';
+
+// =====================================================================
+//  IDR FUSION SPA — All navigation in-page. No external assets.
+//  Polls GET /navigation/state every 500 ms.
+//  All API calls go to http://localhost:8080
+// =====================================================================
+
+var currentTab = 'navigate';
+var outageActive = false;
+var outageStartTime = null;
+var outageTimerInterval = null;
+var calibPolling = null;
+var currentMotionMode = 'VEHICLE';
+
+// Map state
+var leafletMap = null;
+var leafletReady = false;
+var vehicleMarker = null;
+var gnssPolyline = null;   // green — GNSS-aided track
+var drPolyline = null;     // orange — dead reckoning track
+var gnssTrackPoints = [];
+var drTrackPoints = [];
+var lastMode = '';
+var canvas = null;
+var ctx = null;
+var canvasTrack = [];      // fallback canvas track
+
+// =====================================================================
+// TAB SWITCHING
+// =====================================================================
+function switchTab(name) {
+  document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+  document.querySelectorAll('.nav-item').forEach(function(b){ b.classList.remove('active'); });
+  var sc = document.getElementById('screen-' + name);
+  if (sc) sc.classList.add('active');
+  var nb = document.getElementById('nav-' + name);
+  if (nb) nb.classList.add('active');
+  currentTab = name;
+  document.getElementById('main-content').scrollTop = 0;
+  if (name === 'navigate' && !leafletReady) { setTimeout(initCanvasMap, 100); }
+  if (name === 'navigate' && leafletReady && leafletMap) { setTimeout(function(){ leafletMap.invalidateSize(); }, 150); }
+}
+
+// =====================================================================
+// LEAFLET MAP INIT
+// =====================================================================
+function initLeaflet() {
+  if (typeof L === 'undefined' || leafletReady) return;
+  try {
+    leafletMap = L.map('leaflet-map', {
+      zoomControl: false, attributionControl: true,
+      tap: true, tapTolerance: 15
+    }).setView([20.0, 78.0], 15);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(leafletMap);
+
+    // GNSS track — green
+    gnssPolyline = L.polyline([], {
+      color: '#4edea3', weight: 3.5, opacity: 0.9,
+      lineCap: 'round', lineJoin: 'round'
+    }).addTo(leafletMap);
+
+    // DR track — orange
+    drPolyline = L.polyline([], {
+      color: '#ffb347', weight: 3.5, opacity: 0.9,
+      lineCap: 'round', lineJoin: 'round', dashArray: '6,4'
+    }).addTo(leafletMap);
+
+    // Vehicle marker
+    var iconHtml = '<div style="width:16px;height:16px;border-radius:50%;background:#4edea3;border:2.5px solid #fff;box-shadow:0 0 0 3px rgba(78,222,163,0.3);"></div>';
+    vehicleMarker = L.marker([20.0, 78.0], {
+      icon: L.divIcon({ className:'', html: iconHtml, iconSize:[16,16], iconAnchor:[8,8] }),
+      zIndexOffset: 1000
+    }).addTo(leafletMap);
+
+    leafletReady = true;
+    document.getElementById('map-network-note').textContent = 'OSM road map online';
+
+    // Resize on tab switch
+    leafletMap.on('load', function(){ leafletMap.invalidateSize(); });
+  } catch(e) {
+    console.warn('[IDR] Leaflet init failed:', e);
+    initCanvasMap();
+  }
+}
+
+// =====================================================================
+// CANVAS FALLBACK MAP
+// =====================================================================
+function initCanvasMap() {
+  canvas = document.getElementById('map-canvas');
+  if (!canvas) return;
+  var container = document.getElementById('map-container');
+  canvas.width = container.offsetWidth || 360;
+  canvas.height = container.offsetHeight || 220;
+  ctx = canvas.getContext('2d');
+  drawCanvas();
+}
+
+function drawCanvas() {
+  if (!ctx) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#0d1120'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // Grid
+  ctx.strokeStyle = '#192030'; ctx.lineWidth = 1;
+  for (var x = 0; x < canvas.width; x += 32) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke(); }
+  for (var y = 0; y < canvas.height; y += 32) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke(); }
+  if (canvasTrack.length < 2) return;
+
+  // Compute bounds
+  var lats = canvasTrack.map(function(p){ return p[0]; });
+  var lons = canvasTrack.map(function(p){ return p[1]; });
+  var minLat = Math.min.apply(null,lats), maxLat = Math.max.apply(null,lats);
+  var minLon = Math.min.apply(null,lons), maxLon = Math.max.apply(null,lons);
+  var pad = 0.0003;
+  minLat-=pad; maxLat+=pad; minLon-=pad; maxLon+=pad;
+  function toXY(lat,lon) {
+    var latR = maxLat-minLat || 0.001, lonR = maxLon-minLon || 0.001;
+    return [(lon-minLon)/lonR*(canvas.width-20)+10, (maxLat-lat)/latR*(canvas.height-20)+10];
+  }
+
+  ctx.strokeStyle = '#4edea3'; ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  ctx.beginPath();
+  var p0 = toXY(canvasTrack[0][0], canvasTrack[0][1]);
+  ctx.moveTo(p0[0], p0[1]);
+  for (var i = 1; i < canvasTrack.length; i++) {
+    var pi = toXY(canvasTrack[i][0], canvasTrack[i][1]);
+    ctx.lineTo(pi[0], pi[1]);
+  }
+  ctx.stroke();
+
+  // Current position dot
+  var last = toXY(canvasTrack[canvasTrack.length-1][0], canvasTrack[canvasTrack.length-1][1]);
+  ctx.beginPath(); ctx.arc(last[0], last[1], 6, 0, Math.PI*2);
+  ctx.fillStyle = '#4edea3'; ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+}
+
+// =====================================================================
+// UPDATE MAP with position (lat, lon, mode)
+// =====================================================================
+function updateMap(lat, lon, isDR) {
+  if (!lat || !lon) return;
+  var pos = [lat, lon];
+
+  // Leaflet path
+  if (leafletReady && leafletMap && vehicleMarker) {
+    vehicleMarker.setLatLng(pos);
+    if (isDR) {
+      if (drTrackPoints.length === 0 || drTrackPoints[drTrackPoints.length-1][0] !== lat || drTrackPoints[drTrackPoints.length-1][1] !== lon) {
+        drTrackPoints.push(pos);
+        if (drTrackPoints.length > 600) drTrackPoints.shift();
+        drPolyline.setLatLngs(drTrackPoints);
+      }
+      // Update marker color to orange during DR
+      vehicleMarker.setIcon(L.divIcon({ className:'', html:'<div style="width:16px;height:16px;border-radius:50%;background:#ffb347;border:2.5px solid #fff;box-shadow:0 0 0 3px rgba(255,179,71,0.3);"></div>', iconSize:[16,16], iconAnchor:[8,8] }));
+    } else {
+      if (gnssTrackPoints.length === 0 || gnssTrackPoints[gnssTrackPoints.length-1][0] !== lat || gnssTrackPoints[gnssTrackPoints.length-1][1] !== lon) {
+        gnssTrackPoints.push(pos);
+        if (gnssTrackPoints.length > 600) gnssTrackPoints.shift();
+        gnssPolyline.setLatLngs(gnssTrackPoints);
+      }
+      vehicleMarker.setIcon(L.divIcon({ className:'', html:'<div style="width:16px;height:16px;border-radius:50%;background:#4edea3;border:2.5px solid #fff;box-shadow:0 0 0 3px rgba(78,222,163,0.3);"></div>', iconSize:[16,16], iconAnchor:[8,8] }));
+    }
+    // Auto-center on first fix or when centered
+    if (gnssTrackPoints.length + drTrackPoints.length < 3) {
+      leafletMap.setView(pos, 17, { animate: false });
+    }
+  }
+
+  // Canvas fallback
+  if (!leafletReady) {
+    if (canvasTrack.length === 0 || Math.abs(lat - canvasTrack[canvasTrack.length-1][0]) > 0.0000005 || Math.abs(lon - canvasTrack[canvasTrack.length-1][1]) > 0.0000005) {
+      canvasTrack.push([lat, lon]);
+      if (canvasTrack.length > 400) canvasTrack.shift();
+    }
+    if (currentTab === 'navigate') drawCanvas();
+  }
+
+  // Coords overlay
+  var coordEl = document.getElementById('map-overlay-top');
+  if (coordEl) coordEl.textContent = lat.toFixed(5) + ', ' + lon.toFixed(5);
+}
+
+// =====================================================================
+// API HELPERS
+// =====================================================================
+function api(path, method, body) {
+  var opts = { method: method || 'GET', headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  return fetch('http://localhost:8080' + path, opts);
+}
+
+function setText(id, val) { var e = document.getElementById(id); if (e) e.textContent = val; }
+function show(id) { var e = document.getElementById(id); if (e) e.style.display = ''; }
+function hide(id) { var e = document.getElementById(id); if (e) e.style.display = 'none'; }
+function showBlock(id) { var e = document.getElementById(id); if (e) e.style.display = 'block'; }
+function setValClass(id, cls) { var e = document.getElementById(id); if (e) e.className = 'status-val' + (cls ? ' ' + cls : ''); }
+
+function cardinal(deg) {
+  var dirs = ['N','NE','E','SE','S','SW','W','NW'];
+  return dirs[Math.round(deg / 45) % 8];
+}
+
+// =====================================================================
+// UI UPDATE from navigation state
+// =====================================================================
+function updateUI(s) {
+  if (!s) return;
+  var isDR = (s.mode || '').indexOf('DEAD') >= 0 || (s.mode || '').indexOf('IDR') >= 0;
+  var isReacq = (s.mode || '').indexOf('REACQ') >= 0;
+  var hasFix = s.has_gnss_fix === true;
+  var isBlackout = s.gnss_blackout === true;
+
+  // --- Header chip ---
+  var chip = document.getElementById('mode-chip');
+  var dot = document.getElementById('mode-dot');
+  var chipText = document.getElementById('mode-chip-text');
+  if (chip && dot && chipText) {
+    chip.className = 'status-chip';
+    if (isBlackout || isDR) {
+      chip.className += ' chip-orange';
+      chipText.textContent = 'IDR ACTIVE';
+    } else if (isReacq) {
+      chip.className += ' chip-blue';
+      chipText.textContent = 'REACQUIRING';
+    } else if (hasFix) {
+      chip.className += ' chip-green';
+      chipText.textContent = 'GNSS + INS';
+    } else {
+      chip.className += ' chip-dim';
+      chipText.textContent = s.mode ? s.mode.split(' ')[0] : 'INIT';
+    }
+  }
+
+  // --- Navigate screen ---
+  // Mode badge
+  var badge = document.getElementById('nav-mode-badge');
+  var modeText = document.getElementById('nav-mode-text');
+  if (badge && modeText) {
+    modeText.textContent = s.mode || 'INITIALIZING';
+    badge.className = 'status-chip';
+    if (isDR || isBlackout) badge.className += ' chip-orange';
+    else if (isReacq) badge.className += ' chip-blue';
+    else if (hasFix) badge.className += ' chip-green';
+    else badge.className += ' chip-dim';
+  }
+  var modeSub = document.getElementById('nav-mode-sub');
+  if (modeSub) {
+    if (isDR) modeSub.textContent = 'IMU-only dead reckoning \u2014 GNSS gated from fusion';
+    else if (isReacq) modeSub.textContent = 'Smooth GNSS reacquisition ramp active';
+    else if (hasFix) modeSub.textContent = 'GNSS + IMU complementary fusion running';
+    else modeSub.textContent = 'Waiting for GNSS fix...';
+  }
+
+  // Nav Hz
+  setText('val-nav-hz', s.nav_hz != null ? parseFloat(s.nav_hz).toFixed(1) : '--');
+
+  // Map badge
+  var mapBadge = document.getElementById('map-mode-badge');
+  if (mapBadge) {
+    if (isDR || isBlackout) {
+      mapBadge.innerHTML = '<div class="status-chip chip-orange" style="font-size:9px;"><span class="pulse"></span> IDR / DEAD RECKONING</div>';
+    } else if (hasFix) {
+      mapBadge.innerHTML = '<div class="status-chip chip-green" style="font-size:9px;"><span class="pulse"></span> GNSS + INS FUSION</div>';
+    } else {
+      mapBadge.innerHTML = '<div class="status-chip chip-dim" style="font-size:9px;">WAITING FOR FIX</div>';
+    }
+  }
+
+  // Position
+  var pos = s.position;
+  if (pos && pos.latitude != null && pos.longitude != null) {
+    setText('val-lat', pos.latitude.toFixed(6));
+    setText('val-lon', pos.longitude.toFixed(6));
+    updateMap(pos.latitude, pos.longitude, isDR);
+  } else {
+    setText('val-lat', '--');
+    setText('val-lon', '--');
+  }
+
+  // Speed
+  if (s.speed_kmh != null) {
+    setText('val-speed', parseFloat(s.speed_kmh).toFixed(1));
+    setText('val-speed-src', s.speed_source || '--');
+  } else {
+    setText('val-speed', '--');
+    setText('val-speed-src', 'WAITING');
+  }
+
+  // Heading
+  if (s.heading_deg != null && hasFix) {
+    var hdg = Math.round(parseFloat(s.heading_deg));
+    setText('val-heading', hdg);
+    setText('val-heading-card', cardinal(hdg));
+  } else {
+    setText('val-heading', '--');
+    setText('val-heading-card', 'WAITING');
+  }
+
+  // Accuracy
+  if (s.uncertainty_m != null) {
+    setText('val-accuracy', '+/-' + parseFloat(s.uncertainty_m).toFixed(1));
+    setText('val-acc-sub', 'GNSS');
+  } else {
+    setText('val-accuracy', '--');
+    setText('val-acc-sub', '--');
+  }
+
+  // GNSS state
+  var gnssStateEl = document.getElementById('val-gnss-state');
+  if (gnssStateEl) {
+    var gs = s.gnss_state || 'WAITING_FOR_FIX';
+    gnssStateEl.textContent = gs.replace(/_/g, ' ');
+    gnssStateEl.className = 'status-val';
+    if (gs === 'HEALTHY') gnssStateEl.className += ' green';
+    else if (gs === 'DEGRADED') gnssStateEl.className += ' orange';
+    else if (gs === 'LOST' || gs === 'SIMULATED_OUTAGE') gnssStateEl.className += ' red';
+    else gnssStateEl.className += ' dim';
+  }
+
+  setText('val-gnss-age', s.gnss_age_s != null ? parseFloat(s.gnss_age_s).toFixed(1) + ' s' : '--');
+  setText('val-imu-hz', s.imu_hz != null ? parseFloat(s.imu_hz).toFixed(1) + ' Hz' : '--');
+  setText('val-gnss-hz', s.gnss_hz != null ? parseFloat(s.gnss_hz).toFixed(2) + ' Hz' : '--');
+  setText('val-dr-dist', s.dr_dist_m != null ? parseFloat(s.dr_dist_m).toFixed(1) + ' m' : '--');
+
+  // Motion state
+  var ms = s.motion_state || 'UNKNOWN';
+  var motEl = document.getElementById('val-motion-state');
+  if (motEl) {
+    motEl.textContent = ms;
+    motEl.className = 'status-val';
+    if (ms === 'MOVING') motEl.className += ' green';
+    else if (ms === 'VIBRATION') motEl.className += ' orange';
+    else if (ms === 'SHOCK') motEl.className += ' red';
+    else if (ms === 'STATIONARY' || ms === 'IDLING') motEl.className += ' dim';
+  }
+  setText('val-vib', s.vibration_rms != null ? parseFloat(s.vibration_rms).toFixed(3) + ' m/s\u00b2' : '--');
+
+  // Alignment
+  var as = s.alignment_state || 'UNALIGNED';
+  var ac = s.alignment_confidence != null ? (parseFloat(s.alignment_confidence) * 100).toFixed(0) + '%' : '0%';
+  var alignEl = document.getElementById('val-align');
+  if (alignEl) {
+    alignEl.textContent = as + ' (' + ac + ')';
+    alignEl.className = 'status-val';
+    if (as === 'ALIGNED') alignEl.className += ' green';
+    else if (as === 'ALIGNING') alignEl.className += ' orange';
+    else alignEl.className += ' dim';
+  }
+
+  // Pitch / Roll
+  var pt = s.pitch_deg != null ? parseFloat(s.pitch_deg).toFixed(1) + '\u00b0' : '--';
+  var rl = s.roll_deg  != null ? parseFloat(s.roll_deg).toFixed(1)  + '\u00b0' : '--';
+  setText('val-pitch-roll', pt + ' / ' + rl);
+
+  var calibDisplay = (s.calibration || 'NOT_CALIBRATED').replace(/_/g, ' ');
+  setText('val-calib-nav', calibDisplay);
+
+  // IMU values
+  if (s.accel_x != null) {
+    setText('val-ax', parseFloat(s.accel_x).toFixed(2));
+    setText('val-ay', parseFloat(s.accel_y).toFixed(2));
+    setText('val-az', parseFloat(s.accel_z).toFixed(2));
+    setText('val-gx', parseFloat(s.gyro_x).toFixed(3));
+    setText('val-gy', parseFloat(s.gyro_y).toFixed(3));
+    setText('val-gz', parseFloat(s.gyro_z).toFixed(3));
+  }
+  var imuActive = s.imu_hz > 0;
+  if (imuActive) {
+    var ba = document.getElementById('badge-accel'); if (ba) { ba.textContent = 'LIVE'; ba.className = 'sensor-badge badge-live'; }
+    var bg2 = document.getElementById('badge-gyro'); if (bg2) { bg2.textContent = 'LIVE'; bg2.className = 'sensor-badge badge-live'; }
+    var bm = document.getElementById('badge-mag'); if (bm) { bm.textContent = 'AVAILABLE'; bm.className = 'sensor-badge badge-live'; }
+    setText('mag-text', 'Magnetometer detected on device.');
+  }
+
+  // --- Outage screen ---
+  var outGnss = document.getElementById('out-gnss-state');
+  if (outGnss) {
+    if (isBlackout) { outGnss.textContent = 'SIMULATED OUTAGE'; outGnss.className = 'status-val red'; }
+    else if (hasFix) { outGnss.textContent = 'HEALTHY'; outGnss.className = 'status-val green'; }
+    else { outGnss.textContent = 'SEARCHING'; outGnss.className = 'status-val dim'; }
+  }
+  setText('out-nav-mode', s.mode || '--');
+  setText('out-dr-dist', s.dr_dist_m != null ? parseFloat(s.dr_dist_m).toFixed(1) + ' m' : '--');
+  setText('out-speed-src', s.speed_source || '--');
+
+  // Sync outage state from backend
+  if (isBlackout && !outageActive) {
+    outageActive = true; outageStartTime = outageStartTime || Date.now(); showBlackoutUI();
+  } else if (!isBlackout && outageActive) {
+    outageActive = false; showRestoreUI();
+  }
+
+  // --- Pipeline screen ---
+  setText('pipe-mode', s.mode || '--');
+  setText('pipe-imu-hz', s.imu_hz != null ? parseFloat(s.imu_hz).toFixed(1) + ' Hz' : '--');
+  setText('pipe-gnss-hz', s.gnss_hz != null ? parseFloat(s.gnss_hz).toFixed(2) + ' Hz' : '--');
+  setText('pipe-nav-hz', s.nav_hz != null ? parseFloat(s.nav_hz).toFixed(1) + ' Hz' : '--');
+  setText('pipe-calib', calibDisplay);
+  setText('pipe-align', as + ' (' + ac + ')');
+  setText('pipe-motion', ms);
+  setText('pipe-vib', s.vibration_rms != null ? parseFloat(s.vibration_rms).toFixed(3) : '--');
+  var pbo = document.getElementById('pipe-blackout');
+  if (pbo) { pbo.textContent = isBlackout ? 'YES' : 'NO'; pbo.className = 'status-val' + (isBlackout ? ' orange' : ' green'); }
+
+  // --- Settings screen ---
+  var recording = s.recording === true;
+  var recEl = document.getElementById('set-recording');
+  if (recEl) { recEl.textContent = recording ? 'YES' : 'NO'; recEl.className = 'status-val' + (recording ? ' green' : ''); }
+  setText('set-records', s.record_count != null ? s.record_count : 0);
+  document.getElementById('btn-start-session').style.display = recording ? 'none' : '';
+  document.getElementById('btn-stop-session').style.display = recording ? '' : 'none';
+
+  var setGnssEl = document.getElementById('set-gnss');
+  if (setGnssEl) { setGnssEl.textContent = hasFix ? 'FIX AVAILABLE' : 'SEARCHING'; setGnssEl.className = 'status-val' + (hasFix ? ' green' : ' dim'); }
+  var setAccelEl = document.getElementById('set-accel');
+  if (setAccelEl) { setAccelEl.textContent = imuActive ? 'LIVE' : 'WAITING'; setAccelEl.className = 'status-val' + (imuActive ? ' green' : ' dim'); }
+  var setGyroEl = document.getElementById('set-gyro');
+  if (setGyroEl) { setGyroEl.textContent = imuActive ? 'LIVE' : 'WAITING'; setGyroEl.className = 'status-val' + (imuActive ? ' green' : ' dim'); }
+  if (imuActive) { var smEl = document.getElementById('set-mag'); if (smEl) { smEl.textContent = 'AVAILABLE'; smEl.className = 'status-val green'; } }
+  setText('set-calib', calibDisplay);
+
+  var saEl = document.getElementById('set-align');
+  if (saEl) { saEl.textContent = as; saEl.className = 'status-val' + (as === 'ALIGNED' ? ' green' : as === 'ALIGNING' ? ' orange' : ' dim'); }
+
+  updateMotionModeButtons(s.motion_mode || 'VEHICLE');
+  setText('set-motion-mode', s.motion_mode || 'VEHICLE');
+}
+
+// =====================================================================
+// OUTAGE UI HELPERS
+// =====================================================================
+function showBlackoutUI() {
+  hide('btn-blackout'); show('btn-restore'); showBlock('outage-timer-card'); hide('restore-notice');
+  if (!outageStartTime) outageStartTime = Date.now();
+  if (!outageTimerInterval) outageTimerInterval = setInterval(tickOutageTimer, 1000);
+}
+function showRestoreUI() {
+  show('btn-blackout'); hide('btn-restore'); hide('outage-timer-card'); showBlock('restore-notice');
+  if (outageTimerInterval) { clearInterval(outageTimerInterval); outageTimerInterval = null; }
+  outageStartTime = null;
+  setTimeout(function(){ hide('restore-notice'); }, 4000);
+}
+function tickOutageTimer() {
+  if (!outageStartTime) return;
+  var e = Math.floor((Date.now() - outageStartTime) / 1000);
+  var m = Math.floor(e / 60), sec = e % 60;
+  setText('outage-timer-display', (m<10?'0':'')+m+':'+(sec<10?'0':'')+sec);
+}
+
+// =====================================================================
+// MOTION MODE
+// =====================================================================
+function updateMotionModeButtons(mode) {
+  var v = document.getElementById('mode-vehicle'), p = document.getElementById('mode-pedestrian');
+  if (v) v.className = 'mode-option' + (mode === 'VEHICLE' ? ' active' : '');
+  if (p) p.className = 'mode-option' + (mode === 'PEDESTRIAN' ? ' active' : '');
+  currentMotionMode = mode;
+}
+function setMotionMode(mode) {
+  api(mode === 'VEHICLE' ? '/mode/vehicle' : '/mode/pedestrian', 'POST')
+    .catch(function(e){ console.warn('Mode set:', e); });
+  updateMotionModeButtons(mode);
+}
+
+// =====================================================================
+// CALIBRATION POLLING
+// =====================================================================
+function startCalibPolling() {
+  if (calibPolling) return;
+  calibPolling = setInterval(function() {
+    api('/calibrate/status').then(function(r){ return r.json(); }).then(function(d) {
+      var st = d.status || 'CALIBRATING';
+      var col = d.samples_collected || 0;
+      var req = d.samples_required || 200;
+      setText('cal-status-val', st.replace(/_/g,' '));
+      setText('cal-samples-val', col + ' / ' + req);
+      var pct = Math.min(100, Math.round(col / req * 100));
+      var bar = document.getElementById('cal-progress-bar');
+      if (bar) bar.style.width = pct + '%';
+      setText('cal-progress-text', pct + '%');
+      if (st === 'CALIBRATED') {
+        stopCalibPolling();
+        var btn = document.getElementById('btn-calibrate');
+        if (btn) { btn.textContent = 'CALIBRATED'; btn.disabled = false; }
+        hide('cal-progress-card'); showBlock('cal-results-card');
+        if (d.accel_bias && d.accel_bias.length >= 3) {
+          setText('cal-ax', parseFloat(d.accel_bias[0]).toFixed(4) + ' m/s\u00b2');
+          setText('cal-ay', parseFloat(d.accel_bias[1]).toFixed(4) + ' m/s\u00b2');
+          setText('cal-az', parseFloat(d.accel_bias[2]).toFixed(4) + ' m/s\u00b2');
+        }
+        if (d.gyro_bias && d.gyro_bias.length >= 3) {
+          setText('cal-gx', parseFloat(d.gyro_bias[0]).toFixed(5) + ' rad/s');
+          setText('cal-gy', parseFloat(d.gyro_bias[1]).toFixed(5) + ' rad/s');
+          setText('cal-gz', parseFloat(d.gyro_bias[2]).toFixed(5) + ' rad/s');
+        }
+      }
+    }).catch(function(){});
+  }, 500);
+}
+function stopCalibPolling() { if (calibPolling) { clearInterval(calibPolling); calibPolling = null; } }
+
+// =====================================================================
+// TEST SUMMARY
+// =====================================================================
+function fetchAndShowSummary() {
+  api('/session/summary').then(function(r){ return r.json(); }).then(function(d) {
+    showBlock('summary-panel');
+    setText('sum-duration', d.duration_s != null ? parseFloat(d.duration_s).toFixed(0) : '--');
+    setText('sum-dist', d.total_distance_m != null ? parseFloat(d.total_distance_m).toFixed(1) : '--');
+    setText('sum-gnss-s', d.gnss_ins_duration_s != null ? parseFloat(d.gnss_ins_duration_s).toFixed(0) : '--');
+    setText('sum-dr-s', d.dr_duration_s != null ? parseFloat(d.dr_duration_s).toFixed(0) : '--');
+    setText('sum-outages', d.outage_events != null ? d.outage_events : '--');
+    setText('sum-recoveries', d.recovery_events != null ? d.recovery_events : '--');
+    setText('sum-imu-hz', d.avg_imu_hz != null ? parseFloat(d.avg_imu_hz).toFixed(1) : '--');
+    setText('sum-nav-hz', d.avg_nav_hz != null ? parseFloat(d.avg_nav_hz).toFixed(1) : '--');
+    setText('sum-records', d.samples_recorded != null ? d.samples_recorded : '--');
+    // Scroll to top to show summary
+    document.getElementById('main-content').scrollTop = 0;
+  }).catch(function(e){ console.warn('Summary fetch:', e); });
+}
+
+// =====================================================================
+// BUTTON HANDLERS
+// =====================================================================
+document.getElementById('btn-blackout').onclick = function() {
+  api('/gnss/blackout', 'POST').then(function() {
+    outageActive = true; outageStartTime = Date.now(); showBlackoutUI();
+  }).catch(function(e){ console.error('Blackout:', e); });
+};
+
+document.getElementById('btn-restore').onclick = function() {
+  api('/gnss/restore', 'POST').then(function() {
+    outageActive = false; showRestoreUI();
+  }).catch(function(e){ console.error('Restore:', e); });
+};
+
+document.getElementById('btn-calibrate').onclick = function() {
+  var btn = document.getElementById('btn-calibrate');
+  btn.disabled = true; btn.textContent = 'CALIBRATING...';
+  showBlock('cal-progress-card'); hide('cal-results-card');
+  var bar = document.getElementById('cal-progress-bar'); if (bar) bar.style.width = '0%';
+  setText('cal-progress-text', '0%');
+  api('/calibrate/start', 'POST').then(function() {
+    startCalibPolling();
+  }).catch(function(e) {
+    btn.disabled = false; btn.textContent = 'CALIBRATE WHILE STATIONARY';
+    hide('cal-progress-card');
+    console.error('Calib:', e);
+  });
+};
+
+document.getElementById('btn-start-session').onclick = function() {
+  hide('summary-panel');
+  api('/session/start', 'POST').then(function(r){ return r.json(); }).then(function(d) {
+    console.log('[IDR] Session started:', d.name);
+  }).catch(function(e){ console.error('Session start:', e); });
+};
+
+document.getElementById('btn-stop-session').onclick = function() {
+  api('/session/stop', 'POST').then(function(r){ return r.json(); }).then(function(d) {
+    console.log('[IDR] Session stopped, records:', d.records);
+    fetchAndShowSummary();
+  }).catch(function(e){ console.error('Session stop:', e); });
+};
+
+document.getElementById('btn-export').onclick = function() {
+  if (window.idrExportSession) window.idrExportSession();
+  else if (window.Android && window.Android.exportSession) window.Android.exportSession();
+  else console.warn('[IDR] Export bridge not available');
+};
+
+document.getElementById('btn-start-nav').onclick = function() {
+  if (window.idrStartNavigation) window.idrStartNavigation();
+  else if (window.Android && window.Android.startNavigation) window.Android.startNavigation();
+  document.getElementById('btn-start-nav').style.display = 'none';
+  document.getElementById('btn-stop-nav').style.display = '';
+};
+
+document.getElementById('btn-stop-nav').onclick = function() {
+  if (window.idrStopNavigation) window.idrStopNavigation();
+  else if (window.Android && window.Android.stopNavigation) window.Android.stopNavigation();
+  document.getElementById('btn-start-nav').style.display = '';
+  document.getElementById('btn-stop-nav').style.display = 'none';
+};
+
+// Permission banner
+if (window._idrPermissionNeeded) { showBlock('perm-banner'); }
+
+// =====================================================================
+// STATE POLLING
+// =====================================================================
+function pollState() {
+  api('/navigation/state').then(function(r){ return r.json(); }).then(function(state) {
+    updateUI(state);
+  }).catch(function(e){ console.warn('[IDR] Poll:', e); });
+}
+
+// =====================================================================
+// INIT
+// =====================================================================
+window.addEventListener('load', function() {
+  initCanvasMap();
+  pollState();
+  setInterval(pollState, 500);
+});
+
+window.addEventListener('resize', function() {
+  if (!leafletReady) initCanvasMap();
+  else if (leafletMap) leafletMap.invalidateSize();
+});
+</script>
+</body>
+</html>

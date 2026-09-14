@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>IDR — Intelligent Dead Reckoning Navigation</title>
+<style>
+  :root {
+    --bg: #0b1220;
+    --surface: #131d30;
+    --border: #1e2d45;
+    --text: #e0e6f0;
+    --muted: #7a8fa8;
+    --accent: #1e88e5;
+    --green: #64dd17;
+    --orange: #ff6d00;
+    --yellow: #ffd600;
+    --purple: #7c5cd8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 780px; margin: 0 auto; padding: 32px 20px; }
+
+  /* Header */
+  .hero { text-align: center; padding: 40px 0 32px; border-bottom: 1px solid var(--border); }
+  .hero h1 { font-size: 2rem; color: var(--accent); letter-spacing: 0.5px; }
+  .hero .sub { font-size: 1rem; color: var(--muted); margin-top: 8px; }
+  .badge {
+    display: inline-block; margin-top: 16px;
+    padding: 4px 12px; border-radius: 20px;
+    background: var(--surface); border: 1px solid var(--border);
+    font-size: 12px; color: var(--muted);
+  }
+  .badge span { color: var(--green); font-weight: 600; }
+
+  /* Sections */
+  section { padding: 28px 0; border-bottom: 1px solid var(--border); }
+  h2 { font-size: 1.1rem; color: var(--accent); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 1px; }
+
+  /* Overview grid */
+  .feature-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+  .feature-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px; font-size: 13px;
+  }
+  .feature-card .icon { font-size: 18px; margin-bottom: 6px; }
+  .feature-card strong { display: block; color: var(--text); margin-bottom: 4px; }
+  .feature-card span { color: var(--muted); }
+
+  /* Architecture */
+  .arch { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; font-family: monospace; font-size: 13px; }
+  .arch-row { display: flex; align-items: center; gap: 10px; margin: 4px 0; }
+  .arch-label {
+    padding: 4px 10px; border-radius: 4px;
+    min-width: 200px; text-align: center; font-size: 12px;
+  }
+  .arch-arrow { color: var(--muted); font-size: 18px; }
+  .lbl-sensor  { background: #0d2137; color: #82b1ff; border: 1px solid #1565c0; }
+  .lbl-engine  { background: #1a1200; color: #ffd740; border: 1px solid #ff6f00; }
+  .lbl-fused   { background: #0a1f0a; color: #69f0ae; border: 1px solid #2e7d32; }
+  .lbl-dr      { background: #1f0900; color: #ff9e40; border: 1px solid #e65100; }
+  .lbl-ui      { background: #0f0a1f; color: #b388ff; border: 1px solid #6a1b9a; }
+
+  /* Mode states */
+  .mode-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+  .mode-card {
+    background: var(--surface); border-radius: 6px; padding: 12px 14px;
+    font-size: 13px; border-left: 3px solid;
+  }
+  .mode-fused  { border-color: var(--green);  }
+  .mode-dr     { border-color: var(--orange); }
+  .mode-reacq  { border-color: var(--yellow); }
+  .mode-wait   { border-color: var(--muted);  }
+  .mode-card strong { color: var(--text); display: block; margin-bottom: 2px; }
+  .mode-card span   { color: var(--muted); font-size: 12px; }
+
+  /* Benchmark */
+  .bench-box {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 20px; display: flex; align-items: center; gap: 24px;
+  }
+  .bench-value { font-size: 3rem; font-weight: 700; color: var(--green); line-height: 1; }
+  .bench-label { font-size: 13px; color: var(--muted); }
+  .bench-label strong { display: block; color: var(--text); margin-top: 4px; }
+
+  /* Download */
+  .dl-box {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 24px; text-align: center;
+  }
+  .dl-steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin: 20px 0; }
+  .dl-step {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+    padding: 12px; font-size: 12px; color: var(--muted);
+  }
+  .dl-step .num { font-size: 1.5rem; font-weight: 700; color: var(--accent); display: block; }
+  .dl-step strong { display: block; color: var(--text); margin: 4px 0 2px; }
+  .btn-dl {
+    display: inline-block; padding: 14px 32px; border-radius: 8px;
+    background: var(--accent); color: #fff; font-size: 15px; font-weight: 600;
+    text-decoration: none; margin-top: 8px;
+  }
+  .note { color: var(--muted); font-size: 12px; margin-top: 12px; }
+
+  /* Test matrix */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 8px 12px; background: var(--surface); color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
+  td { padding: 8px 12px; border-top: 1px solid var(--border); color: var(--text); vertical-align: top; }
+  .pass { color: var(--green); font-weight: 600; }
+  .na   { color: var(--muted); }
+
+  /* Footer */
+  footer { text-align: center; font-size: 12px; color: var(--muted); padding: 24px 0; border-top: 1px solid var(--border); margin-top: 16px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HERO -->
+  <div class="hero">
+    <h1>IDR Navigation</h1>
+    <div class="sub">Intelligent Dead Reckoning — Standalone Android MVP</div>
+    <div class="badge">IO-VNBD Benchmark &nbsp;|&nbsp; <span>7.64% drift</span> &nbsp;(protected baseline)</div>
+  </div>
+
+  <!-- OVERVIEW -->
+  <section>
+    <h2>What This Does</h2>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="icon">📡</div>
+        <strong>Real-time GNSS + INS Fusion</strong>
+        <span>Combines phone GPS with accelerometer and gyroscope for smooth, continuous position tracking.</span>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🔴</div>
+        <strong>Live GNSS Blackout Test</strong>
+        <span>Press a button to gate out GNSS. Navigation switches to Dead Reckoning from live IMU.</span>
+      </div>
+      <div class="feature-card">
+        <div class="icon">♻️</div>
+        <strong>Automatic GNSS Recovery</strong>
+        <span>Restoring GNSS triggers smooth Reacquisition blending back to GNSS_INS_FUSED mode.</span>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🗺️</div>
+        <strong>Live Map Track</strong>
+        <span>OpenStreetMap tiles with colour-coded track: blue = fused, orange = dead reckoning, yellow = reacquisition.</span>
+      </div>
+      <div class="feature-card">
+        <div class="icon">💾</div>
+        <strong>Session Recording</strong>
+        <span>Every sensor reading, GNSS fix, and navigation output saved to an NDJSON file. One-tap export.</span>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🔌</div>
+        <strong>No Server Required</strong>
+        <span>The navigation engine runs entirely on the phone. No laptop, no USB, no Python server needed.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ARCHITECTURE -->
+  <section>
+    <h2>Architecture</h2>
+    <div class="arch">
+      <div class="arch-row"><div class="arch-label lbl-sensor">Phone Accelerometer + Gyroscope</div></div>
+      <div class="arch-row"><div class="arch-arrow">↓</div></div>
+      <div class="arch-row"><div class="arch-label lbl-sensor">Phone GPS / GNSS</div></div>
+      <div class="arch-row"><div class="arch-arrow">↓</div></div>
+      <div class="arch-row"><div class="arch-label lbl-engine">IDRNavigationEngine.kt&nbsp;&nbsp;(on-device)</div></div>
+      <div class="arch-row"><div class="arch-arrow">↓</div><div style="color:#7a8fa8;font-size:12px">processImu() + processGnss()</div></div>
+      <div class="arch-row"><div class="arch-label lbl-fused">GNSS_INS_FUSED state</div></div>
+      <div class="arch-row"><div class="arch-arrow" style="color:#ff6d00">↓ blackout gate</div></div>
+      <div class="arch-row"><div class="arch-label lbl-dr">DEAD_RECKONING state</div></div>
+      <div class="arch-row"><div class="arch-arrow" style="color:#ffd600">↓ gnss restored</div></div>
+      <div class="arch-row"><div class="arch-label lbl-fused">REACQUISITION → GNSS_INS_FUSED</div></div>
+      <div class="arch-row"><div class="arch-arrow">↓</div></div>
+      <div class="arch-row"><div class="arch-label lbl-ui">Live UI + Live Map + Session File</div></div>
+    </div>
+  </section>
+
+  <!-- NAVIGATION MODES -->
+  <section>
+    <h2>Navigation Modes</h2>
+    <div class="mode-grid">
+      <div class="mode-card mode-fused">
+        <strong>● GNSS + INS FUSED</strong>
+        <span>GPS fixes and IMU combined. Best position accuracy. Active when GNSS is available.</span>
+      </div>
+      <div class="mode-card mode-dr">
+        <strong>◆ DEAD RECKONING</strong>
+        <span>IMU only. Position integrated from gyro heading + accelerometer speed. Active during blackout.</span>
+      </div>
+      <div class="mode-card mode-reacq">
+        <strong>↺ REACQUISITION</strong>
+        <span>GNSS restored. Smooth blending from DR position back to fused GPS position over ~5 fixes.</span>
+      </div>
+      <div class="mode-card mode-wait">
+        <strong>○ WAITING FOR FIX</strong>
+        <span>Sensors running but fewer than 2 GNSS fixes received. Normal at startup outdoors.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- BENCHMARK -->
+  <section>
+    <h2>Protected Benchmark</h2>
+    <div class="bench-box">
+      <div>
+        <div class="bench-value">7.64%</div>
+        <div class="bench-value" style="font-size:1rem;color:var(--muted)">IO-VNBD drift</div>
+      </div>
+      <div class="bench-label">
+        <strong>This baseline is protected.</strong>
+        Measured on the IO-VNBD dataset using the production replay pipeline.<br>
+        Run <code style="color:#82b1ff">pytest -q</code> and <code style="color:#82b1ff">benchmark_iovnbd.py</code> to verify.
+        Do not modify benchmark conditions to improve the reported number.
+      </div>
+    </div>
+  </section>
+
+  <!-- DOWNLOAD -->
+  <section>
+    <h2>Install on Android</h2>
+    <div class="dl-box">
+      <div class="dl-steps">
+        <div class="dl-step">
+          <span class="num">1</span>
+          <strong>Download APK</strong>
+          <span>Tap the button below or scan the QR code from the presentation.</span>
+        </div>
+        <div class="dl-step">
+          <span class="num">2</span>
+          <strong>Allow unknown sources</strong>
+          <span>Settings → Apps → Special App Access → Install Unknown Apps → enable for browser/Files.</span>
+        </div>
+        <div class="dl-step">
+          <span class="num">3</span>
+          <strong>Install the APK</strong>
+          <span>Open the downloaded file and tap Install.</span>
+        </div>
+        <div class="dl-step">
+          <span class="num">4</span>
+          <strong>Grant permissions</strong>
+          <span>Allow Precise Location when prompted. No other permissions required.</span>
+        </div>
+        <div class="dl-step">
+          <span class="num">5</span>
+          <strong>Press START NAVIGATION</strong>
+          <span>Go outdoors. Wait for GNSS fix. Watch the mode switch to GNSS + INS FUSED.</span>
+        </div>
+        <div class="dl-step">
+          <span class="num">6</span>
+          <strong>Test Blackout</strong>
+          <span>Press ⚠ START BLACKOUT while moving. Watch the mode switch to DEAD RECKONING.</span>
+        </div>
+      </div>
+      <a class="btn-dl" href="app-release-unsigned.apk">⬇ Download APK</a>
+      <div class="note">
+        Android 8.0+ (API 26) required. Tested on API 26–35.<br>
+        No internet connection required for navigation. Internet used only for map tiles (optional).
+      </div>
+    </div>
+  </section>
+
+  <!-- TEST MATRIX -->
+  <section>
+    <h2>Test Matrix</h2>
+    <table>
+      <thead>
+        <tr><th>Test</th><th>Scenario</th><th>Expected</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>T1 — APK Launch</td>
+          <td>Install APK, disconnect USB, force-stop, reopen</td>
+          <td>App launches. No white screen. Sensor status shown.</td>
+          <td class="na">Run on device</td>
+        </tr>
+        <tr>
+          <td>T2 — Stationary</td>
+          <td>Phone still, outdoors</td>
+          <td>IMU rate visible. GNSS fix acquired. No phantom motion.</td>
+          <td class="na">Run on device</td>
+        </tr>
+        <tr>
+          <td>T3 — Walking</td>
+          <td>Walk outdoors with phone</td>
+          <td>Live position updates. Map marker moves. Timestamps update.</td>
+          <td class="na">Run on device</td>
+        </tr>
+        <tr>
+          <td>T4 — Bus / Vehicle</td>
+          <td>Use existing bus session or live bus test</td>
+          <td>Speed estimation correct. Heading stable. Map follows route.</td>
+          <td class="na">Run on device</td>
+        </tr>
+        <tr>
+          <td>T5 — GNSS Blackout</td>
+          <td>Press ⚠ START BLACKOUT while moving</td>
+          <td>GNSS_INS_FUSED → DEAD_RECKONING. IMU continues. Timer visible.</td>
+          <td class="na">Run on device</td>
+        </tr>
+        <tr>
+          <td>T6 — GNSS Recovery</td>
+          <td>Press ✓ RESTORE GNSS after blackout</td>
+          <td>DEAD_RECKONING → REACQUISITION → GNSS_INS_FUSED. Smooth convergence.</td>
+          <td class="na">Run on device</td>
+        </tr>
+        <tr>
+          <td>T7 — Session Export</td>
+          <td>Record session during walk, tap EXPORT SESSION</td>
+          <td>NDJSON file shared via Android share sheet. File contains all sensor + nav data.</td>
+          <td class="na">Run on device</td>
+        </tr>
+        <tr>
+          <td>T8 — Benchmark</td>
+          <td>Run <code>pytest -q</code> and <code>benchmark_iovnbd.py</code></td>
+          <td>IO-VNBD drift ≈ 7.64%. All 54 tests pass.</td>
+          <td class="pass">PROTECTED</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+</div>
+
+<footer>
+  <p>IDR — Intelligent Dead Reckoning Navigation &nbsp;|&nbsp; Standalone Android MVP</p>
+  <div style="margin-top:6px;padding-top:8px;border-top:1px solid var(--border)">Made with IBM Bob</div>
+</footer>
+</body>
+</html>
