@@ -14,6 +14,7 @@ import kotlin.math.*
  *  - Smooth GNSS reacquisition blending
  *  - Calibration workflow
  *  - IMU Hz / GNSS Hz rate estimation
+ *  - Runtime filter/NHC/alignment configuration
  *
  * All state is kept here. No server, no WebSocket, no laptop required.
  */
@@ -29,6 +30,8 @@ class IDRNavigationEngine {
     }
 
     enum class MotionMode { VEHICLE, PEDESTRIAN }
+
+    enum class FilterMode { STRICT, BALANCED, RAW }
 
     data class CalibrationResult(
         val status: String,       // NOT_CALIBRATED, CALIBRATING, CALIBRATED
@@ -58,7 +61,21 @@ class IDRNavigationEngine {
         val lastAccelZ: Double = 0.0,
         val lastGyroX: Double = 0.0,
         val lastGyroY: Double = 0.0,
-        val lastGyroZ: Double = 0.0
+        val lastGyroZ: Double = 0.0,
+        // Magnetometer
+        val hasMag: Boolean = false,
+        val lastMagX: Double = 0.0,
+        val lastMagY: Double = 0.0,
+        val lastMagZ: Double = 0.0,
+        // Counters
+        val imuCount: Int = 0,
+        val gnssCount: Int = 0,
+        // Configuration
+        val filterMode: FilterMode = FilterMode.BALANCED,
+        val nhcEnabled: Boolean = true,
+        val mountingCalibrated: Boolean = false,
+        // Derived
+        val isStationary: Boolean = false
     )
 
     // ---------------------------------------------------------------
@@ -80,6 +97,15 @@ class IDRNavigationEngine {
     @Volatile private var gnssAccuracyM: Double = 0.0
     @Volatile private var motionMode: MotionMode = MotionMode.VEHICLE
 
+    // Runtime configuration
+    @Volatile var filterMode: FilterMode = FilterMode.BALANCED
+    @Volatile var nhcEnabled: Boolean = true
+    @Volatile private var mountingCalibrated: Boolean = false
+
+    // Phone forward/up vectors for alignment
+    private val forwardPhone = DoubleArray(3) { if (it == 1) 1.0 else 0.0 } // +Y default
+    private val upPhone = DoubleArray(3) { if (it == 2) 1.0 else 0.0 }      // +Z default
+
     // Raw sensor values (for UI display)
     @Volatile private var rawAx: Double = 0.0
     @Volatile private var rawAy: Double = 0.0
@@ -87,6 +113,12 @@ class IDRNavigationEngine {
     @Volatile private var rawGx: Double = 0.0
     @Volatile private var rawGy: Double = 0.0
     @Volatile private var rawGz: Double = 0.0
+
+    // Magnetometer
+    @Volatile private var hasMag: Boolean = false
+    @Volatile private var rawMx: Double = 0.0
+    @Volatile private var rawMy: Double = 0.0
+    @Volatile private var rawMz: Double = 0.0
 
     // Wall-clock times for UI
     @Volatile var lastImuWallMs: Long = 0L
@@ -150,6 +182,8 @@ class IDRNavigationEngine {
     private val STATIONARY_WIN = 20
     private val STATIONARY_THRESH = 0.15 // m/s²
 
+    @Volatile private var stationaryState = false
+
     // ---------------------------------------------------------------
     // PUBLIC API
     // ---------------------------------------------------------------
@@ -174,9 +208,24 @@ class IDRNavigationEngine {
         prevGnssTs = null
         reacqCount = 0
         yawCalibrated = false
+        stationaryState = false
     }
 
     fun setMotionMode(m: MotionMode) { motionMode = m }
+
+    fun setAlignment(fwdPhone: DoubleArray, upPh: DoubleArray) {
+        for (i in 0..2) {
+            forwardPhone[i] = fwdPhone[i]
+            upPhone[i] = upPh[i]
+        }
+        // Recalculate gyro axis based on forward phone vector
+        // The yaw axis is the one that corresponds to the up direction
+        gyroAxis = upPh.indices.maxByOrNull { abs(upPh[it]) } ?: 2
+        // Apply sign based on orientation
+        gyroSign = if (upPh[gyroAxis] > 0) -1.0 else 1.0
+        mountingCalibrated = true
+        yawCalibrated = true
+    }
 
     fun startCalibration() {
         synchronized(calibLock) {
@@ -184,6 +233,13 @@ class IDRNavigationEngine {
             calibAccelSamples.clear()
             calibGyroSamples.clear()
         }
+    }
+
+    fun processMag(mx: Float, my: Float, mz: Float) {
+        hasMag = true
+        rawMx = mx.toDouble()
+        rawMy = my.toDouble()
+        rawMz = mz.toDouble()
     }
 
     fun getCalibrationState(): CalibrationResult = when (calibState) {
@@ -234,6 +290,20 @@ class IDRNavigationEngine {
         val cgz = gz - (if (calibState == CalibState.CALIBRATED) gyroBias[2] else 0.0)
 
         // -----------------------------------------------------------------------
+        // Apply filter mode — thresholding for vibration rejection
+        // -----------------------------------------------------------------------
+        val accelThreshold = when (filterMode) {
+            FilterMode.STRICT   -> 0.08
+            FilterMode.BALANCED -> 0.04
+            FilterMode.RAW      -> 0.0
+        }
+        val gyroThreshold = when (filterMode) {
+            FilterMode.STRICT   -> 0.012
+            FilterMode.BALANCED -> 0.005
+            FilterMode.RAW      -> 0.0
+        }
+
+        // -----------------------------------------------------------------------
         // Gravity low-pass filter
         // -----------------------------------------------------------------------
         gravLp[0] = LP_ALPHA * gravLp[0] + (1 - LP_ALPHA) * cax
@@ -243,19 +313,21 @@ class IDRNavigationEngine {
         // Linear acceleration (gravity-compensated)
         val lax = cax - gravLp[0]
         val lay = cay - gravLp[1]
+        val laz = caz - gravLp[2]
 
         // Accel magnitude for stationary detection
-        val aMag = sqrt(lax * lax + lay * lay + (caz - gravLp[2]).pow(2))
+        val aMag = sqrt(lax * lax + lay * lay + laz * laz)
         accelMagBuf.addLast(aMag)
         if (accelMagBuf.size > STATIONARY_WIN) accelMagBuf.removeFirst()
         val isStationary = accelMagBuf.size >= STATIONARY_WIN &&
             accelMagBuf.average() < STATIONARY_THRESH
+        stationaryState = isStationary
 
         // -----------------------------------------------------------------------
         // Gyro yaw rate (use calibrated axis)
         // -----------------------------------------------------------------------
         val rawYaw = when (gyroAxis) { 0 -> cgx; 1 -> cgy; else -> cgz } * gyroSign
-        val filteredYaw = if (abs(rawYaw) < 0.005) 0.0 else rawYaw // dead-zone filter
+        val filteredYaw = if (abs(rawYaw) < gyroThreshold) 0.0 else rawYaw
 
         if (!initialized) {
             if (gnssCount >= 2) { initialized = true; mode = NavMode.GNSS_INS_FUSED }
@@ -271,16 +343,17 @@ class IDRNavigationEngine {
         // Dead reckoning position integration (when GNSS is blacked out)
         // -----------------------------------------------------------------------
         if (mode == NavMode.DEAD_RECKONING) {
-            if (isStationary) {
+            if (isStationary || (nhcEnabled && isStationary)) {
                 speedMps *= 0.95 // decay toward zero
             } else {
                 val forwardAccel = lax * sin(Math.toRadians(headingDeg)) +
                                    lay * cos(Math.toRadians(headingDeg))
-                val accelContrib = forwardAccel * dt
+                val filteredAccel = if (abs(forwardAccel) < accelThreshold) 0.0 else forwardAccel
+                val accelContrib = filteredAccel * dt
                 speedMps = (speedMps + accelContrib * 0.25).coerceIn(0.0,
                     if (motionMode == MotionMode.VEHICLE) 55.0 else 10.0)
                 // NHC: constrain speed decay when no accel
-                if (aMag < 0.2) speedMps *= 0.98
+                if (nhcEnabled && aMag < 0.2) speedMps *= 0.98
             }
 
             // NHC: for vehicle mode, zero out lateral/vertical drift
@@ -318,7 +391,7 @@ class IDRNavigationEngine {
                 val course = bearing(prevLat, prevLon, latitude, longitude)
                 val gnssSpd = dist / dtG
 
-                // Auto-calibrate gyro yaw axis from GNSS course
+                // Auto-calibrate gyro yaw axis from GNSS course (if not manually set)
                 if (!yawCalibrated && gnssCount >= 5) {
                     yawCalibrated = true
                     gyroAxis = 2; gyroSign = -1.0 // best default for portrait phone
@@ -407,7 +480,15 @@ class IDRNavigationEngine {
             calibrationStatus = calibLabel,
             gnssAccuracyM = gnssAccuracyM,
             lastAccelX = rawAx, lastAccelY = rawAy, lastAccelZ = rawAz,
-            lastGyroX = rawGx, lastGyroY = rawGy, lastGyroZ = rawGz
+            lastGyroX = rawGx, lastGyroY = rawGy, lastGyroZ = rawGz,
+            hasMag = hasMag,
+            lastMagX = rawMx, lastMagY = rawMy, lastMagZ = rawMz,
+            imuCount = imuCount,
+            gnssCount = gnssCount,
+            filterMode = filterMode,
+            nhcEnabled = nhcEnabled,
+            mountingCalibrated = mountingCalibrated,
+            isStationary = stationaryState
         )
     }
 

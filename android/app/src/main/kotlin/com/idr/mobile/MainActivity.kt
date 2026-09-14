@@ -36,14 +36,15 @@ import java.util.concurrent.atomic.AtomicReference
  * Architecture:
  *  Real Android Sensors (Accel, Gyro, Mag, GNSS)
  *    ↓
- *  IDRNavigationEngine (on-device, no server)
+ *  IDRNavigationEngine (on-device, no external server)
  *    ↓
  *  IDRLocalServer (embedded HTTP on localhost:8080)
  *    ↓
- *  WebView loads advanced IDR Fusion UI from assets
+ *  WebView loads IDR Fusion UI from assets
  *    ↓
- *  UI polls /navigation/state at 600ms
+ *  UI polls /navigation/state at 200ms (5 Hz)
  *
+ * Sensors start immediately on launch — no user interaction required to begin.
  * No USB, no laptop, no external server required.
  */
 class MainActivity : Activity(), SensorEventListener, LocationListener {
@@ -68,7 +69,6 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
     // Sensor state (written by sensor callbacks, atomics for thread safety)
     private val accel = AtomicReference(FloatArray(3))
     private val gyro  = AtomicReference(FloatArray(3))
-    private val mag   = AtomicReference<FloatArray?>(null)
     private val hasAccel = AtomicBoolean(false)
     private val hasGyro  = AtomicBoolean(false)
     private val hasMag   = AtomicBoolean(false)
@@ -80,16 +80,15 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
     @Volatile private var lastGnssAcc: Double? = null
 
     @Volatile private var navigationRunning = false
-    @Volatile private var permissionPending = false
 
-    // WebView — the advanced IDR Fusion UI
+    // WebView — the IDR Fusion UI
     private lateinit var webView: WebView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         recorder = SessionRecorder(this)
 
-        // Start embedded HTTP server
+        // Start embedded HTTP server before anything else
         server = IDRLocalServer(SERVER_PORT, assets, engine, recorder)
         try {
             server.start()
@@ -101,6 +100,11 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
         locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
         setupWebView()
+
+        // Auto-start sensors immediately — IMU does NOT need location permission.
+        // GNSS will be requested after we check/request the permission.
+        startImuSensors()
+        requestLocationPermissionAndStartGnss()
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -112,23 +116,17 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
                 allowFileAccess = false
                 allowContentAccess = false
                 cacheMode = WebSettings.LOAD_NO_CACHE
-                // Allow mixed content (for loading OSM tiles over http from https pages)
+                // Allow mixed content (OSM tiles over http from https-origin pages)
                 mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                 setSupportZoom(false)
             }
             webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView?, url: String?) {
-                    // Inject Android bridge for start/stop/export controls
+                    // Inject Android bridge for export control
                     injectAndroidBridge()
-                    // Auto-request permissions if not yet granted
-                    if (!hasLocationPermission()) {
-                        evaluateJavascript(
-                            "window._idrPermissionNeeded = true;", null
-                        )
-                    }
                 }
             }
-            // Load the advanced navigation UI from local server
+            // Load the navigation UI from the embedded server
             loadUrl("http://localhost:$SERVER_PORT/navigate")
         }
         setContentView(webView, ViewGroup.LayoutParams(
@@ -138,105 +136,34 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
     }
 
     /**
-     * Inject JavaScript bridge into the WebView so UI buttons can call
-     * native Android functions (start nav, blackout, export, etc.)
+     * Inject a minimal JavaScript bridge so the export button can call
+     * native Android functions.  The main navigation state flows through
+     * the embedded HTTP server — no bridge needed for that.
      */
     private fun injectAndroidBridge() {
+        // Add the Android interface object
+        webView.addJavascriptInterface(AndroidBridge(), "Android")
+
         val js = """
 (function() {
   if (window._idrBridgeInjected) return;
   window._idrBridgeInjected = true;
 
-  // Override fetch() calls to the local server — they should work natively
-  // but we patch the base URL just in case the HTML has relative paths.
-  const BASE = 'http://localhost:$SERVER_PORT';
-  const _origFetch = window.fetch.bind(window);
-  window.fetch = function(url, opts) {
-    if (typeof url === 'string' && url.startsWith('/')) {
-      url = BASE + url;
-    }
-    return _origFetch(url, opts);
-  };
-
-  // START NAVIGATION — called from any "Start" button in the UI
-  window.idrStartNavigation = function() {
-    Android.startNavigation();
-  };
-
-  // STOP NAVIGATION
-  window.idrStopNavigation = function() {
-    Android.stopNavigation();
-  };
-
-  // GNSS BLACKOUT
-  window.idrStartBlackout = function() {
-    fetch('/gnss/blackout', {method:'POST'});
-  };
-
-  // GNSS RESTORE
-  window.idrRestoreGnss = function() {
-    fetch('/gnss/restore', {method:'POST'});
-  };
-
-  // CALIBRATE
-  window.idrCalibrate = function() {
-    fetch('/calibrate/start', {method:'POST'});
-  };
-
-  // SESSION
-  window.idrStartSession = function() {
-    fetch('/session/start', {method:'POST'})
-      .then(r => r.json())
-      .then(d => { if (window._idrShowToast) _idrShowToast('Session started: '+d.name); });
-  };
-
-  window.idrStopSession = function() {
-    fetch('/session/stop', {method:'POST'})
-      .then(r => r.json())
-      .then(d => { if (window._idrShowToast) _idrShowToast('Session saved: '+d.records+' records'); });
-  };
-
   window.idrExportSession = function() {
-    Android.exportSession();
+    if (typeof Android !== 'undefined') Android.exportSession();
   };
 
-  // Toast helper
   window._idrShowToast = function(msg) {
-    Android.showToast(msg);
+    if (typeof Android !== 'undefined') Android.showToast(msg);
   };
 
-  // Auto-start navigation when user presses START in the UI
-  // Watch for the simTunnelBtn which is the existing demo button
-  var simBtn = document.getElementById('simTunnelBtn');
-  if (simBtn) {
-    // Replace the original demo handler with real GNSS blackout
-    simBtn.onclick = function(e) {
-      e.stopPropagation();
-      e.preventDefault();
-      window.idrStartBlackout();
-    };
-  }
-
-  console.log('[IDR] Android bridge injected — standalone mode active');
+  console.log('[IDR] Android bridge injected — standalone on-device mode');
 })();
         """.trimIndent()
         webView.evaluateJavascript(js, null)
-
-        // Also add the Android interface object
-        webView.addJavascriptInterface(AndroidBridge(), "Android")
     }
 
     inner class AndroidBridge {
-        @android.webkit.JavascriptInterface
-        fun startNavigation() {
-            runOnUiThread { onStartNavigation() }
-        }
-
-        @android.webkit.JavascriptInterface
-        fun stopNavigation() {
-            runOnUiThread { stopNav() }
-        }
-
         @android.webkit.JavascriptInterface
         fun exportSession() {
             runOnUiThread { doExportSession() }
@@ -249,40 +176,41 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
     }
 
     // ---------------------------------------------------------------
-    // NAVIGATION START
+    // IMU SENSOR START — does not require location permission
     // ---------------------------------------------------------------
-    private fun onStartNavigation() {
-        permissionPending = true
-        if (!hasLocationPermission()) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
-                PERM_REQ
-            )
-            return
-        }
-        startNav()
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun startNav() {
-        if (navigationRunning) return
-        engine.reset()
-        server.clearTrack()
-
+    private fun startImuSensors() {
         val accelSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         val gyroSensor  = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
         if (accelSensor == null || gyroSensor == null) {
             Toast.makeText(this, "Required IMU sensors not available on this device", Toast.LENGTH_LONG).show()
             return
         }
-
         sensorManager.registerListener(this, accelSensor, IMU_RATE)
         sensorManager.registerListener(this, gyroSensor, IMU_RATE)
         sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)?.let {
             sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
         }
+    }
 
+    // ---------------------------------------------------------------
+    // GNSS — request permission then start
+    // ---------------------------------------------------------------
+    private fun requestLocationPermissionAndStartGnss() {
+        if (hasLocationPermission()) {
+            startGnss()
+        } else {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
+                PERM_REQ
+            )
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun startGnss() {
+        if (navigationRunning) return
+        navigationRunning = true
         try {
             locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, GNSS_MIN_MS, 0f, this)
         } catch (e: Exception) {
@@ -293,10 +221,7 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
                 locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, GNSS_MIN_MS * 3, 0f, this)
             }
         } catch (_: Exception) {}
-
-        navigationRunning = true
         handler.post(trackUpdateRunnable)
-        Toast.makeText(this, "Navigation started — waiting for GNSS fix", Toast.LENGTH_SHORT).show()
     }
 
     private fun stopNav() {
@@ -366,12 +291,12 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
                 // Session recording
                 if (recorder.isRecording) {
                     val state = engine.getState()
-                    val m = if (hasMag.get()) mag.get() else null
+                    val mx = if (hasMag.get()) event.values.getOrNull(0)?.toDouble() else null
                     recorder.record(SessionRecorder.SessionRecord(
                         wallMs = System.currentTimeMillis(), timestamp = ts,
                         ax = v[0].toDouble(), ay = v[1].toDouble(), az = v[2].toDouble(),
                         gx = g[0].toDouble(), gy = g[1].toDouble(), gz = g[2].toDouble(),
-                        mx = m?.get(0)?.toDouble(), my = m?.get(1)?.toDouble(), mz = m?.get(2)?.toDouble(),
+                        mx = null, my = null, mz = null,
                         gnssLat = lastGnssLat, gnssLon = lastGnssLon,
                         gnssSpeedMps = lastGnssSpeed, gnssAccuracyM = lastGnssAcc,
                         navLat = state.latitude, navLon = state.longitude,
@@ -382,7 +307,10 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
                 }
             }
             Sensor.TYPE_GYROSCOPE -> { gyro.set(event.values.copyOf()); hasGyro.set(true) }
-            Sensor.TYPE_MAGNETIC_FIELD -> { mag.set(event.values.copyOf()); hasMag.set(true) }
+            Sensor.TYPE_MAGNETIC_FIELD -> {
+                hasMag.set(true)
+                engine.processMag(event.values[0], event.values[1], event.values[2])
+            }
         }
     }
 
@@ -420,8 +348,11 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
     override fun onRequestPermissionsResult(req: Int, perms: Array<out String>, grants: IntArray) {
         super.onRequestPermissionsResult(req, perms, grants)
         if (req != PERM_REQ) return
-        if (hasLocationPermission()) startNav()
-        else Toast.makeText(this, "Location permission required for GNSS navigation", Toast.LENGTH_LONG).show()
+        if (hasLocationPermission()) {
+            startGnss()
+        } else {
+            Toast.makeText(this, "Location permission required for GNSS navigation", Toast.LENGTH_LONG).show()
+        }
     }
 
     // ---------------------------------------------------------------
@@ -429,9 +360,9 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
     // ---------------------------------------------------------------
     override fun onResume() {
         super.onResume()
-        // Auto-start navigation on first launch if permission already granted
-        if (!navigationRunning && hasLocationPermission() && permissionPending) {
-            startNav()
+        // If GNSS not yet running but permission was granted (e.g. via Settings), start now
+        if (!navigationRunning && hasLocationPermission()) {
+            startGnss()
         }
     }
 

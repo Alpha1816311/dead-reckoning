@@ -36,5 +36,4 @@ kotlin {
 dependencies {
     implementation "androidx.core:core-ktx:1.13.1"
     // FileProvider (part of androidx.core — already included above)
-    implementation "com.squareup.okhttp3:okhttp:4.12.0"
 }

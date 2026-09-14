@@ -18,7 +18,7 @@ import java.util.concurrent.Executors
  */
 abstract class NanoHTTPD(private val port: Int) {
 
-    enum class Method { GET, POST, PUT, DELETE, OPTIONS, HEAD }
+    enum class Method { GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD }
 
     interface IHTTPSession {
         val uri: String
@@ -31,6 +31,7 @@ abstract class NanoHTTPD(private val port: Int) {
     class Response(val status: Status, val mimeType: String, val data: Any) {
         enum class Status(val code: Int, val description: String) {
             OK(200, "OK"),
+            BAD_REQUEST(400, "Bad Request"),
             NOT_FOUND(404, "Not Found"),
             METHOD_NOT_ALLOWED(405, "Method Not Allowed"),
             INTERNAL_ERROR(500, "Internal Server Error")

@@ -253,14 +253,8 @@ tailwind.config = {
     <div class="h-16 px-gutter-mobile flex items-center justify-between">
 
       <div class="flex items-center gap-telemetry-gap">
-
-        <img
-          alt="IDR Fusion Logo"
-          class="h-8 w-auto object-contain"
-          src="https://lh3.googleusercontent.com/aida/AEtjO1XaUzhLvDQZ7jrLWXl8gv9oV-4OnMNZVklefwzvFGqQdsbW1GcOQoT2JQ48AuQBYyLFMa0cw7AlRVMotQXj-kCiivQU4IUytFMpGHGw1TDSD5L7kWxAEEVJbb0V_CXMV6me8UXmhzjVDav1JDFA9PEOyFvZEjN2UjmdVCXE2ol-otCRHsbTdtZpJMpWVJ3ZxjC4enbGoK-ndNdQHJJJVboWNjgXmvzk5Opf6NdIzhaTsxKGvsFuLdkD_0J6"
-        >
-
-        <div class="flex flex-col">
+        <div class="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-on-primary font-bold text-[11px]">IDR</div>
+<div class="flex flex-col">
 
           <div class="flex items-center gap-1.5">
 
@@ -295,7 +289,7 @@ tailwind.config = {
               <span
                 class="font-label-caps text-label-caps text-primary uppercase"
               >
-                100HZ INS
+                LIVE INS
               </span>
 
             </div>
@@ -303,7 +297,7 @@ tailwind.config = {
             <span
               class="text-outline font-label-caps text-label-caps"
             >
-              ΓÇó
+              •
             </span>
 
             <!-- LIVE GNSS STATUS -->
@@ -312,7 +306,7 @@ tailwind.config = {
               id="gnssFixSummary"
               class="font-label-caps text-label-caps text-secondary uppercase"
             >
-              GNSS STATUS ΓÇö
+              GNSS STATUS —
             </span>
 
           </div>
@@ -325,19 +319,20 @@ tailwind.config = {
 
         <div class="hidden sm:flex flex-col items-end mr-1">
 
-          <span
-            class="font-metric-sm text-metric-sm text-on-surface"
-          >
-            14:28:09.4 Z
-          </span>
+        <span
+          id="utcClock"
+          class="font-metric-sm text-metric-sm text-on-surface"
+        >
+          —
+        </span>
 
-          <span
-            class="font-label-caps text-label-caps text-on-surface-variant"
-          >
-            UTC TELEMETRY
-          </span>
+        <span
+          class="font-label-caps text-label-caps text-on-surface-variant"
+        >
+          UTC TELEMETRY
+        </span>
 
-        </div>
+      </div>
 
         <div
           class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"
@@ -407,7 +402,7 @@ tailwind.config = {
                 id="confidenceValue"
                 class="font-metric-sm text-metric-sm"
               >
-                ΓÇö CONF
+                — CONF
               </span>
 
             </div>
@@ -458,77 +453,13 @@ tailwind.config = {
               <span
                 class="font-label-caps text-label-caps font-semibold"
               >
-                MAP STATUS ΓÇö
+                MAP STATUS —
               </span>
 
             </div>
 
           </div>
-
-
-          <!-- Dynamic Telemetry Chips -->
-
-          <div class="grid grid-cols-3 gap-1.5">
-
-            <div
-              class="bg-surface-container-high px-2 py-1.5 rounded flex flex-col items-center justify-center text-center"
-            >
-
-              <span
-                class="font-label-caps text-label-caps text-on-surface-variant"
-              >
-                CONSTELLATION
-              </span>
-
-              <span
-                class="font-metric-sm text-metric-sm text-secondary truncate"
-              >
-                SATELLITES ΓÇö
-              </span>
-
-            </div>
-
-            <div
-              class="bg-surface-container-high px-2 py-1.5 rounded flex flex-col items-center justify-center text-center"
-            >
-
-              <span
-                class="font-label-caps text-label-caps text-on-surface-variant"
-              >
-                DILUTION (HDOP)
-              </span>
-
-              <span
-                class="font-metric-sm text-metric-sm text-primary"
-              >
-                HDOP ΓÇö
-              </span>
-
-            </div>
-
-            <div
-              class="bg-surface-container-high px-2 py-1.5 rounded flex flex-col items-center justify-center text-center"
-            >
-
-              <span
-                class="font-label-caps text-label-caps text-on-surface-variant"
-              >
-                KALMAN RATE
-              </span>
-
-              <span
-                class="font-metric-sm text-metric-sm text-on-surface"
-              >
-                IMU / FUSION ΓÇö
-              </span>
-
-            </div>
-
-          </div>
-
-        </div>
-
-      </div>
+</div>
 
 
       <!-- =====================================================
@@ -578,7 +509,7 @@ tailwind.config = {
                 <span
                   class="font-label-caps text-label-caps text-on-surface-variant"
                 >
-                  ΓÇó LIVE
+                  • LIVE
                 </span>
 
               </div>
@@ -643,7 +574,7 @@ tailwind.config = {
                 id="mapValue"
                 class="font-label-caps text-label-caps text-primary"
               >
-                MAP MATCH ΓÇö
+                MAP MATCH —
               </span>
 
             </div>
@@ -652,7 +583,7 @@ tailwind.config = {
               id="headingValue"
               class="font-label-caps text-label-caps text-on-surface-variant bg-surface-container-lowest/80 px-2 py-1 rounded"
             >
-              HEADING ΓÇö
+              HEADING —
             </span>
 
           </div>
@@ -681,7 +612,7 @@ tailwind.config = {
               class="font-metric-display text-metric-display-mobile text-on-surface tracking-tighter"
               id="speedValue"
             >
-              64
+              —
             </span>
 
             <div class="flex flex-col">
@@ -701,48 +632,31 @@ tailwind.config = {
             </div>
 
           </div>
+</div>
 
 
-          <!-- Road Sign Speed Limit -->
+        <!-- ===================================================
+             LIVE DIAGNOSTICS STRIP  (real-time pipeline proof)
+             =================================================== -->
 
-          <div class="flex items-center gap-3">
-
-            <div class="flex flex-col items-end">
-
-              <span
-                class="font-label-caps text-label-caps text-primary font-semibold"
-              >
-                LEGAL THRESHOLD
-              </span>
-
-              <span
-                class="font-metric-sm text-metric-sm text-on-surface-variant"
-              >
-                HEADROOM +16
-              </span>
-
-            </div>
-
-            <div
-              class="w-11 h-11 rounded-full bg-surface-container-highest flex flex-col items-center justify-center shadow-inner"
-            >
-
-              <span
-                class="font-label-caps text-[9px] leading-none text-error font-extrabold uppercase"
-              >
-                LIMIT
-              </span>
-
-              <span
-                class="font-metric-md text-metric-md text-on-surface font-black leading-tight"
-              >
-                80
-              </span>
-
-            </div>
-
+        <div
+          class="bg-surface-container-low rounded-xl px-3 py-2 flex flex-col gap-1 shadow-sm font-mono text-[11px] text-on-surface-variant"
+          id="diagStrip"
+        >
+          <div class="flex items-center justify-between">
+            <span class="text-primary font-bold uppercase tracking-wider">LIVE PIPELINE DIAGNOSTICS</span>
+            <span id="diagMode" class="text-secondary font-bold">—</span>
           </div>
-
+          <div class="grid grid-cols-2 gap-x-4 gap-y-0.5">
+            <span>Lat: <span id="diagLat" class="text-on-surface">—</span></span>
+            <span>Lon: <span id="diagLon" class="text-on-surface">—</span></span>
+            <span>Speed: <span id="diagSpeed" class="text-on-surface">— km/h</span></span>
+            <span>Accuracy: <span id="diagAccuracy" class="text-on-surface">— m</span></span>
+            <span>IMU accepted: <span id="diagImuCount" class="text-primary">—</span></span>
+            <span>GNSS accepted: <span id="diagGnssCount" class="text-secondary">—</span></span>
+            <span>GNSS status: <span id="diagGnssStatus" class="text-on-surface">—</span></span>
+            <span>Timestamp: <span id="diagTs" class="text-on-surface-variant">—</span></span>
+          </div>
         </div>
 
 
@@ -781,7 +695,7 @@ tailwind.config = {
                 id="accuracyValue"
                 class="font-metric-large text-metric-large text-primary"
               >
-                ΓÇö
+                —
               </span>
 
               <span
@@ -862,7 +776,7 @@ tailwind.config = {
                 id="nhcValue"
                 class="font-metric-sm text-metric-sm text-on-surface font-semibold"
               >
-                NHC ΓÇö
+                NHC —
               </span>
 
               <span
@@ -874,49 +788,7 @@ tailwind.config = {
             </div>
 
           </div>
-
-
-          <!-- Edge Compute -->
-
-          <div
-            class="bg-surface-container-low p-card-padding-sm rounded-lg flex flex-col justify-between h-20 shadow-sm"
-          >
-
-            <div class="flex items-center justify-between">
-
-              <span
-                class="font-label-caps text-label-caps text-on-surface-variant uppercase"
-              >
-                Compute Core
-              </span>
-
-              <span
-                class="material-symbols-outlined text-tertiary text-[16px]"
-              >
-                developer_board
-              </span>
-
-            </div>
-
-            <div class="flex flex-col">
-
-              <span
-                class="font-metric-sm text-metric-sm text-on-surface font-semibold"
-              >
-                EDGE PROCESSING
-              </span>
-
-              <span
-                class="font-label-caps text-[10px] text-tertiary"
-              >
-                AI INFERENCE ΓÇó READY
-              </span>
-
-            </div>
-
-          </div>
-
-        </div>
+</div>
 
 
         <!-- Telemetry Confidence -->
@@ -934,7 +806,7 @@ tailwind.config = {
             <span
               class="font-body-sm text-body-sm truncate"
             >
-              Live navigation state ΓÇó GNSS / IMU fusion
+              Live navigation state • GNSS / IMU fusion
             </span>
 
           </div>
@@ -1055,7 +927,7 @@ tailwind.config = {
       <a
         class="flex flex-col items-center justify-center flex-1 h-touch-target-min py-1 px-1 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors"
         data-path="calibration"
-        href="/calibrate"
+        href="/calibration"
       >
 
         <span class="material-symbols-outlined text-[22px]">
@@ -1129,7 +1001,109 @@ tailwind.config = {
     (function initDashboard() {
 
       // ========================================================
+      // API HELPERS — communicate with embedded local server
+      // ========================================================
+
+      async function api(path, opts) {
+        const r = await fetch(path, Object.assign({ cache: 'no-store' }, opts || {}));
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      }
+
+      async function getState() {
+        return api('/navigation/state');
+      }
+
+      let _lastState = null;
+
+      async function refreshState() {
+        try {
+          const s = await getState();
+          _lastState = s;
+          applyState(s);
+        } catch (e) {
+          console.warn('[IDR] state fetch failed:', e.message);
+          const el = document.getElementById('fusionStatus');
+          if (el) el.textContent = 'WAITING FOR ENGINE';
+        }
+      }
+
+      // ========================================================
+      // APPLY STATE TO ALL UI ELEMENTS
+      // ========================================================
+
+      function setText(id, v) {
+        const e = document.getElementById(id);
+        if (e) e.textContent = v;
+      }
+
+      function applyState(s) {
+        // Fusion status badge
+        setText('fusionStatus', s.mode || 'INITIALIZING');
+        setText('gnssFixSummary', s.gnss_status || 'GNSS —');
+
+        // Confidence / accuracy
+        const acc = s.uncertainty_m;
+        setText('confidenceValue', acc == null ? '— CONF' : Number(acc).toFixed(0) + 'm CONF');
+        setText('accuracyValue', acc == null ? '—' : Number(acc).toFixed(1));
+
+        // Speed
+        const spd = s.speed_kmh;
+        setText('speedValue', spd == null ? '—' : Number(spd).toFixed(0));
+
+        // Heading
+        const hdg = s.heading_deg;
+        setText('headingValue', hdg == null ? 'HEADING —' : 'HDG ' + Number(hdg).toFixed(0) + '°');
+
+        // NHC
+        setText('nhcValue', 'NHC ' + (s.nhc_status || '—'));
+
+        // Map status
+        setText('mapValue', s.map_status || 'MAP STATUS —');
+
+        // Live diagnostics strip
+        setText('diagMode', s.mode || '—');
+        setText('diagLat', s.latitude != null ? Number(s.latitude).toFixed(6) : '—');
+        setText('diagLon', s.longitude != null ? Number(s.longitude).toFixed(6) : '—');
+        setText('diagSpeed', (spd == null ? '—' : Number(spd).toFixed(1)) + ' km/h');
+        setText('diagAccuracy', acc == null ? '—' : Number(acc).toFixed(1) + ' m');
+        setText('diagImuCount', s.accepted_imu != null ? String(s.accepted_imu) : '—');
+        setText('diagGnssCount', s.accepted_gnss != null ? String(s.accepted_gnss) : '—');
+        setText('diagGnssStatus', s.gnss_status || '—');
+        setText('diagTs', s.timestamp != null ? Number(s.timestamp).toFixed(1) + 's' : '—');
+
+        // Map position
+        const pos = s.position;
+        if (pos && Number.isFinite(Number(pos.latitude)) && Number.isFinite(Number(pos.longitude))) {
+          updateMapPosition(Number(pos.latitude), Number(pos.longitude));
+        }
+
+        // Track history from server
+        const track = Array.isArray(s.track) ? s.track : [];
+        if (track.length > 0) {
+          const latLngs = track
+            .filter(x => Array.isArray(x) && x.length >= 2)
+            .map(x => [Number(x[0]), Number(x[1])])
+            .filter(x => Number.isFinite(x[0]) && Number.isFinite(x[1]));
+          if (latLngs.length > 0) {
+            navigationPath.setLatLngs(latLngs);
+          }
+        }
+
+        // Sim tunnel button label
+        const inOutage = String(s.gnss_state || '').includes('SIMULATED_OUTAGE');
+        if (simBtn) {
+          const label = simBtn.querySelector('.font-headline-sm');
+          if (label) label.textContent = inOutage
+            ? 'End GNSS Outage Test / Restore'
+            : 'Simulate GNSS Tunnel Outage';
+        }
+      }
+
+      // ========================================================
       // REAL OSM ROAD MAP
+      // Map starts at a neutral world zoom — no hardcoded city.
+      // It will animate to the real GNSS position when acquired.
       // ========================================================
 
       const navigationMap = L.map('navigationMap', {
@@ -1137,10 +1111,7 @@ tailwind.config = {
         attributionControl: true,
         zoomAnimation: true,
         markerZoomAnimation: true
-      }).setView(
-        [12.9716, 77.5946],
-        17
-      );
+      }).setView([0, 0], 2);
 
 
       // OpenStreetMap road tiles
@@ -1173,35 +1144,19 @@ tailwind.config = {
         iconAnchor: [17, 17]
 
       });
-
-
-      const vehicleMarker = L.marker(
-        [12.9716, 77.5946],
-        {
-          icon: vehicleIcon,
-          zIndexOffset: 1000
-        }
-      ).addTo(navigationMap);
-
+      let vehicleMarker = null;
+      let mapFirstFix = false;
 
       // ========================================================
       // NAVIGATION PATH
       // ========================================================
-
-      const navigationPath = L.polyline(
-        [
-          [12.9716, 77.5946]
-        ],
-        {
-          color: '#1976d2',
-          weight: 5,
-          opacity: 0.9,
-          lineCap: 'round',
-          lineJoin: 'round'
-        }
-      ).addTo(navigationMap);
-
-
+      const navigationPath = L.polyline([], {
+        color: '#1976d2',
+        weight: 5,
+        opacity: 0.9,
+        lineCap: 'round',
+        lineJoin: 'round'
+      }).addTo(navigationMap);
       let mapCentered = true;
 
 
@@ -1223,21 +1178,20 @@ tailwind.config = {
 
         const position = [lat, lon];
 
-        vehicleMarker.setLatLng(position);
+        if (!vehicleMarker) {
+          vehicleMarker = L.marker(position, {
+            icon: vehicleIcon,
+            zIndexOffset: 1000
+          }).addTo(navigationMap);
+          // First real fix — zoom to it
+          navigationMap.setView(position, 17, { animate: true });
+          mapFirstFix = true;
+        } else {
+          vehicleMarker.setLatLng(position);
+        }
 
-        navigationPath.addLatLng(position);
-
-
-        if (mapCentered) {
-
-          navigationMap.setView(
-            position,
-            navigationMap.getZoom(),
-            {
-              animate: true
-            }
-          );
-
+        if (mapCentered && mapFirstFix) {
+          navigationMap.panTo(position, { animate: true, duration: 0.25 });
         }
 
       }
@@ -1250,787 +1204,84 @@ tailwind.config = {
       const simBtn =
         document.getElementById('simTunnelBtn');
 
-      const speedVal =
-        document.getElementById('speedValue');
-
 
       // ========================================================
-      // DEMO STATE
+      // LIVE GNSS OUTAGE CONTROL
       // ========================================================
-
-      let demoTimer = null;
-
-      let demoPhase = "idle";
-
-      let demoTick = 0;
-
-      let demoTime = 1000;
-
-      let demoLat = 12.9716;
-
-      let demoLon = 77.5946;
-
-
-      // ========================================================
-      // GET NAVIGATION STATE
-      // ========================================================
-
-      async function getState() {
-
-        const response =
-          await fetch('/navigation/state');
-
-        if (!response.ok) {
-
-          throw new Error(
-            'Navigation state unavailable'
-          );
-
-        }
-
-        return response.json();
-
-      }
-
-
-      // ========================================================
-      // UPDATE UI ELEMENT IF PRESENT
-      // ========================================================
-
-      function updateIfPresent(id, value) {
-
-        const element =
-          document.getElementById(id);
-
-        if (element) {
-
-          element.textContent = value;
-
-        }
-
-      }
-
-
-      // ========================================================
-      // UPDATE SCREEN
-      // ========================================================
-
-      function updateScreen(state) {
-
-        if (!state) {
-          return;
-        }
-
-
-        // ------------------------------------------------------
-        // REAL MAP POSITION
-        // ------------------------------------------------------
-
-       const position = state.position || {};
-
-        if (
-          position.latitude != null &&
-          position.longitude != null
-        ) {
-          updateMapPosition(
-            position.latitude,
-            position.longitude
-          );
-        }
-
-        if (
-          Array.isArray(state.track) &&
-          state.track.length > 0
-        ) {
-          navigationPath.setLatLngs(state.track);
-        }
-
-
-        // ------------------------------------------------------
-        // SPEED
-        // ------------------------------------------------------
-
-        if (speedVal) {
-
-          speedVal.textContent =
-            Math.round(
-              Number(state.speed_kmh || 0)
-            );
-
-        }
-
-
-        // ------------------------------------------------------
-        // GNSS STATE
-        // ------------------------------------------------------
-
-        updateIfPresent(
-          'gnssState',
-          state.gnss_status || 'ΓÇö'
-        );
-
-
-        // ------------------------------------------------------
-        // NAVIGATION MODE
-        // ------------------------------------------------------
-
-        updateIfPresent(
-          'navigationMode',
-          state.mode || 'ΓÇö'
-        );
-
-
-        // ------------------------------------------------------
-        // HEADING
-        // ------------------------------------------------------
-
-        updateIfPresent(
-          'headingValue',
-
-          state.heading_deg == null
-
-            ? 'HEADING ΓÇö'
-
-            : `HEADING ${
-                Math.round(
-                  Number(state.heading_deg)
-                )
-              }┬░`
-        );
-
-
-        // ------------------------------------------------------
-        // POSITION ACCURACY
-        // ------------------------------------------------------
-
-        updateIfPresent(
-          'accuracyValue',
-
-          state.uncertainty_m == null
-
-            ? 'ΓÇö'
-
-            : `┬▒ ${
-                Number(
-                  state.uncertainty_m
-                ).toFixed(1)
-              }`
-        );
-
-
-        // ------------------------------------------------------
-        // NHC
-        // ------------------------------------------------------
-
-        updateIfPresent(
-          'nhcValue',
-          state.nhc_status || 'ΓÇö'
-        );
-
-
-        // ------------------------------------------------------
-        // MAP STATUS
-        // ------------------------------------------------------
-
-        updateIfPresent(
-          'mapValue',
-          state.map_status || 'ΓÇö'
-        );
-
-
-        // ------------------------------------------------------
-        // FUSION STATUS
-        // ------------------------------------------------------
-
-        updateIfPresent(
-          'fusionStatus',
-          state.mode || 'ΓÇö'
-        );
-
-
-        // ------------------------------------------------------
-        // CONFIDENCE
-        //
-        // Backend currently provides uncertainty in metres,
-        // not a statistical percentage.
-        // ------------------------------------------------------
-
-        updateIfPresent(
-
-          'confidenceValue',
-
-          state.uncertainty_m == null
-
-            ? 'ΓÇö CONF'
-
-            : `┬▒${
-                Number(
-                  state.uncertainty_m
-                ).toFixed(1)
-              }m`
-
-        );
-
-
-        // ------------------------------------------------------
-        // GNSS / DEAD RECKONING VISUAL STATE
-        // ------------------------------------------------------
-
-        const stateName =
-          String(
-            state.gnss_state || ''
-          );
-
-        const modeName =
-          String(
-            state.mode || ''
-          );
-
-
-        if (
-
-          stateName.includes('LOST') ||
-
-          stateName.includes(
-            'DEAD_RECKONING'
-          ) ||
-
-          modeName.includes(
-            'DEAD RECKONING'
-          )
-
-        ) {
-
-          if (simBtn) {
-
-            simBtn.classList.add(
-              'bg-tertiary-container/40'
-            );
-
-          }
-
-        } else {
-
-          if (simBtn) {
-
-            simBtn.classList.remove(
-              'bg-tertiary-container/40'
-            );
-
-          }
-
-        }
-
-
-        // ------------------------------------------------------
-        // HEADER GNSS STATUS
-        // ------------------------------------------------------
-
-        updateIfPresent(
-          'gnssFixSummary',
-          state.gnss_status ||
-          'GNSS STATUS ΓÇö'
-        );
-
-      }
-
-
-      // ========================================================
-      // REFRESH NAVIGATION STATE
-      // ========================================================
-
-      async function refreshState() {
-
-        try {
-
-          const state =
-            await getState();
-
-          updateScreen(state);
-
-        } catch (error) {
-
-          console.error(
-            'Navigation state error:',
-            error
-          );
-
-        }
-
-      }
-
-
-      // ========================================================
-      // API HELPER
-      // ========================================================
-
-      async function api(
-        path,
-        options = {}
-      ) {
-
-        const response =
-          await fetch(
-            path,
-            {
-              headers: {
-                'Content-Type':
-                  'application/json'
-              },
-
-              ...options
-            }
-          );
-
-
-        if (!response.ok) {
-
-          throw new Error(
-            `${
-              response.status
-            } ${
-              await response.text()
-            }`
-          );
-
-        }
-
-
-        return response.json();
-
-      }
-
-
-      // ========================================================
-      // STOP DEMO
-      // ========================================================
-
-      function stopDemo() {
-
-        if (demoTimer) {
-
-          clearInterval(
-            demoTimer
-          );
-
-          demoTimer = null;
-
-        }
-
-        demoPhase = "idle";
-
-      }
-
-
-      // ========================================================
-      // SEND DEMO SENSOR PACKET
-      // ========================================================
-
-      async function sendDemoPacket() {
-
-        demoTime += 0.1;
-
-        demoTick++;
-
-
-        // ------------------------------------------------------
-        // CONTINUOUS IMU STREAM
-        // ------------------------------------------------------
-
-        await api(
-          '/sensor/imu',
-          {
-            method: 'POST',
-
-            body: JSON.stringify({
-
-              timestamp: demoTime,
-
-              ax: 0,
-
-              ay: 0,
-
-              az: 9.80665,
-
-              gx: 0,
-
-              gy: 0,
-
-              gz: 0
-
-            })
-
-          }
-        );
-
-
-        // ------------------------------------------------------
-        // GNSS AVAILABLE DURING NORMAL PHASE
-        // During outage GNSS deliberately stops.
-        // ------------------------------------------------------
-
-        if (
-
-          demoPhase !== "outage" &&
-
-          demoTick % 10 === 0
-
-        ) {
-
-          demoLon +=
-
-            (8.0 * 1.0) /
-
-            (
-              111320 *
-              Math.cos(
-                demoLat *
-                Math.PI /
-                180
-              )
-            );
-
-
-          await api(
-            '/sensor/gnss',
-            {
-              method: 'POST',
-
-              body: JSON.stringify({
-
-                timestamp: demoTime,
-
-                latitude: demoLat,
-
-                longitude: demoLon,
-
-                speed: 8,
-
-                accuracy: 5
-
-              })
-
-            }
-          );
-
-        }
-
-
-        // ------------------------------------------------------
-        // 5 SEC GNSS-AIDED NAVIGATION
-        // THEN ~8 SEC GNSS OUTAGE
-        // ------------------------------------------------------
-
-        if (demoTick === 50) {
-
-          demoPhase = "outage";
-
-          console.log(
-            'GNSS signal lost ΓÇö dead reckoning active'
-          );
-
-        }
-
-
-        // ------------------------------------------------------
-        // GNSS RETURNS
-        // ------------------------------------------------------
-
-        if (demoTick === 130) {
-
-          demoPhase = "recovery";
-
-          console.log(
-            'GNSS restored ΓÇö reacquisition active'
-          );
-
-        }
-
-
-        // ------------------------------------------------------
-        // GNSS DURING RECOVERY
-        // ------------------------------------------------------
-
-        if (
-
-          demoPhase === "recovery" &&
-
-          demoTick % 10 === 0
-
-        ) {
-
-          demoLon +=
-
-            (8.0 * 1.0) /
-
-            (
-              111320 *
-              Math.cos(
-                demoLat *
-                Math.PI /
-                180
-              )
-            );
-
-
-          await api(
-            '/sensor/gnss',
-            {
-              method: 'POST',
-
-              body: JSON.stringify({
-
-                timestamp: demoTime,
-
-                latitude: demoLat,
-
-                longitude: demoLon,
-
-                speed: 8,
-
-                accuracy: 5
-
-              })
-
-            }
-          );
-
-        }
-
-
-        // ------------------------------------------------------
-        // FINISH DEMO
-        // ------------------------------------------------------
-
-        if (demoTick >= 175) {
-
-          stopDemo();
-
-          console.log(
-            'Navigation demonstration complete'
-          );
-
-        }
-
-      }
-
-
-      // ========================================================
-      // START NAVIGATION DEMO
-      // ========================================================
-
-      async function startNavigationDemo() {
-
-        if (demoTimer) {
-
-          stopDemo();
-
-        }
-
-
-        // ------------------------------------------------------
-        // CLEAN NAVIGATION STATE
-        // ------------------------------------------------------
-
-        await api(
-          '/demo/reset',
-          {
-            method: 'POST'
-          }
-        );
-
-
-        demoTick = 0;
-
-        demoTime = 1000;
-
-        demoLat = 12.9716;
-
-        demoLon = 77.5946;
-
-
-        // ------------------------------------------------------
-        // INITIAL GNSS FIX
-        // ------------------------------------------------------
-
-        await api(
-          '/sensor/gnss',
-          {
-            method: 'POST',
-
-            body: JSON.stringify({
-
-              timestamp: demoTime,
-
-              latitude: demoLat,
-
-              longitude: demoLon,
-
-              speed: 8,
-
-              accuracy: 5
-
-            })
-
-          }
-        );
-
-
-        demoPhase = "normal";
-
-
-        // ------------------------------------------------------
-        // 10 HZ DEMONSTRATION SENSOR STREAM
-        // ------------------------------------------------------
-
-        demoTimer =
-          setInterval(
-            () => {
-
-              sendDemoPacket()
-                .catch(
-                  error => {
-
-                    console.error(
-                      'Demo packet error:',
-                      error
-                    );
-
-                  }
-                );
-
-            },
-            100
-          );
-
-      }
-
-
-      // ========================================================
-      // GNSS OUTAGE BUTTON — REAL BLACKOUT (standalone mode)
-      // ========================================================
-
-      var blackoutActive = false;
 
       if (simBtn) {
         simBtn.addEventListener('click', async () => {
           try {
-            if (!blackoutActive) {
-              blackoutActive = true;
-              simBtn.classList.add('bg-tertiary-container/40');
-              // Change button label
-              var label = simBtn.querySelector('.font-headline-sm');
-              if (label) label.textContent = 'RESTORE GNSS';
-              var sub = simBtn.querySelector('.font-label-caps');
-              if (sub) sub.textContent = 'SIMULATED OUTAGE ACTIVE — TAP TO RESTORE';
-              await fetch('/gnss/blackout', {method:'POST'});
-            } else {
-              blackoutActive = false;
-              simBtn.classList.remove('bg-tertiary-container/40');
-              var label2 = simBtn.querySelector('.font-headline-sm');
-              if (label2) label2.textContent = 'Simulate GNSS Tunnel Outage';
-              var sub2 = simBtn.querySelector('.font-label-caps');
-              if (sub2) sub2.textContent = 'TRIGGER INSTANTANEOUS DEAD RECKONING FAILOVER';
-              await fetch('/gnss/restore', {method:'POST'});
-            }
-          } catch(e) { console.error('Blackout toggle error:', e); }
+            const state = _lastState || await getState();
+            const outageActive = String(state?.gnss_state || '').includes('SIMULATED_OUTAGE');
+            simBtn.disabled = true;
+            await api(outageActive ? '/gnss/restore' : '/gnss/blackout', { method: 'POST' });
+            await refreshState();
+          } catch (error) {
+            console.error('GNSS outage control failed:', error);
+          } finally {
+            simBtn.disabled = false;
+          }
         });
       }
 
       // ========================================================
-      // UPDATE FUSION STATUS CHIP
+      // RECENTER BUTTON
       // ========================================================
-      function updateFusionChip(state) {
-        var chip = document.getElementById('fusionStatus');
-        if (!chip) return;
-        var mode = (state.mode || '').toUpperCase();
-        if (mode.includes('DEAD') || mode.includes('IDR')) {
-          chip.textContent = 'GNSS OUTAGE — IDR ACTIVE';
-          chip.className = chip.className.replace(/text-\w+/g, '').replace(/bg-\w+/g, '');
-          chip.classList.add('text-tertiary');
-        } else if (mode.includes('REACQ')) {
-          chip.textContent = 'GNSS REACQUISITION';
-          chip.classList.add('text-secondary');
-        } else if (mode.includes('WAIT') || mode.includes('INIT')) {
-          chip.textContent = 'ACQUIRING FIX...';
-        } else {
-          chip.textContent = 'GNSS + INS FUSION';
-          chip.classList.add('text-primary');
-        }
+
+      const recenterBtn = document.getElementById('recenterBtn');
+      if (recenterBtn) {
+        recenterBtn.addEventListener('click', () => {
+          mapCentered = true;
+          if (!vehicleMarker) return;
+          const pos = vehicleMarker.getLatLng();
+          navigationMap.setView(pos, navigationMap.getZoom(), { animate: true });
+        });
       }
 
+
       // ========================================================
-      // EXTRA UI FIELDS — update sensor values shown in the UI
+      // ZOOM CORRIDOR BUTTON (toggle track fit vs fixed zoom)
       // ========================================================
-      function updateExtraFields(state) {
-        // IMU rate / GNSS rate
-        updateIfPresent('imuRateValue', (state.imu_hz || 0).toFixed(1) + ' Hz');
-        updateIfPresent('gnssRateValue', (state.gnss_hz || 0).toFixed(2) + ' Hz');
-        // Lat/lon if elements exist
-        updateIfPresent('latValue', state.position && state.position.latitude != null ?
-          state.position.latitude.toFixed(6) : '—');
-        updateIfPresent('lonValue', state.position && state.position.longitude != null ?
-          state.position.longitude.toFixed(6) : '—');
-        // Calibration
-        updateIfPresent('calibValue', state.calibration || '—');
-        // Blackout timer
-        if (state.gnss_blackout && state.blackout_seconds > 0) {
-          var sec = state.blackout_seconds;
-          var mm = Math.floor(sec/60).toString().padStart(2,'0');
-          var ss = Math.floor(sec%60).toString().padStart(2,'0');
-          updateIfPresent('blackoutTimer', 'OUTAGE: '+mm+':'+ss);
-        } else {
-          updateIfPresent('blackoutTimer', '');
-        }
-        // DR distance
-        updateIfPresent('drDistValue', (state.dr_dist_m || 0).toFixed(1) + ' m');
-        // Accel values
-        updateIfPresent('accelX', (state.accel_x || 0).toFixed(3));
-        updateIfPresent('accelY', (state.accel_y || 0).toFixed(3));
-        updateIfPresent('accelZ', (state.accel_z || 0).toFixed(3));
-        updateIfPresent('gyroX',  (state.gyro_x || 0).toFixed(4));
-        updateIfPresent('gyroY',  (state.gyro_y || 0).toFixed(4));
-        updateIfPresent('gyroZ',  (state.gyro_z || 0).toFixed(4));
-        // Session recording
-        if (state.recording) {
-          updateIfPresent('sessionStatus', '● REC ' + state.record_count + ' records');
-        } else {
-          updateIfPresent('sessionStatus', 'Not recording');
-        }
+
+      const zoomCorridorBtn = document.getElementById('zoomCorridorBtn');
+      if (zoomCorridorBtn) {
+        zoomCorridorBtn.addEventListener('click', () => {
+          const latlngs = navigationPath.getLatLngs();
+          if (latlngs.length > 1) {
+            navigationMap.fitBounds(navigationPath.getBounds(), { padding: [32, 32], animate: true });
+            mapCentered = false;
+          }
+        });
       }
 
-      // ========================================================
-      // PATCH refreshState to also call our extra updaters
-      // ========================================================
-      var _origRefreshState = refreshState;
-      refreshState = async function() {
-        try {
-          var state = await getState();
-          updateScreen(state);
-          updateFusionChip(state);
-          updateExtraFields(state);
-        } catch(e) {
-          console.warn('[IDR] state poll error:', e.message);
-        }
-      };
+      // Disable auto-center when user drags/zooms map
+      navigationMap.on('dragstart zoomstart', () => { mapCentered = false; });
+
 
       // ========================================================
-      // INITIAL STATE
+      // LIVE UTC CLOCK
+      // ========================================================
+
+      function tickClock() {
+        const el = document.getElementById('utcClock');
+        if (!el) return;
+        const now = new Date();
+        const hh = String(now.getUTCHours()).padStart(2, '0');
+        const mm = String(now.getUTCMinutes()).padStart(2, '0');
+        const ss = String(now.getUTCSeconds()).padStart(2, '0');
+        const ms = String(Math.floor(now.getUTCMilliseconds() / 100));
+        el.textContent = `${hh}:${mm}:${ss}.${ms} Z`;
+      }
+      tickClock();
+      setInterval(tickClock, 100);
+
+
+      // ========================================================
+      // INITIAL STATE — immediate fetch + then poll at 5 Hz
       // ========================================================
       refreshState();
-      // ========================================================
-      // KEEP UI SYNCHRONIZED WITH BACKEND — 600ms poll
-      // ========================================================
-      setInterval(refreshState, 600);
-
-      // ========================================================
-      // AUTO-START NAVIGATION when page loads (request from Android)
-      // ========================================================
-      setTimeout(function() {
-        if (window.Android && window.Android.startNavigation) {
-          Android.startNavigation();
-        }
-      }, 800);
+      setInterval(refreshState, 200);
 
     })();
   </script>
