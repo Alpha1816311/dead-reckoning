@@ -12,7 +12,7 @@
   *, *::before, *::after { box-sizing: border-box; }
   html, body {
     width: 100%;
-    max-width: 100vw;
+    max-width: 100%;
     margin: 0;
     padding: 0;
     background-color: #0f131d;
@@ -27,18 +27,46 @@
   .pt-safe { padding-top: env(safe-area-inset-top, 0px); }
   ::-webkit-scrollbar { display: none; }
   .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
-  /* Calibration SVG: scale properly inside its container */
+
+  /* Calibration SVG: fully responsive, never clips, preserves aspect ratio */
   .calib-diagram-wrap {
     width: 100%;
     overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: block;
   }
   .calib-diagram-wrap svg {
     width: 100%;
-    max-width: 340px;
     height: auto;
+    max-width: 100%;
+    display: block;
+  }
+
+  /* Equation label: allow safe wrap, never overflow */
+  .equation-label {
+    font-size: 10px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    white-space: normal;
+    min-width: 0;
+  }
+
+  /* Long labels wrap gracefully */
+  .label-wrap {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    white-space: normal;
+  }
+
+  /* Pitch/Roll/Yaw grid: 3 col wide, 1 col narrow */
+  .pry-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+  }
+  @media (max-width: 360px) {
+    .pry-grid {
+      grid-template-columns: 1fr;
+    }
   }
 </style>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
@@ -135,7 +163,7 @@ tailwind.config = {
 </header>
 
 <!-- MAIN -->
-<main class="flex-1 flex flex-col relative w-full pt-16 pb-24 bg-surface" style="overflow-x:hidden;">
+<main class="flex-1 flex flex-col relative w-full pt-16 bg-surface" style="overflow-x:hidden; padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));">
   <div class="flex flex-col w-full px-3 py-4 gap-4">
 
     <!-- CARD 1: Alignment Engine Header -->
@@ -224,14 +252,14 @@ tailwind.config = {
           <path d="M 210 108 A 42 42 0 0 0 213 93" fill="none" stroke="#ffb95f" stroke-dasharray="2 2" stroke-width="1.5"/>
           <text fill="#ffb95f" font-family="JetBrains Mono" font-size="9" font-weight="700" x="218" y="103">Δψ —</text>
         </svg>
-        <div class="absolute bottom-2 left-2 right-2 flex items-center gap-1.5 bg-surface-container-high/90 px-2 py-0.5 rounded backdrop-blur overflow-hidden">
-          <span class="w-1.5 h-1.5 rounded-full bg-secondary shrink-0"></span>
-          <span class="font-label-caps text-[10px] text-on-surface-variant truncate">R_vb = Rz(ψ) Ry(θ) Rx(φ)</span>
+        <div class="absolute bottom-2 left-2 right-2 flex items-start gap-1.5 bg-surface-container-high/90 px-2 py-0.5 rounded backdrop-blur overflow-hidden">
+          <span class="w-1.5 h-1.5 rounded-full bg-secondary shrink-0 mt-0.5"></span>
+          <span class="equation-label text-on-surface-variant">R_vb = Rz(ψ) Ry(θ) Rx(φ)</span>
         </div>
       </div>
 
-      <!-- 3 Telemetry Gauges -->
-      <div class="grid grid-cols-3 gap-2">
+      <!-- 3 Telemetry Gauges — responsive: 3 col wide, 1 col narrow -->
+      <div class="pry-grid">
         <!-- Pitch -->
         <div class="flex flex-col bg-surface-container-low rounded-lg p-2 gap-1 min-w-0">
           <div class="flex items-center justify-between gap-1">
@@ -401,27 +429,27 @@ tailwind.config = {
 </main>
 
 <!-- BOTTOM NAVIGATION -->
-<nav class="fixed bottom-0 inset-x-0 z-50 pb-safe bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_-1px_12px_rgba(0,0,0,0.5)]" data-active-classes="text-primary bg-surface-container-high/60">
-  <div class="flex justify-around items-center h-16 px-1">
-    <a class="flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors" data-path="navigate" href="/navigate">
+<nav class="fixed bottom-0 inset-x-0 z-50 pb-safe bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_-1px_12px_rgba(0,0,0,0.5)]">
+  <div class="flex justify-around items-center h-[56px] px-1">
+    <a class="flex flex-col items-center justify-center flex-1 py-1 px-0.5 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors min-w-0" href="/navigate">
       <span class="material-symbols-outlined text-[22px]">navigation</span>
-      <span class="font-label-caps text-[10px] uppercase mt-0.5 tracking-tight">NAV</span>
+      <span class="font-label-caps text-[10px] uppercase mt-0.5 leading-none">NAV</span>
     </a>
-    <a class="flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors" data-path="outage-mode" href="/outage">
+    <a class="flex flex-col items-center justify-center flex-1 py-1 px-0.5 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors min-w-0" href="/outage">
       <span class="material-symbols-outlined text-[22px]">warning</span>
-      <span class="font-label-caps text-[10px] uppercase mt-0.5 tracking-tight">OUTAGE</span>
+      <span class="font-label-caps text-[10px] uppercase mt-0.5 leading-none">OUTAGE</span>
     </a>
-    <a aria-current="page" class="flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-lg transition-colors text-primary bg-surface-container-high/60" data-path="calibration" href="/calibration">
+    <a aria-current="page" class="flex flex-col items-center justify-center flex-1 py-1 px-0.5 rounded-lg transition-colors text-primary bg-surface-container-high/60 min-w-0" href="/calibration">
       <span class="material-symbols-outlined text-[22px]">explore</span>
-      <span class="font-label-caps text-[10px] uppercase mt-0.5 tracking-tight">CAL</span>
+      <span class="font-label-caps text-[10px] uppercase mt-0.5 leading-none">CAL</span>
     </a>
-    <a class="flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors" data-path="pipeline-status" href="/pipeline">
+    <a class="flex flex-col items-center justify-center flex-1 py-1 px-0.5 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors min-w-0" href="/pipeline">
       <span class="material-symbols-outlined text-[22px]">memory</span>
-      <span class="font-label-caps text-[10px] uppercase mt-0.5 tracking-tight">PIPELINE</span>
+      <span class="font-label-caps text-[10px] uppercase mt-0.5 leading-none">PIPE</span>
     </a>
-    <a class="flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors" data-path="settings" href="/settings">
+    <a class="flex flex-col items-center justify-center flex-1 py-1 px-0.5 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors min-w-0" href="/settings">
       <span class="material-symbols-outlined text-[22px]">settings</span>
-      <span class="font-label-caps text-[10px] uppercase mt-0.5 tracking-tight">SETTINGS</span>
+      <span class="font-label-caps text-[10px] uppercase mt-0.5 leading-none">SET</span>
     </a>
   </div>
 </nav>

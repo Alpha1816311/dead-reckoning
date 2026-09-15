@@ -1,234 +1,397 @@
 <!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html,body{width:100%;max-width:100%;margin:0;padding:0;background-color:#0f131d;color:#dee2f0;overflow-x:hidden}
+body{overscroll-behavior:none;min-height:100dvh;font-family:Inter,Arial,sans-serif}
+.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px)}
+.pt-safe{padding-top:env(safe-area-inset-top,0px)}
+::-webkit-scrollbar{display:none}
+.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24}
+/* Labels in settings rows never overlap status badges */
+.settings-row{display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap}
+.settings-label{overflow-wrap:anywhere;word-break:break-word;white-space:normal;flex:1;min-width:0}
+.settings-status{flex-shrink:0;text-align:right}
+</style>
+<script src="https://cdn.tailwindcss.com"></script>
+<script id="tailwind-config">
+tailwind.config={darkMode:"class",theme:{extend:{colors:{"inverse-surface":"#dee2f0","inverse-primary":"#006c49","surface":"#0f131d","on-surface-variant":"#bbcabf","on-background":"#dee2f0","on-secondary-fixed":"#001f26","on-secondary":"#003640","on-tertiary":"#472a00","tertiary-fixed-dim":"#ffb95f","surface-bright":"#343944","on-primary-container":"#00422b","secondary-fixed-dim":"#4cd7f6","primary-container":"#10b981","secondary":"#4cd7f6","on-error-container":"#ffdad6","on-tertiary-fixed-variant":"#653e00","outline":"#86948a","surface-variant":"#30353f","on-error":"#690005","secondary-fixed":"#acedff","surface-container-high":"#252a34","surface-container-lowest":"#090e17","inverse-on-surface":"#2c303b","secondary-container":"#03b5d3","on-primary-fixed":"#002113","surface-container-highest":"#30353f","background":"#0f131d","surface-container-low":"#171c25","surface-container":"#1b2029","on-primary-fixed-variant":"#005236","on-tertiary-fixed":"#2a1700","on-tertiary-container":"#523200","tertiary-container":"#e29100","on-secondary-fixed-variant":"#004e5c","tertiary":"#ffb95f","primary":"#4edea3","primary-fixed-dim":"#4edea3","error-container":"#93000a","surface-dim":"#0f131d","tertiary-fixed":"#ffddb8","outline-variant":"#3c4a42","on-secondary-container":"#00424e","on-surface":"#dee2f0","surface-tint":"#4edea3","error":"#ffb4ab","primary-fixed":"#6ffbbe","on-primary":"#003824"},borderRadius:{DEFAULT:"0.25rem",lg:"0.5rem",xl:"0.75rem",full:"9999px"},spacing:{"gutter-mobile":".75rem","card-padding-md":"1rem","card-padding-sm":".75rem","touch-target-min":"3rem"},fontFamily:{"body-sm":["Inter"],"metric-display":["JetBrains Mono"],"metric-sm":["JetBrains Mono"],"body-md":["Inter"],"headline-md":["Inter"],"label-caps":["JetBrains Mono"],"metric-md":["JetBrains Mono"],"body-lg":["Inter"],"headline-sm":["Inter"],"metric-large":["JetBrains Mono"],"headline-lg":["Inter"]},fontSize:{"body-sm":["12px",{lineHeight:"16px",fontWeight:"400"}],"metric-sm":["12px",{lineHeight:"16px",fontWeight:"600"}],"body-md":["14px",{lineHeight:"20px",fontWeight:"400"}],"headline-sm":["16px",{lineHeight:"24px",fontWeight:"600"}],"label-caps":["11px",{lineHeight:"14px",fontWeight:"700"}],"metric-large":["20px",{lineHeight:"24px",fontWeight:"700"}]}}}};
+</script>
+</head>
 
-<html class="dark" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{width:100vw;margin:0;padding:0;background-color:#0f131d;color:#dee2f0;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{"colors":{"inverse-surface":"#dee2f0","inverse-primary":"#006c49","surface":"#0f131d","on-surface-variant":"#bbcabf","on-background":"#dee2f0","on-secondary-fixed":"#001f26","on-secondary":"#003640","on-tertiary":"#472a00","tertiary-fixed-dim":"#ffb95f","surface-bright":"#343944","on-primary-container":"#00422b","secondary-fixed-dim":"#4cd7f6","primary-container":"#10b981","secondary":"#4cd7f6","on-error-container":"#ffdad6","on-tertiary-fixed-variant":"#653e00","outline":"#86948a","surface-variant":"#30353f","on-error":"#690005","secondary-fixed":"#acedff","surface-container-high":"#252a34","surface-container-lowest":"#090e17","inverse-on-surface":"#2c303b","secondary-container":"#03b5d3","on-primary-fixed":"#002113","surface-container-highest":"#30353f","background":"#0f131d","surface-container-low":"#171c25","surface-container":"#1b2029","on-primary-fixed-variant":"#005236","on-tertiary-fixed":"#2a1700","on-tertiary-container":"#523200","tertiary-container":"#e29100","on-secondary-fixed-variant":"#004e5c","tertiary":"#ffb95f","primary":"#4edea3","primary-fixed-dim":"#4edea3","error-container":"#93000a","surface-dim":"#0f131d","tertiary-fixed":"#ffddb8","outline-variant":"#3c4a42","on-secondary-container":"#00424e","on-surface":"#dee2f0","surface-tint":"#4edea3","error":"#ffb4ab","primary-fixed":"#6ffbbe","on-primary":"#003824"},"borderRadius":{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},"spacing":{"telemetry-gap":"0.5rem","gutter-automotive":"1.5rem","card-padding-md":"1rem","card-padding-sm":"0.75rem","gutter-mobile":"0.75rem","touch-target-min":"3rem","gutter-tablet":"1rem","card-padding-lg":"1.5rem"},"fontFamily":{"body-sm":["Inter"],"metric-display":["JetBrains Mono"],"metric-sm":["JetBrains Mono"],"metric-display-mobile":["JetBrains Mono"],"body-md":["Inter"],"headline-md":["Inter"],"label-caps":["JetBrains Mono"],"metric-md":["JetBrains Mono"],"body-lg":["Inter"],"headline-sm":["Inter"],"metric-large":["JetBrains Mono"],"headline-lg":["Inter"],"headline-lg-mobile":["Inter"]},"fontSize":{"body-sm":["12px",{"lineHeight":"16px","fontWeight":"400"}],"metric-display":["36px",{"lineHeight":"40px","letterSpacing":"-0.04em","fontWeight":"700"}],"metric-sm":["12px",{"lineHeight":"16px","letterSpacing":"0em","fontWeight":"500"}],"metric-display-mobile":["28px",{"lineHeight":"32px","letterSpacing":"-0.03em","fontWeight":"700"}],"body-md":["14px",{"lineHeight":"20px","fontWeight":"400"}],"headline-md":["22px",{"lineHeight":"28px","letterSpacing":"-0.01em","fontWeight":"600"}],"label-caps":["11px",{"lineHeight":"14px","letterSpacing":"0.08em","fontWeight":"700"}],"metric-md":["16px",{"lineHeight":"20px","letterSpacing":"-0.01em","fontWeight":"600"}],"body-lg":["16px",{"lineHeight":"24px","fontWeight":"400"}],"headline-sm":["18px",{"lineHeight":"24px","letterSpacing":"0em","fontWeight":"600"}],"metric-large":["24px",{"lineHeight":"28px","letterSpacing":"-0.02em","fontWeight":"600"}],"headline-lg":["32px",{"lineHeight":"38px","letterSpacing":"-0.02em","fontWeight":"700"}],"headline-lg-mobile":["26px",{"lineHeight":"32px","letterSpacing":"-0.02em","fontWeight":"700"}]}}}}</script></head><body class="bg-surface font-body-md text-body-md text-on-surface flex flex-col min-h-screen"><header class="fixed top-0 inset-x-0 z-50 bg-surface-container-lowest/85 backdrop-blur-xl pt-safe shadow-[0_1px_8px_rgba(0,0,0,0.4)]"><div class="h-16 px-gutter-mobile flex items-center justify-between"><div class="flex items-center gap-telemetry-gap"><div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center"><span class="font-label-caps text-on-primary font-bold">IDR</span></div><div class="flex flex-col"><div class="flex items-center gap-1.5"><span class="font-label-caps text-label-caps text-primary tracking-wider uppercase">IDR FUSION</span><span class="font-label-caps text-label-caps text-on-surface-variant">|</span><span class="font-headline-sm text-headline-sm text-on-surface tracking-tight leading-none">Settings</span></div><div class="flex items-center gap-2 mt-0.5"><div class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span><span class="font-label-caps text-label-caps text-primary uppercase">LIVE INS</span></div><span class="text-outline font-label-caps text-label-caps">•</span><span class="font-label-caps text-label-caps text-secondary uppercase" id="settingsGnssSummary">GNSS STATUS —</span></div></div></div><div class="flex items-center gap-2"><div class="hidden sm:flex flex-col items-end mr-1"><span class="font-metric-sm text-metric-sm text-on-surface" id="settingsTelemetryTime">—</span><span class="font-label-caps text-label-caps text-on-surface-variant">UTC TELEMETRY</span></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="flex-1 flex flex-col relative w-full pt-16 pb-20 bg-surface"><div class="flex flex-col w-full pb-10">
-<!-- Top HUD Strip / Telemetry Banner -->
-<section class="w-full px-gutter-mobile py-2 bg-surface-container-lowest flex flex-col gap-1 shadow-sm">
-<div class="flex items-center justify-between">
-<div class="flex items-center gap-2">
-<span class="w-2 h-2 rounded-full bg-primary animate-ping"></span>
-<span class="font-label-caps text-label-caps tracking-widest text-primary uppercase">ENGINE SETTINGS &amp; CONTROLS</span>
-</div>
-<div class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-caps text-[10px] tracking-wider uppercase">
+<body class="bg-surface font-body-md text-body-md text-on-surface flex flex-col min-h-screen">
+
+<!-- ===================== FIXED HEADER ===================== -->
+<header class="fixed top-0 inset-x-0 z-50 bg-surface-container-lowest/85 backdrop-blur-xl pt-safe shadow-[0_1px_8px_rgba(0,0,0,0.4)]">
+  <div class="h-16 px-3 flex items-center justify-between gap-2 min-w-0">
+    <div class="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+      <div class="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-on-primary font-bold text-[11px] shrink-0">IDR</div>
+      <div class="flex flex-col min-w-0">
+        <div class="flex items-center gap-1 min-w-0">
+          <span class="font-label-caps text-label-caps text-primary tracking-wider uppercase shrink-0">IDR FUSION</span>
+          <span class="font-label-caps text-label-caps text-on-surface-variant shrink-0">|</span>
+          <span class="font-headline-sm text-headline-sm text-on-surface tracking-tight leading-none truncate">Settings</span>
+        </div>
+        <div class="flex items-center gap-1.5 mt-0.5 min-w-0">
+          <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0"></span>
+          <span class="font-label-caps text-label-caps text-primary uppercase shrink-0">LIVE</span>
+          <span class="text-outline font-label-caps text-label-caps shrink-0">•</span>
+          <span id="settingsGnssSummary" class="font-label-caps text-label-caps text-secondary uppercase truncate">GNSS —</span>
+        </div>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 shrink-0">
+      <div class="hidden sm:flex flex-col items-end mr-1">
+        <span id="settingsTelemetryTime" class="font-metric-sm text-metric-sm text-on-surface">—</span>
+        <span class="font-label-caps text-label-caps text-on-surface-variant">UTC</span>
+      </div>
+      <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0">
+        <span class="material-symbols-outlined text-on-primary text-[18px]">person</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ===================== MAIN ===================== -->
+<main class="flex-1 w-full pt-16 bg-surface" style="overflow-x:hidden; padding-bottom:calc(80px + env(safe-area-inset-bottom,0px))">
+
+  <!-- Top HUD Strip -->
+  <section class="w-full px-3 py-2 bg-surface-container-lowest flex flex-col gap-1 shadow-sm">
+    <div class="flex items-center justify-between flex-wrap gap-1">
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-primary animate-ping shrink-0"></span>
+        <span class="font-label-caps text-label-caps tracking-widest text-primary uppercase">ENGINE SETTINGS &amp; CONTROLS</span>
+      </div>
+      <div class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-caps text-[10px] tracking-wider uppercase shrink-0">
         BACKEND: <span id="settingsCoreLatency">—</span>
       </div>
-</div>
-<div class="flex items-center justify-between flex-wrap gap-1">
-<span class="font-headline-sm text-sm font-semibold text-on-surface tracking-tight">SIH Evaluation Matrix &amp; Filter Tuning</span>
-<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-secondary-container text-on-secondary-container font-label-caps text-[10px] tracking-wide">
-<span class="material-symbols-outlined text-[14px]">neurology</span>
-<span>SMARTPHONE EDGE CORE • <span id="settingsModelBanner">MODEL STATUS —</span></span>
-</div>
-</div>
-</section>
-<!-- Main Grid Layout for Automotive HUD & Mobile Viewport -->
-<div class="w-full px-gutter-mobile flex flex-col gap-4 mt-3">
-<!-- SECTION 1: RUNTIME STATUS -->
-<section class="bg-surface-container-low rounded-xl p-card-padding-md shadow-md flex flex-col gap-3">
-  <div class="flex items-center justify-between">
-    <div class="flex items-center gap-2">
-      <span class="material-symbols-outlined text-primary text-[20px]">monitor_heart</span>
-      <span class="font-label-caps text-label-caps uppercase tracking-wider text-on-surface-variant">Live Runtime Status</span>
     </div>
-    <span id="runtimeStatusBadge" class="px-2 py-0.5 rounded bg-surface-container text-primary font-label-caps text-[10px] font-bold uppercase">—</span>
-  </div>
-  <div class="grid grid-cols-2 gap-2">
-    <div class="bg-surface-container p-3 rounded-lg"><span class="font-label-caps text-[10px] text-on-surface-variant uppercase">Navigation Mode</span><div id="runtimeMode" class="mt-1 font-metric-sm text-sm text-on-surface">—</div></div>
-    <div class="bg-surface-container p-3 rounded-lg"><span class="font-label-caps text-[10px] text-on-surface-variant uppercase">GNSS Status</span><div id="runtimeGnss" class="mt-1 font-metric-sm text-sm text-secondary">—</div></div>
-    <div class="bg-surface-container p-3 rounded-lg"><span class="font-label-caps text-[10px] text-on-surface-variant uppercase">AI Model</span><div id="runtimeAi" class="mt-1 font-metric-sm text-sm text-primary">—</div></div>
-    <div class="bg-surface-container p-3 rounded-lg"><span class="font-label-caps text-[10px] text-on-surface-variant uppercase">Map Matching</span><div id="runtimeMap" class="mt-1 font-metric-sm text-sm text-secondary">—</div></div>
-  </div>
-</section>
-<!-- SECTION 2: SENSOR FUSION & FILTER TUNING -->
-<section class="bg-surface-container-low rounded-xl p-card-padding-md shadow-md flex flex-col gap-4">
-<div class="flex items-center justify-between">
-<div class="flex items-center gap-2">
-<span class="material-symbols-outlined text-secondary text-[20px]">tune</span>
-<span class="font-label-caps text-label-caps uppercase tracking-wider text-on-surface-variant">Sensor Fusion &amp; Filter Tuning</span>
-</div>
-<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface font-label-caps text-[10px]">KALMAN / EKF PARAMS</span>
-</div>
-<!-- Filter Intensity Segmented Controls -->
-<div class="flex flex-col gap-1.5">
-<div class="flex items-center justify-between">
-<span class="text-xs font-semibold text-on-surface">AI Speed &amp; Vibration Rejection (Indian Roads)</span>
-<span class="font-label-caps text-[10px] text-primary" id="filter-label-current">STRICT (8-15Hz Band-Stop)</span>
-</div>
-<div class="grid grid-cols-3 gap-1 bg-surface-container-lowest p-1 rounded-lg">
-<button class="py-2 px-1 rounded text-center font-label-caps text-[11px] font-bold bg-primary text-on-primary shadow-sm transition-colors" id="filter-strict" onclick="setFilterIntensity('strict')" type="button">
-            STRICT (POTHOLE)
-          </button>
-<button class="py-2 px-1 rounded text-center font-label-caps text-[11px] font-medium text-on-surface-variant hover:text-on-surface transition-colors" id="filter-balanced" onclick="setFilterIntensity('balanced')" type="button">
-            BALANCED
-          </button>
-<button class="py-2 px-1 rounded text-center font-label-caps text-[11px] font-medium text-on-surface-variant hover:text-on-surface transition-colors" id="filter-raw" onclick="setFilterIntensity('raw')" type="button">
-            RAW KINEMATIC
-          </button>
-</div>
-<span class="text-[11px] text-on-surface-variant">Recommended for high-amplitude chassis vibration, engine resonances, and sudden pothole deceleration transients.</span>
-</div>
-<!-- Toggles: NHC & ZUPT -->
-<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-<!-- NHC Toggle -->
-<div class="bg-surface-container p-3 rounded-lg flex flex-col justify-between gap-2">
-<div class="flex items-start justify-between">
-<div class="flex flex-col">
-<span class="text-xs font-semibold text-on-surface">Non-Holonomic Constraints (NHC)</span>
-<span class="text-[11px] text-on-surface-variant">Enforce zero lateral slip (dy/dt ≈ 0) &amp; vertical bounce (dz/dt ≈ 0)</span>
-</div>
-<label class="relative inline-flex items-center cursor-pointer ml-2">
-<input checked="" class="sr-only peer" id="toggle-nhc" onchange="toggleFeature('nhc')" type="checkbox"/>
-<div class="w-11 h-6 bg-surface-container-high peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-surface peer-checked:bg-primary after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-on-primary after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-</label>
-</div>
-<div class="flex items-center justify-between text-[10px] font-metric-sm text-secondary bg-surface-container-lowest px-2 py-1 rounded">
-<span>AXIS CONSTRAINTS</span>
-<span id="nhc-status-txt">ACTIVE [Y, Z RESTRICTED]</span>
-</div>
-</div>
-<!-- ZUPT Toggle & Sensitivity -->
-<div class="bg-surface-container p-3 rounded-lg flex flex-col justify-between gap-2">
-<div class="flex items-start justify-between">
-<div class="flex flex-col">
-<span class="text-xs font-semibold text-on-surface">Zero Velocity Update (ZUPT)</span>
-<span class="text-[11px] text-on-surface-variant">Zero-clamp covariance at traffic halts</span>
-</div>
-<label class="relative inline-flex items-center cursor-pointer ml-2">
-<input checked="" disabled="" class="sr-only peer" id="toggle-zupt" type="checkbox"/>
-<div class="w-11 h-6 bg-surface-container-high opacity-50 rounded-full peer-checked:after:translate-x-full peer-checked:after:border-surface peer-checked:bg-primary after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-on-primary after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-</label>
-</div>
-<div class="flex items-center justify-between text-[10px] font-metric-sm text-on-surface-variant bg-surface-container-lowest px-2 py-1 rounded">
-<span>SENSITIVITY WINDOW</span>
-<span class="text-outline font-bold">AUTOMATIC / NOT CONFIGURABLE</span>
-</div>
-</div>
-</div>
-</section>
-<!-- SECTION 3: GNSS OUTAGE DETECTION -->
-<section class="bg-surface-container-low rounded-xl p-card-padding-md shadow-md flex flex-col gap-3">
-  <div class="flex items-center justify-between">
-    <div class="flex items-center gap-2">
-      <span class="material-symbols-outlined text-tertiary text-[20px]">sensors_off</span>
-      <span class="font-label-caps text-label-caps uppercase tracking-wider text-on-surface-variant">GNSS Outage Handling</span>
+    <div class="flex items-center justify-between flex-wrap gap-1">
+      <span class="font-headline-sm text-sm font-semibold text-on-surface tracking-tight">SIH Evaluation Matrix &amp; Filter Tuning</span>
+      <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-secondary-container text-on-secondary-container font-label-caps text-[10px] tracking-wide shrink-0">
+        <span class="material-symbols-outlined text-[14px]">neurology</span>
+        <span class="truncate">EDGE CORE • <span id="settingsModelBanner">MODEL STATUS —</span></span>
+      </div>
     </div>
-    <span class="px-2 py-0.5 rounded bg-surface-container text-on-surface-variant font-label-caps text-[10px]">LIVE ENGINE STATE</span>
+  </section>
+
+  <div class="w-full px-3 flex flex-col gap-4 mt-3">
+
+    <!-- SECTION 1: RUNTIME STATUS -->
+    <section class="bg-surface-container-low rounded-xl p-card-padding-md shadow-md flex flex-col gap-3">
+      <div class="flex items-center justify-between flex-wrap gap-1">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary text-[20px]">monitor_heart</span>
+          <span class="font-label-caps text-label-caps uppercase tracking-wider text-on-surface-variant">Live Runtime Status</span>
+        </div>
+        <span id="runtimeStatusBadge" class="px-2 py-0.5 rounded bg-surface-container text-primary font-label-caps text-[10px] font-bold uppercase">—</span>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div class="bg-surface-container p-3 rounded-lg">
+          <span class="font-label-caps text-[10px] text-on-surface-variant uppercase">Navigation Mode</span>
+          <div id="runtimeMode" class="mt-1 font-metric-sm text-sm text-on-surface break-words">—</div>
+        </div>
+        <div class="bg-surface-container p-3 rounded-lg">
+          <span class="font-label-caps text-[10px] text-on-surface-variant uppercase">GNSS Status</span>
+          <div id="runtimeGnss" class="mt-1 font-metric-sm text-sm text-secondary break-words">—</div>
+        </div>
+        <div class="bg-surface-container p-3 rounded-lg">
+          <span class="font-label-caps text-[10px] text-on-surface-variant uppercase">AI Model</span>
+          <div id="runtimeAi" class="mt-1 font-metric-sm text-sm text-primary break-words">—</div>
+        </div>
+        <div class="bg-surface-container p-3 rounded-lg">
+          <span class="font-label-caps text-[10px] text-on-surface-variant uppercase">Map Matching</span>
+          <div id="runtimeMap" class="mt-1 font-metric-sm text-sm text-secondary break-words">—</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: SENSOR STATUS -->
+    <section class="bg-surface-container-low rounded-xl p-card-padding-md shadow-md flex flex-col gap-3">
+      <div class="flex items-center justify-between flex-wrap gap-1">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary text-[20px]">sensors</span>
+          <span class="font-label-caps text-label-caps uppercase tracking-wider text-on-surface-variant">Sensor Status</span>
+        </div>
+        <span class="px-2 py-0.5 rounded bg-surface-container text-on-surface font-label-caps text-[10px]">LIVE READINGS</span>
+      </div>
+      <!-- Sensor rows: LABEL ——————— STATUS -->
+      <div class="flex flex-col gap-2">
+        <div class="settings-row bg-surface-container px-3 py-2.5 rounded-lg">
+          <span class="settings-label font-label-caps text-label-caps text-on-surface uppercase">ACCELEROMETER</span>
+          <span id="sensorAccel" class="settings-status font-label-caps text-label-caps text-primary uppercase bg-primary/10 px-2 py-0.5 rounded">LIVE</span>
+        </div>
+        <div class="settings-row bg-surface-container px-3 py-2.5 rounded-lg">
+          <span class="settings-label font-label-caps text-label-caps text-on-surface uppercase">GYROSCOPE</span>
+          <span id="sensorGyro" class="settings-status font-label-caps text-label-caps text-primary uppercase bg-primary/10 px-2 py-0.5 rounded">LIVE</span>
+        </div>
+        <div class="settings-row bg-surface-container px-3 py-2.5 rounded-lg">
+          <span class="settings-label font-label-caps text-label-caps text-on-surface uppercase">MAGNETOMETER</span>
+          <span id="sensorMag" class="settings-status font-label-caps text-label-caps text-outline uppercase bg-surface-container-high px-2 py-0.5 rounded">UNAVAILABLE</span>
+        </div>
+        <div class="settings-row bg-surface-container px-3 py-2.5 rounded-lg">
+          <span class="settings-label font-label-caps text-label-caps text-on-surface uppercase">GNSS</span>
+          <span id="sensorGnss" class="settings-status font-label-caps text-label-caps text-secondary uppercase bg-secondary/10 px-2 py-0.5 rounded">—</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 3: SENSOR FUSION & FILTER TUNING -->
+    <section class="bg-surface-container-low rounded-xl p-card-padding-md shadow-md flex flex-col gap-4">
+      <div class="flex items-center justify-between flex-wrap gap-1">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-secondary text-[20px]">tune</span>
+          <span class="font-label-caps text-label-caps uppercase tracking-wider text-on-surface-variant">Sensor Fusion &amp; Filter Tuning</span>
+        </div>
+        <span class="px-2 py-0.5 rounded bg-surface-container text-on-surface font-label-caps text-[10px]">KALMAN / EKF</span>
+      </div>
+      <!-- Filter Intensity -->
+      <div class="flex flex-col gap-1.5">
+        <div class="flex items-center justify-between flex-wrap gap-1">
+          <span class="text-xs font-semibold text-on-surface">AI Speed &amp; Vibration Rejection</span>
+          <span class="font-label-caps text-[10px] text-primary" id="filter-label-current">STRICT</span>
+        </div>
+        <div class="grid grid-cols-3 gap-1 bg-surface-container-lowest p-1 rounded-lg">
+          <button class="py-2 px-1 rounded text-center font-label-caps text-[11px] font-bold bg-primary text-on-primary shadow-sm transition-colors" id="filter-strict" onclick="setFilterIntensity('strict')" type="button">STRICT</button>
+          <button class="py-2 px-1 rounded text-center font-label-caps text-[11px] font-medium text-on-surface-variant hover:text-on-surface transition-colors" id="filter-balanced" onclick="setFilterIntensity('balanced')" type="button">BALANCED</button>
+          <button class="py-2 px-1 rounded text-center font-label-caps text-[11px] font-medium text-on-surface-variant hover:text-on-surface transition-colors" id="filter-raw" onclick="setFilterIntensity('raw')" type="button">RAW</button>
+        </div>
+        <span class="text-[11px] text-on-surface-variant">Recommended for high-amplitude chassis vibration and pothole deceleration transients.</span>
+      </div>
+      <!-- Toggles: NHC & ZUPT -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+        <!-- NHC Toggle -->
+        <div class="bg-surface-container p-3 rounded-lg flex flex-col justify-between gap-2">
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex flex-col min-w-0 flex-1">
+              <span class="text-xs font-semibold text-on-surface">Non-Holonomic Constraints (NHC)</span>
+              <span class="text-[11px] text-on-surface-variant">Enforce zero lateral slip &amp; vertical bounce</span>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer ml-2 shrink-0">
+              <input checked="" class="sr-only peer" id="toggle-nhc" onchange="toggleFeature('nhc')" type="checkbox"/>
+              <div class="w-11 h-6 bg-surface-container-high peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-surface peer-checked:bg-primary after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-on-primary after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+            </label>
+          </div>
+          <div class="flex items-center justify-between text-[10px] font-metric-sm text-secondary bg-surface-container-lowest px-2 py-1 rounded">
+            <span>AXIS CONSTRAINTS</span>
+            <span id="nhc-status-txt">ACTIVE [Y, Z RESTRICTED]</span>
+          </div>
+        </div>
+        <!-- ZUPT Toggle -->
+        <div class="bg-surface-container p-3 rounded-lg flex flex-col justify-between gap-2">
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex flex-col min-w-0 flex-1">
+              <span class="text-xs font-semibold text-on-surface">Zero Velocity Update (ZUPT)</span>
+              <span class="text-[11px] text-on-surface-variant">Zero-clamp covariance at traffic halts</span>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer ml-2 shrink-0">
+              <input checked="" disabled="" class="sr-only peer" id="toggle-zupt" type="checkbox"/>
+              <div class="w-11 h-6 bg-surface-container-high opacity-50 rounded-full peer-checked:after:translate-x-full peer-checked:after:border-surface peer-checked:bg-primary after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-on-primary after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+            </label>
+          </div>
+          <div class="flex items-center justify-between text-[10px] font-metric-sm text-on-surface-variant bg-surface-container-lowest px-2 py-1 rounded">
+            <span>SENSITIVITY</span>
+            <span class="text-outline font-bold">AUTO</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 4: GNSS OUTAGE HANDLING -->
+    <section class="bg-surface-container-low rounded-xl p-card-padding-md shadow-md flex flex-col gap-3">
+      <div class="flex items-center justify-between flex-wrap gap-1">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-tertiary text-[20px]">sensors_off</span>
+          <span class="font-label-caps text-label-caps uppercase tracking-wider text-on-surface-variant">GNSS Outage Handling</span>
+        </div>
+        <span class="px-2 py-0.5 rounded bg-surface-container text-on-surface-variant font-label-caps text-[10px]">LIVE ENGINE STATE</span>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div class="p-3 rounded-lg bg-surface-container">
+          <span class="font-label-caps text-[10px] text-on-surface-variant uppercase">GNSS Signal</span>
+          <span id="gnssSignalLive" class="block mt-1 font-metric-sm text-sm text-secondary break-words">—</span>
+        </div>
+        <div class="p-3 rounded-lg bg-surface-container">
+          <span class="font-label-caps text-[10px] text-on-surface-variant uppercase">Failover</span>
+          <span id="failoverLive" class="block mt-1 font-metric-sm text-sm text-tertiary break-words">—</span>
+        </div>
+        <div class="p-3 rounded-lg bg-surface-container">
+          <span class="font-label-caps text-[10px] text-on-surface-variant uppercase">C/N0 Telemetry</span>
+          <span class="block mt-1 font-metric-sm text-sm text-outline">NOT EXPOSED</span>
+        </div>
+        <div class="p-3 rounded-lg bg-surface-container">
+          <span class="font-label-caps text-[10px] text-on-surface-variant uppercase">Satellite Count</span>
+          <span id="satelliteCountLive" class="block mt-1 font-metric-sm text-sm text-outline">NOT EXPOSED</span>
+        </div>
+      </div>
+      <p class="text-[11px] text-on-surface-variant">Outage detection and recovery are controlled by the navigation engine.</p>
+    </section>
+
+    <!-- SECTION 5: EDGE MODELS & OFFLINE TOPOLOGY -->
+    <section class="bg-surface-container-low rounded-xl p-card-padding-md shadow-md flex flex-col gap-3">
+      <div class="flex items-center justify-between flex-wrap gap-1">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary text-[20px]">dataset</span>
+          <span class="font-label-caps text-label-caps uppercase tracking-wider text-on-surface-variant">Edge Models &amp; Offline Topology</span>
+        </div>
+        <button class="px-2 py-1 rounded bg-surface-container hover:bg-surface-container-high text-primary font-label-caps text-[10px] flex items-center gap-1 transition-colors shrink-0" onclick="reloadModels()" type="button">
+          <span class="material-symbols-outlined text-[14px]">sync</span>
+          <span>REFRESH</span>
+        </button>
+      </div>
+      <div class="flex flex-col gap-2">
+        <!-- Map DB -->
+        <div class="p-3 rounded-lg bg-surface-container flex items-center justify-between gap-2">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-9 h-9 rounded-lg bg-surface-container-lowest flex items-center justify-center text-primary shrink-0">
+              <span class="material-symbols-outlined text-[20px]">map</span>
+            </div>
+            <div class="flex flex-col min-w-0">
+              <span class="text-xs font-semibold text-on-surface truncate">Offline OSM Road Network</span>
+              <span class="text-[11px] text-on-surface-variant">Offline road topology • <span id="settingsMapDetail">STATUS —</span></span>
+            </div>
+          </div>
+          <div class="text-right shrink-0">
+            <span class="font-metric-sm text-xs font-bold text-on-surface" id="settingsMapSize">—</span>
+            <span class="block text-[10px] text-secondary font-label-caps uppercase" id="settingsMapStatus">—</span>
+          </div>
+        </div>
+        <!-- Neural Speed Model -->
+        <div class="p-3 rounded-lg bg-surface-container flex items-center justify-between gap-2">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-9 h-9 rounded-lg bg-surface-container-lowest flex items-center justify-center text-secondary shrink-0">
+              <span class="material-symbols-outlined text-[20px]">memory</span>
+            </div>
+            <div class="flex flex-col min-w-0">
+              <span class="text-xs font-semibold text-on-surface truncate">IO-VNBD Speed Model</span>
+              <span class="text-[11px] text-on-surface-variant">Temporal acceleration model • Backend inference</span>
+            </div>
+          </div>
+          <div class="text-right shrink-0">
+            <span class="font-metric-sm text-xs font-bold text-on-surface" id="settingsModelSize">—</span>
+            <span class="block text-[10px] text-primary font-label-caps uppercase" id="settingsModelStatus">—</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 6: SESSION RECORDING & EXPORT -->
+    <section class="bg-surface-container-low rounded-xl p-card-padding-md shadow-md flex flex-col gap-3">
+      <div class="flex items-center justify-between flex-wrap gap-1">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-outline text-[20px]">save_alt</span>
+          <span class="font-label-caps text-label-caps uppercase tracking-wider text-on-surface-variant">Session Recording &amp; Export</span>
+        </div>
+        <span class="px-2 py-0.5 rounded bg-surface-container text-on-surface font-label-caps text-[10px]">SESSION DATA</span>
+      </div>
+      <!-- Session Status Row -->
+      <div class="settings-row bg-surface-container p-3 rounded-lg">
+        <div class="flex flex-col gap-0.5 min-w-0 flex-1">
+          <span class="font-label-caps text-[10px] text-on-surface-variant uppercase">Session Recording</span>
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="font-metric-sm text-xs font-bold" id="sessionRecordingStatus">—</span>
+            <span class="font-label-caps text-[10px] text-on-surface-variant">RECORDS: <span id="sessionRecordCount">—</span></span>
+          </div>
+        </div>
+        <div class="flex gap-2 shrink-0">
+          <button class="px-3 py-1.5 rounded bg-primary text-on-primary font-label-caps text-[10px] font-bold uppercase" id="btnStartSession" onclick="startSession()" type="button">START</button>
+          <button class="px-3 py-1.5 rounded bg-surface-container-high text-on-surface font-label-caps text-[10px] font-bold uppercase" id="btnStopSession" onclick="stopSession()" type="button">STOP</button>
+        </div>
+      </div>
+      <!-- Format Info -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="bg-surface-container p-3 rounded-lg flex flex-col gap-1">
+          <span class="font-label-caps text-[10px] text-on-surface-variant uppercase">Stream Output Protocol</span>
+          <div class="flex items-center justify-between flex-wrap gap-1">
+            <span class="font-metric-sm text-xs font-bold text-on-surface">CSV SESSION EXPORT</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-surface-container-lowest text-primary uppercase font-mono shrink-0">ON DEVICE</span>
+          </div>
+          <span class="text-[10px] text-on-surface-variant">Exports current navigation state from the runtime.</span>
+        </div>
+        <div class="bg-surface-container p-3 rounded-lg flex items-center justify-between gap-2">
+          <div class="flex flex-col min-w-0 flex-1">
+            <span class="text-xs font-semibold text-on-surface">Session Logging</span>
+            <span class="text-[10px] text-on-surface-variant">Use the runtime session recorder.</span>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer ml-2 shrink-0">
+            <input checked="" class="sr-only peer" type="checkbox"/>
+            <div class="w-11 h-6 bg-surface-container-high peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-surface peer-checked:bg-primary after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-on-primary after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+          </label>
+        </div>
+      </div>
+      <!-- Export Button -->
+      <button class="w-full h-touch-target-min rounded-lg bg-primary hover:bg-primary/80 text-on-primary flex items-center justify-center gap-2 font-headline-sm text-xs font-semibold transition-colors" id="btnExportLog" onclick="exportLog()" type="button">
+        <span class="material-symbols-outlined text-[18px]">file_download</span>
+        <span>EXPORT LOG</span>
+      </button>
+    </section>
+
+    <!-- NAVIGATION ENGINE SECTION -->
+    <section class="bg-surface-container-low rounded-xl p-card-padding-md shadow-md flex flex-col gap-3">
+      <div class="flex items-center justify-between flex-wrap gap-1">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary text-[20px]">rocket_launch</span>
+          <span class="font-label-caps text-label-caps uppercase tracking-wider text-on-surface-variant">Navigation Engine</span>
+        </div>
+        <span id="navEngineBadge" class="px-2 py-0.5 rounded bg-primary/20 text-primary font-label-caps text-[10px] font-bold uppercase">—</span>
+      </div>
+      <div class="settings-row bg-surface-container px-3 py-2.5 rounded-lg">
+        <span class="settings-label font-label-caps text-label-caps text-on-surface uppercase">CALIBRATION</span>
+        <span id="navCalibStatus" class="settings-status font-label-caps text-label-caps text-primary uppercase bg-primary/10 px-2 py-0.5 rounded">—</span>
+      </div>
+      <div class="settings-row bg-surface-container px-3 py-2.5 rounded-lg">
+        <span class="settings-label font-label-caps text-label-caps text-on-surface uppercase">ALIGNMENT</span>
+        <span id="navAlignStatus" class="settings-status font-label-caps text-label-caps text-secondary uppercase bg-secondary/10 px-2 py-0.5 rounded">—</span>
+      </div>
+      <div class="settings-row bg-surface-container px-3 py-2.5 rounded-lg">
+        <span class="settings-label font-label-caps text-label-caps text-on-surface uppercase">MOTION MODE</span>
+        <span id="navMotionMode" class="settings-status font-label-caps text-label-caps text-on-surface uppercase bg-surface-container-high px-2 py-0.5 rounded">—</span>
+      </div>
+    </section>
+
   </div>
-  <div class="grid grid-cols-2 gap-2">
-    <div class="p-3 rounded-lg bg-surface-container"><span class="font-label-caps text-[10px] text-on-surface-variant uppercase">GNSS Signal</span><span id="gnssSignalLive" class="block mt-1 font-metric-sm text-sm text-secondary">—</span></div>
-    <div class="p-3 rounded-lg bg-surface-container"><span class="font-label-caps text-[10px] text-on-surface-variant uppercase">Failover</span><span id="failoverLive" class="block mt-1 font-metric-sm text-sm text-tertiary">—</span></div>
-    <div class="p-3 rounded-lg bg-surface-container"><span class="font-label-caps text-[10px] text-on-surface-variant uppercase">C/N0 Telemetry</span><span class="block mt-1 font-metric-sm text-sm text-outline">NOT EXPOSED</span></div>
-    <div class="p-3 rounded-lg bg-surface-container"><span class="font-label-caps text-[10px] text-on-surface-variant uppercase">Satellite Count</span><span id="satelliteCountLive" class="block mt-1 font-metric-sm text-sm text-outline">NOT EXPOSED</span></div>
-  </div>
-  <p class="text-[11px] text-on-surface-variant">Outage detection and recovery are controlled by the navigation engine. This screen does not invent threshold values that are unavailable from the Android payload.</p>
-</section>
-<!-- SECTION 4: OFFLINE RESOURCES & ON-DEVICE NEURAL MODELS -->
-<section class="bg-surface-container-low rounded-xl p-card-padding-md shadow-md flex flex-col gap-3">
-<div class="flex items-center justify-between">
-<div class="flex items-center gap-2">
-<span class="material-symbols-outlined text-primary text-[20px]">dataset</span>
-<span class="font-label-caps text-label-caps uppercase tracking-wider text-on-surface-variant">Edge Models &amp; Offline Topology</span>
-</div>
-<button class="px-2 py-1 rounded bg-surface-container hover:bg-surface-container-high text-primary font-label-caps text-[10px] flex items-center gap-1 transition-colors" onclick="reloadModels()" type="button">
-<span class="material-symbols-outlined text-[14px]">sync</span>
-<span>REFRESH STATUS</span>
-</button>
-</div>
-<div class="flex flex-col gap-2">
-<!-- Resource 1: Map Snapping DB -->
-<div class="p-3 rounded-lg bg-surface-container flex items-center justify-between gap-2">
-<div class="flex items-center gap-3 min-w-0">
-<div class="w-9 h-9 rounded-lg bg-surface-container-lowest flex items-center justify-center text-primary flex-shrink-0">
-<span class="material-symbols-outlined text-[20px]">map</span>
-</div>
-<div class="flex flex-col min-w-0">
-<span class="text-xs font-semibold text-on-surface truncate">Offline OSM Road Network</span>
-<span class="text-[11px] text-on-surface-variant">Offline road topology • <span id="settingsMapDetail">STATUS —</span></span>
-</div>
-</div>
-<div class="text-right flex-shrink-0">
-<span class="font-metric-sm text-xs font-bold text-on-surface" id="settingsMapSize">—</span>
-<span class="block text-[10px] text-secondary font-label-caps uppercase" id="settingsMapStatus">—</span>
-</div>
-</div>
-<!-- Resource 2: Neural Speed Model -->
-<div class="p-3 rounded-lg bg-surface-container flex items-center justify-between gap-2">
-<div class="flex items-center gap-3 min-w-0">
-<div class="w-9 h-9 rounded-lg bg-surface-container-lowest flex items-center justify-center text-secondary flex-shrink-0">
-<span class="material-symbols-outlined text-[20px]">memory</span>
-</div>
-<div class="flex flex-col min-w-0">
-<span class="text-xs font-semibold text-on-surface truncate">IO-VNBD Speed Model Asset</span>
-<span class="text-[11px] text-on-surface-variant">Temporal acceleration model • Backend inference status</span>
-</div>
-</div>
-<div class="text-right flex-shrink-0">
-<span class="font-metric-sm text-xs font-bold text-on-surface" id="settingsModelSize">—</span>
-<span class="block text-[10px] text-primary font-label-caps uppercase" id="settingsModelStatus">—</span>
-</div>
-</div>
-</div>
-</section>
-<!-- SECTION 5: TELEMETRY LOGGING & SESSION EXPORT -->
-<section class="bg-surface-container-low rounded-xl p-card-padding-md shadow-md flex flex-col gap-3">
-<div class="flex items-center justify-between">
-<div class="flex items-center gap-2">
-<span class="material-symbols-outlined text-outline text-[20px]">save_alt</span>
-<span class="font-label-caps text-label-caps uppercase tracking-wider text-on-surface-variant">Logging &amp; Jury Telemetry Export</span>
-</div>
-<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface font-label-caps text-[10px]">SESSION DATA</span>
-</div>
-<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-<!-- Format Spec -->
-<div class="bg-surface-container p-3 rounded-lg flex flex-col gap-1">
-<span class="font-label-caps text-[10px] text-on-surface-variant uppercase">Stream Output Protocol</span>
-<div class="flex items-center justify-between">
-<span class="font-metric-sm text-xs font-bold text-on-surface">CSV SESSION EXPORT</span>
-<span class="text-[10px] px-1.5 py-0.5 rounded bg-surface-container-lowest text-primary uppercase font-mono">ON DEVICE</span>
-</div>
-<span class="text-[10px] text-on-surface-variant">Exports the current navigation state available to the runtime.</span>
-</div>
-<!-- Auto-Log Switch -->
-<div class="bg-surface-container p-3 rounded-lg flex items-center justify-between">
-<div class="flex flex-col">
-<span class="text-xs font-semibold text-on-surface">Session Logging</span>
-<span class="text-[10px] text-on-surface-variant">Use the runtime session recorder when available.</span>
-</div>
-<label class="relative inline-flex items-center cursor-pointer ml-2">
-<input checked="" class="sr-only peer" type="checkbox"/>
-<div class="w-11 h-6 bg-surface-container-high peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-surface peer-checked:bg-primary after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-on-primary after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-</label>
-</div>
-</div>
-<!-- Session Status Row -->
-<div class="flex items-center justify-between bg-surface-container p-3 rounded-lg">
-<div class="flex flex-col gap-0.5">
-  <span class="font-label-caps text-[10px] text-on-surface-variant uppercase">Session Recording</span>
-  <div class="flex items-center gap-2">
-    <span class="font-metric-sm text-xs font-bold" id="sessionRecordingStatus">—</span>
-    <span class="font-label-caps text-[10px] text-on-surface-variant">RECORDS: <span id="sessionRecordCount">—</span></span>
-  </div>
-</div>
-<div class="flex gap-2">
-  <button class="px-3 py-1.5 rounded bg-primary text-on-primary font-label-caps text-[10px] font-bold uppercase" id="btnStartSession" onclick="startSession()" type="button">START</button>
-  <button class="px-3 py-1.5 rounded bg-surface-container-high text-on-surface font-label-caps text-[10px] font-bold uppercase" id="btnStopSession" onclick="stopSession()" type="button">STOP</button>
-</div>
-</div>
-<!-- Action Buttons -->
-<div class="flex flex-col sm:flex-row gap-2 pt-1">
-<button class="w-full sm:flex-1 h-touch-target-min rounded-lg bg-primary hover:bg-primary/80 text-on-primary flex items-center justify-center gap-2 font-headline-sm text-xs font-semibold transition-colors" id="btnExportLog" onclick="exportLog()" type="button">
-<span class="material-symbols-outlined text-[18px]">file_download</span>
-<span>EXPORT LOG</span>
-</button>
-</div>
-</section>
-<!-- Visual Confirmation Floating Toast Notification (Hidden by default) -->
+</main>
+
+<!-- Toast notification -->
 <div class="opacity-0 transition-opacity duration-300 fixed bottom-24 left-1/2 -translate-x-1/2 z-40 bg-surface-container-highest px-4 py-2.5 rounded-lg shadow-xl flex items-center gap-2 pointer-events-none text-xs font-medium text-on-surface" id="toast">
-<span class="material-symbols-outlined text-primary text-[18px]" id="toast-icon">check_circle</span>
-<span id="toast-message">Configuration applied successfully.</span>
+  <span class="material-symbols-outlined text-primary text-[18px]" id="toast-icon">check_circle</span>
+  <span id="toast-message">Configuration applied successfully.</span>
 </div>
-</div>
-</div>
+
+<!-- ===================== BOTTOM NAVIGATION ===================== -->
+<nav class="fixed bottom-0 inset-x-0 z-50 pb-safe bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_-1px_12px_rgba(0,0,0,0.5)]">
+  <div class="flex justify-around items-center h-[56px] px-1">
+    <a class="flex flex-col items-center justify-center flex-1 py-1 px-0.5 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors min-w-0" href="/navigate">
+      <span class="material-symbols-outlined text-[22px]">navigation</span>
+      <span class="font-label-caps text-[10px] uppercase mt-0.5 leading-none">NAV</span>
+    </a>
+    <a class="flex flex-col items-center justify-center flex-1 py-1 px-0.5 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors min-w-0" href="/outage">
+      <span class="material-symbols-outlined text-[22px]">warning</span>
+      <span class="font-label-caps text-[10px] uppercase mt-0.5 leading-none">OUTAGE</span>
+    </a>
+    <a class="flex flex-col items-center justify-center flex-1 py-1 px-0.5 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors min-w-0" href="/calibration">
+      <span class="material-symbols-outlined text-[22px]">explore</span>
+      <span class="font-label-caps text-[10px] uppercase mt-0.5 leading-none">CAL</span>
+    </a>
+    <a class="flex flex-col items-center justify-center flex-1 py-1 px-0.5 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors min-w-0" href="/pipeline">
+      <span class="material-symbols-outlined text-[22px]">memory</span>
+      <span class="font-label-caps text-[10px] uppercase mt-0.5 leading-none">PIPE</span>
+    </a>
+    <a aria-current="page" class="flex flex-col items-center justify-center flex-1 py-1 px-0.5 rounded-lg transition-colors text-primary bg-surface-container-high/60 min-w-0" href="/settings">
+      <span class="material-symbols-outlined text-[22px]">settings</span>
+      <span class="font-label-caps text-[10px] uppercase mt-0.5 leading-none">SET</span>
+    </a>
+  </div>
+</nav>
+
 <script>
 (function () {
   let toastTimer;
@@ -262,6 +425,7 @@
       const modelStatus = String(state.ai_model_status || '—');
       const mapStatus = String(state.map_status || '—');
       const imuStatus = String(state.imu_status || '—');
+
       updateText('settingsGnssSummary', gnssStatus);
       updateText('settingsTelemetryTime', state.timestamp == null ? '—' : `${Number(state.timestamp).toFixed(1)} s`);
       updateText('settingsModelBanner', modelStatus);
@@ -280,6 +444,21 @@
       updateText('settingsCoreLatency', 'LIVE');
       updateText('settingsMapSize', '—');
       updateText('settingsModelSize', '—');
+
+      // Sensor status from imu_status
+      const imuActive = imuStatus === 'ACTIVE';
+      const gnssLocked = gnssStatus === 'LOCKED';
+      updateText('sensorAccel', imuActive ? 'LIVE' : 'WAITING');
+      updateText('sensorGyro', imuActive ? 'LIVE' : 'WAITING');
+      updateText('sensorMag', 'UNAVAILABLE');
+      updateText('sensorGnss', gnssStatus !== '—' ? gnssStatus : 'SEARCHING');
+
+      // Navigation engine section
+      updateText('navEngineBadge', imuActive ? 'ACTIVE' : 'WAITING');
+      updateText('navCalibStatus', state.mounting_calibrated ? 'CALIBRATED' : 'NOT CALIBRATED');
+      updateText('navAlignStatus', state.orientation_initialized ? 'INITIALIZED' : 'PENDING');
+      updateText('navMotionMode', mode);
+
       renderRuntimeConfiguration(state);
     } catch (error) {
       console.error('Settings state error:', error);
@@ -293,7 +472,7 @@
   }
   function renderRuntimeConfiguration(configuration) {
     const mode = configuration.filter_mode || 'balanced';
-    const labels = {strict: 'STRICT', balanced: 'BALANCED', raw: 'RAW KINEMATICS'};
+    const labels = {strict: 'STRICT (8-15Hz)', balanced: 'BALANCED', raw: 'RAW KINEMATICS'};
     const defaultClass = 'py-2 px-1 rounded text-center font-label-caps text-[11px] font-medium text-on-surface-variant hover:text-on-surface transition-colors';
     const activeClass = 'py-2 px-1 rounded text-center font-label-caps text-[11px] font-bold bg-primary text-on-primary shadow-sm transition-colors';
     ['strict','balanced','raw'].forEach(candidate => {
@@ -335,9 +514,7 @@
     await refreshSettingsState();
     showToast('check_circle', 'Live backend status refreshed.');
   };
-  // ---------------------------------------------------------------
   // SESSION RECORDING CONTROLS
-  // ---------------------------------------------------------------
   window.startSession = async function() {
     try {
       const r = await fetch('/session/start', {method:'POST', cache:'no-store'});
@@ -349,7 +526,6 @@
       console.error(e); showToast('error', 'Could not start session: ' + e.message);
     }
   };
-
   window.stopSession = async function() {
     try {
       const r = await fetch('/session/stop', {method:'POST', cache:'no-store'});
@@ -361,7 +537,6 @@
       console.error(e); showToast('error', 'Could not stop session: ' + e.message);
     }
   };
-
   async function refreshSessionStatus() {
     try {
       const r = await fetch('/session/status', {cache:'no-store'});
@@ -376,18 +551,12 @@
       if (cntEl) cntEl.textContent = String(j.records ?? 0);
     } catch (_) {}
   }
-
-  // ---------------------------------------------------------------
-  // EXPORT LOG — calls the Android native bridge
-  // Falls back to HTTP endpoint if bridge is unavailable
-  // ---------------------------------------------------------------
+  // EXPORT LOG — calls the Android native bridge or HTTP endpoint
   window.exportLog = async function() {
-    // Preferred path: call Android native bridge which triggers share sheet
     if (typeof Android !== 'undefined' && typeof Android.exportSession === 'function') {
       Android.exportSession();
       return;
     }
-    // Fallback: call the server export endpoint (triggers native share via server→MainActivity callback)
     try {
       const r = await fetch('/session/export', {method:'POST', cache:'no-store'});
       const j = await r.json();
@@ -401,8 +570,6 @@
       showToast('error', 'NO SESSION DATA AVAILABLE TO EXPORT');
     }
   };
-
-  // Keep legacy name so any other pages that call exportData() still work
   window.exportData = window.exportLog;
 
   refreshSettingsState();
@@ -410,4 +577,6 @@
   setInterval(refreshSettingsState, 1000);
   setInterval(refreshSessionStatus, 1000);
 })();
-</script></main><nav class="fixed bottom-0 inset-x-0 z-50 pb-safe bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_-1px_12px_rgba(0,0,0,0.5)]" data-active-classes="text-primary bg-surface-container-high/60"><div class="grid grid-cols-5 items-center h-20 px-1"><a class="flex flex-col items-center justify-center h-touch-target-min py-1 px-1 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors" data-path="navigate" href="/navigate"><span class="material-symbols-outlined text-[22px]">navigation</span><span class="font-label-caps text-[10px] leading-tight uppercase mt-1 tracking-tight truncate max-w-full">Navigate</span></a><a class="flex flex-col items-center justify-center h-touch-target-min py-1 px-1 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors" data-path="outage-mode" href="/outage"><span class="material-symbols-outlined text-[22px]">warning</span><span class="font-label-caps text-[10px] leading-tight uppercase mt-1 tracking-tight truncate max-w-full">Outage</span></a><a class="flex flex-col items-center justify-center h-touch-target-min py-1 px-1 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors" data-path="calibration" href="/calibration"><span class="material-symbols-outlined text-[22px]">explore</span><span class="font-label-caps text-[10px] leading-tight uppercase mt-1 tracking-tight truncate max-w-full">Calibrate</span></a><a class="flex flex-col items-center justify-center h-touch-target-min py-1 px-1 rounded-lg text-on-surface-variant hover:text-on-surface transition-colors" data-path="pipeline-status" href="/pipeline"><span class="material-symbols-outlined text-[22px]">memory</span><span class="font-label-caps text-[10px] leading-tight uppercase mt-1 tracking-tight truncate max-w-full">Pipeline</span></a><a aria-current="page" class="flex flex-col items-center justify-center h-touch-target-min py-1 px-1 rounded-lg transition-colors text-primary bg-surface-container-high/60" data-path="settings" href="/settings"><span class="material-symbols-outlined text-[22px]">settings</span><span class="font-label-caps text-[10px] leading-tight uppercase mt-1 tracking-tight truncate max-w-full">Settings</span></a></div></nav></body></html>
+</script>
+</body>
+</html>
