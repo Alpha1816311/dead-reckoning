@@ -423,11 +423,21 @@ class IDRNavigationEngine {
 
                 // Speed from GNSS: prefer Android Location.speed (Doppler-based),
                 // fall back to haversine-derived speed.  Mark source as GNSS.
-                val sp = speedMpsRaw ?: gnssSpd
-                speedHistory.addLast(sp.coerceIn(0.0, 60.0))
-                if (speedHistory.size > SPEED_HIST) speedHistory.removeFirst()
-                speedMps = speedHistory.average()
-                speedSource = SpeedSource.GNSS
+                // If Doppler reports stationary (< 0.15 m/s) trust it over the
+                // haversine-derived speed — positional noise of a few metres at fix
+                // acquisition time produces haversine speeds of 10–14 km/h even
+                // when the device is completely still.
+                if (speedMpsRaw != null && speedMpsRaw < 0.15) {
+                    speedMps = 0.0
+                    speedHistory.clear()
+                    speedSource = SpeedSource.STATIONARY
+                } else {
+                    val sp = speedMpsRaw ?: gnssSpd
+                    speedHistory.addLast(sp.coerceIn(0.0, 60.0))
+                    if (speedHistory.size > SPEED_HIST) speedHistory.removeFirst()
+                    speedMps = speedHistory.average()
+                    speedSource = SpeedSource.GNSS
+                }
             } else if (dist <= 2.0) {
                 // GNSS fix arrived but device hasn't moved appreciably:
                 // if Android reports speed via Doppler, use it directly.
