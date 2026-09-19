@@ -1,85 +1,266 @@
 # Intelligent Dead Reckoning (IDR)
 
-IDR is an SIH navigation prototype that combines smartphone or external IMU measurements with GNSS, vehicle constraints, a locally stored road map, and an optional trained speed model. The production entry point is the FastAPI backend in `app.py`; it powers the web dashboard and receives Android sensor data.
+**SIH 2026 — Intelligent Dead Reckoning Navigation System**
 
-## Architecture
+A smartphone-based navigation prototype that combines GNSS, IMU/INS, dead reckoning and navigation processing to provide continuous positioning and movement information.
+
+---
+
+## 1. Project Structure
 
 ```text
-Smartphone / external IMU + GNSS
-        -> FastAPI HTTP or WebSocket gateway (`app.py`)
-        -> incremental `NavigationEngine`
-        -> timestamping, filtering, orientation, DR, GNSS correction, map match
-        -> navigation state for the web UI and Android client
+dead-reckoning/
+│
+├── android/                         # Android application
+│   └── app/
+│       └── src/main/
+│           └── kotlin/
+│               └── com/idr/
+│                   └── navigation/ # Navigation engine
+│
+├── tests/                           # Python test suite
+│
+├── app.py                           # FastAPI backend
+├── navigation_engine.py             # Python navigation engine
+├── gnss_ins_fusion.py               # GNSS/INS fusion
+├── sensor_processing.py             # Sensor processing
+├── map_matching.py                  # Map matching
+├── speed_model.py                   # Speed estimation/model
+│
+├── requirements.txt                 # Python dependencies
+└── requirements-dev.txt             # Development/test dependencies
 ```
 
-The repository also retains offline training, replay, and benchmarking scripts. They are not required to start the live backend.
+### Main Android navigation code
 
-## Prerequisites
+```text
+android/app/src/main/kotlin/com/idr/navigation/IDRNavigationEngine.kt
+```
 
-- Windows 10/11 with PowerShell
-- Python 3.10 or newer
-- Android Studio and a physical Android device for the Android collector
-- A local Wi-Fi/LAN connection between the phone and backend computer when using the current networked Android workflow
+---
 
-## Installation (Windows PowerShell)
+## 2. Requirements
+
+### For Android
+
+* Android Studio
+* Android SDK
+* Physical Android phone recommended for GNSS/IMU testing
+* Location/GPS enabled
+* Required app permissions enabled
+* USB debugging enabled if running directly from Android Studio
+
+### For Python backend
+
+* Python 3.10+
+* PowerShell / Terminal
+
+---
+
+# 3. Important: APK Is Independent
+
+The **APK is an independent Android application**.
+
+Once the APK is built and installed on the phone, it can be run directly from the phone without opening the project in Android Studio.
+
+The source code, Python development environment and Android Studio are required for **development/testing/building**, but they are not required for normal operation of the installed APK.
+
+---
+
+# 4. Before Starting the APK
+
+For the navigation system to initialize correctly, follow these steps **before starting the app**:
+
+### 1. Turn ON Location
+
+Make sure the phone's **Location/GPS is turned ON**.
+
+Also make sure the application has the required location permissions.
+
+### 2. Go to an Open-Sky Area
+
+Before starting the application, move outdoors or to an area with a clear view of the sky.
+
+Avoid starting the app:
+
+* Inside a building
+* In a basement
+* In a covered/underground area
+* In an area with heavily obstructed sky view
+
+### 3. Wait for the Current Location
+
+Stay in the open-sky area for approximately **5–6 seconds** so the phone can acquire the current GNSS location.
+
+### 4. Start the Application
+
+After the initial location is available, open the APK and start navigation.
+
+> **Recommended flow:**
+> **Location ON → Open sky → Wait 5–6 seconds → Start APK**
+
+This initial GNSS acquisition helps the application obtain the current starting position before navigation begins.
+
+---
+
+# 5. Run the Python Backend
 
 From the project root:
 
 ```powershell
 py -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-For tests and development tools:
-
-```powershell
-python -m pip install -r requirements-dev.txt
-```
-
-Offline plot generation is optional:
-
-```powershell
-python -m pip install -r requirements-visualization.txt
-```
-
-If PowerShell prevents activation, run this only for the current terminal and then retry activation:
-
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-```
-
-## Run the backend
+Start the backend:
 
 ```powershell
 python -m uvicorn app:app --host 0.0.0.0 --port 8000
 ```
 
-Verify it locally at `http://127.0.0.1:8000/health`. The startup log reports the actual map, model, NHC, and runtime configuration status. Open the local dashboard at `http://127.0.0.1:8000/`.
+The backend can be checked at:
 
-## Run tests
+```text
+http://127.0.0.1:8000/health
+```
+
+For a physical Android phone, use the computer's local network IP instead of `127.0.0.1`.
+
+Example:
+
+```text
+http://192.168.1.42:8000
+```
+
+The phone and computer should be connected to the same network.
+
+---
+
+# 6. Run Tests
+
+Install development dependencies:
+
+```powershell
+python -m pip install -r requirements-dev.txt
+```
+
+Run the complete Python test suite:
 
 ```powershell
 python -m pytest -q
 ```
 
-## Android connection
+The tests are located in:
 
-Start the backend before opening the Android app. The phone and computer must be on the same network; use the computer's LAN IPv4 address, not `localhost` or `127.0.0.1`. Allow inbound TCP port 8000 through the computer firewall.
+```text
+tests/
+```
 
-The Android control panel stores its server URL locally. Enter the laptop URL, for example `http://192.168.1.42:8000`, then select **Test Connection**. It only reports `CONNECTED` after `/health` responds. Select **Start Collection** to register sensors and GPS, and **Stop Collection** to unregister them and stop scheduled uploads. Live packets use the acknowledged WebSocket endpoint; if it is temporarily unavailable, the existing REST endpoints are used serially while the app reconnects with capped backoff. IMU buffering keeps only the latest sample and GNSS buffering is bounded. The panel shows IMU produced/sent, GNSS sent, failed uploads, last error, and last successful acknowledgement.
+---
 
-The default `http://10.0.2.2:8000` is for an Android emulator only; a physical phone must be configured with the laptop's LAN address.
+# 7. Open the Android Application
 
-## Map and model assets
+Open the following folder in **Android Studio**:
 
-- `Data/roads.geojson` is the default offline road geometry.
-- `models/speed_model.joblib` is the default speed-model artifact.
-- Override either at startup with `IDR_ROADS_GEOJSON` or `IDR_SPEED_MODEL`.
+```text
+dead-reckoning/android
+```
 
-If an asset is missing or incompatible, the health endpoint and startup log report its actual unavailable/error status; the project does not claim it is active.
+Allow Gradle to sync and finish indexing.
 
-## Current limitations
+Connect the Android phone through USB with USB debugging enabled.
 
-This is an actively improving prototype, not a claim of SIH target performance. The included benchmark artifacts show current GNSS-outage drift above the SIH target. The live engine, map/model loading, and baseline tests are operational, while Android transport hardening, robust calibration, advanced fusion, and benchmark improvement remain in progress.
+Then select the `app` configuration and press:
+
+**Run ▶**
+
+The application will be installed directly on the connected device.
+
+---
+
+# 8. Build the APK
+
+From Android Studio:
+
+**Build → Build App Bundle(s) / APK(s) → Build APK(s)**
+
+Or from PowerShell:
+
+```powershell
+cd android
+.\gradlew assembleDebug
+```
+
+The generated debug APK will be located at:
+
+```text
+android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+---
+
+# 9. APK Download
+
+The latest test/MVP APK will also be provided here:
+
+**[Download Latest IDR APK](https://github.com/Alpha1816311/dead-reckoning/releases/tag/v1.0.0)**
+
+
+---
+
+# 10. Basic APK Testing Flow
+
+1. Turn **Location/GPS ON**.
+2. Grant the application the required permissions.
+3. Go to an **open-sky/outdoor area**.
+4. Wait approximately **5–6 seconds** for the current location to be acquired.
+5. Open the APK.
+6. Start navigation/data collection.
+7. Keep the phone stationary and check the reported speed.
+8. Walk/move with the phone and check position and speed.
+9. Stop and verify that the speed returns toward zero.
+10. If testing GNSS outage/dead reckoning, temporarily block GNSS and observe the navigation behavior.
+
+---
+
+# 11. Important Notes
+
+* The APK is **independent** and can be operated directly after installation.
+* For meaningful GNSS/IMU testing, use a **physical Android device**.
+* **Location/GPS must be enabled** before starting the application.
+* Perform the initial location acquisition in an **open-sky area**.
+* Allow approximately **5–6 seconds** for the initial GNSS position.
+* Do not commit generated Android build files.
+* The Android application and Python backend are separate components.
+* When modifying navigation logic, run the Python test suite before pushing changes.
+* Test important navigation changes on an actual device before considering them validated.
+
+---
+
+# 12. Quick Commands
+
+### Run backend
+
+```powershell
+python -m uvicorn app:app --host 0.0.0.0 --port 8000
+```
+
+### Run tests
+
+```powershell
+python -m pytest -q
+```
+
+### Build APK
+
+```powershell
+cd android
+.\gradlew assembleDebug
+```
+
+### APK location
+
+```text
+android/app/build/outputs/apk/debug/app-debug.apk
+```
