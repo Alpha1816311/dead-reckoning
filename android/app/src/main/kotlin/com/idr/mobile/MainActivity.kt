@@ -168,10 +168,10 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
                 cacheMode = WebSettings.LOAD_NO_CACHE
                 // Allow mixed content (OSM tiles over http from https-origin pages)
                 mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                // Keep zoom support enabled so the WebView's gesture detector
-                // handles vertical swipe-scroll correctly; hide the zoom UI only.
-                setSupportZoom(true)
-                builtInZoomControls = true
+                // Disable WebView page zoom entirely. Leaflet manages its own
+                // pinch-zoom internally and does not rely on WebView zoom.
+                setSupportZoom(false)
+                builtInZoomControls = false
                 displayZoomControls = false
             }
             webViewClient = object : WebViewClient() {

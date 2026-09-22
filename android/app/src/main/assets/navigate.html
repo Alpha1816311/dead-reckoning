@@ -196,7 +196,7 @@ tailwind.config = {
 
     body {
       min-height: 100dvh;
-      overscroll-behavior: none;
+      overscroll-behavior-x: none;
     }
 
     /* =========================================================
@@ -222,10 +222,11 @@ tailwind.config = {
     .leaflet-container {
       font-family: Inter, sans-serif;
       background: #e8e8e8;
-      /* Override Leaflet's .leaflet-touch-drag rule which sets touch-action:pinch-zoom
-         and blocks single-finger scroll. pan-y lets the WebView handle vertical
-         one-finger swipes natively while leaving pinch-zoom untouched. */
-      touch-action: pan-y !important;
+      /* pan-y  → one-finger vertical swipe scrolls the WebView page.
+         pinch-zoom → two-finger pinch still zooms the Leaflet map.
+         Both values are required together; pan-y alone blocks pinch on some
+         Android WebView versions. */
+      touch-action: pan-y pinch-zoom !important;
     }
 
     /* Vehicle position marker */

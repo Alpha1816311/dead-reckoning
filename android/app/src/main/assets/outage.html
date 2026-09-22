@@ -10,7 +10,7 @@
 *,*::before,*::after{box-sizing:border-box}
 html,body{width:100%;max-width:100%;margin:0;padding:0;background:#0f131d;color:#dee2f0;overflow-x:hidden}
 html{overflow-y:auto}
-body{overscroll-behavior:none;min-height:100dvh;font-family:Inter,Arial,sans-serif}
+body{overscroll-behavior-x:none;min-height:100dvh;font-family:Inter,Arial,sans-serif}
 ::-webkit-scrollbar{display:none}
 .mono{font-family:'JetBrains Mono',monospace}
 .caps{font-family:'JetBrains Mono',monospace;font-size:11px;line-height:14px;letter-spacing:.06em;font-weight:700}
@@ -74,7 +74,7 @@ body{overscroll-behavior:none;min-height:100dvh;font-family:Inter,Arial,sans-ser
     <span id="satelliteStatus" class="caps">GNSS —</span>
   </div>
 </div>
-<div id="outageMap" style="touch-action: pan-y;"></div>
+<div id="outageMap" style="touch-action: pan-y pinch-zoom;"></div>
 <div class="absolute bottom-2 left-2 right-2 z-20 flex flex-col gap-1.5 p-2 rounded-lg bg-surface-container/90 pointer-events-none">
   <div class="flex items-center justify-between">
     <div class="flex items-center gap-2">
