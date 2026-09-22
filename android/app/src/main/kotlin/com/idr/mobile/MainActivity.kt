@@ -168,7 +168,11 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
                 cacheMode = WebSettings.LOAD_NO_CACHE
                 // Allow mixed content (OSM tiles over http from https-origin pages)
                 mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                setSupportZoom(false)
+                // Keep zoom support enabled so the WebView's gesture detector
+                // handles vertical swipe-scroll correctly; hide the zoom UI only.
+                setSupportZoom(true)
+                builtInZoomControls = true
+                displayZoomControls = false
             }
             webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView?, url: String?) {

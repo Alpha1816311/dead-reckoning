@@ -5,7 +5,7 @@
   <meta charset="utf-8">
 
   <meta
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover"
     name="viewport"
   >
 
@@ -190,6 +190,10 @@ tailwind.config = {
       overflow-x: hidden;
     }
 
+    html {
+      overflow-y: auto;
+    }
+
     body {
       min-height: 100dvh;
       overscroll-behavior: none;
@@ -218,6 +222,10 @@ tailwind.config = {
     .leaflet-container {
       font-family: Inter, sans-serif;
       background: #e8e8e8;
+      /* Override Leaflet's .leaflet-touch-drag rule which sets touch-action:pinch-zoom
+         and blocks single-finger scroll. pan-y lets the WebView handle vertical
+         one-finger swipes natively while leaving pinch-zoom untouched. */
+      touch-action: pan-y !important;
     }
 
     /* Vehicle position marker */
@@ -274,7 +282,7 @@ tailwind.config = {
 
 </head>
 
-<body class="bg-surface font-body-md text-body-md text-on-surface flex flex-col min-h-screen" style="overflow-x:hidden;">
+<body class="bg-surface font-body-md text-body-md text-on-surface min-h-screen" style="overflow-x:hidden; overflow-y:auto;">
 
   <!-- =========================================================
        HEADER
@@ -326,7 +334,7 @@ tailwind.config = {
        ========================================================= -->
 
   <main
-    class="flex-1 flex flex-col relative w-full pt-16 bg-surface"
+    class="flex flex-col relative w-full pt-16 bg-surface"
     style="overflow-x:hidden; padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));"
   >
 
@@ -1033,7 +1041,8 @@ tailwind.config = {
         zoomControl: false,
         attributionControl: true,
         zoomAnimation: true,
-        markerZoomAnimation: true
+        markerZoomAnimation: true,
+        dragging: false
       }).setView([0, 0], 2);
 
 
