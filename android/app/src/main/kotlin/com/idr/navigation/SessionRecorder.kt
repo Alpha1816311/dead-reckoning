@@ -119,15 +119,28 @@ class SessionRecorder(private val context: Context) {
             "nav_lat,nav_lon,nav_speed_mps,nav_heading_deg,nav_mode," +
             "gnss_blackout,blackout_seconds\n"
 
+        // Minimum required fields — a row without these is useless/malformed
+        val REQUIRED_FIELDS = setOf("wall_ms", "timestamp", "nav_lat", "nav_lon", "nav_mode")
+
         try {
             BufferedWriter(FileWriter(csvFile, false)).use { out ->
                 out.write(header)
                 BufferedReader(FileReader(src)).use { lines ->
                     var line = lines.readLine()
                     while (line != null) {
-                        if (line.isBlank()) { line = lines.readLine(); continue }
+                        val trimmed = line.trim()
+                        if (trimmed.isBlank()) { line = lines.readLine(); continue }
+                        // Validate: line must start with '{' and end with '}'
+                        // — guards against partial writes on the last record
+                        if (!trimmed.startsWith('{') || !trimmed.endsWith('}')) {
+                            line = lines.readLine(); continue
+                        }
                         try {
-                            val j = JSONObject(line)
+                            val j = JSONObject(trimmed)
+                            // Reject rows missing required navigation fields
+                            if (REQUIRED_FIELDS.any { !j.has(it) }) {
+                                line = lines.readLine(); continue
+                            }
                             val row = buildCsvRow(j)
                             out.write(row)
                             out.newLine()

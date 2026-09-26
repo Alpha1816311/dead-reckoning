@@ -26,17 +26,80 @@ class IDRLocalServer(
     private val trackLock = Any()
     private val MAX_TRACK = 600
 
-    fun appendTrack(lat: Double, lon: Double) {
+    // Last accepted track point — used for minimum-distance gate
+    @Volatile private var lastTrackLat: Double = 0.0
+    @Volatile private var lastTrackLon: Double = 0.0
+    @Volatile private var hasLastTrackPoint: Boolean = false
+
+    companion object {
+        // Minimum distance between accepted track points (metres).
+        // Prevents GNSS jitter (10–30 m noise) from adding false path points.
+        // Must be larger than typical GNSS noise radius but smaller than
+        // the smallest real movement segment worth recording (~5 m).
+        const val TRACK_MIN_DISTANCE_M = 5.0
+    }
+
+    /**
+     * Append a track point with physical plausibility validation.
+     *
+     * Validation gates (all must pass to add a point):
+     *  1. Coordinates are non-zero and finite
+     *  2. Navigation state is initialized (not INITIALIZING / WAITING_FOR_FIX)
+     *  3. Either: device is NOT stationary, OR this is the very first accepted point
+     *  4. Distance from previous accepted track point ≥ TRACK_MIN_DISTANCE_M
+     *
+     * This prevents GNSS jitter from creating wandering track when stationary.
+     */
+    fun appendTrack(lat: Double, lon: Double, state: IDRNavigationEngine.NavigationState) {
         if (lat == 0.0 && lon == 0.0) return
+        if (!lat.isFinite() || !lon.isFinite()) return
+
+        // Gate 1: engine must be past initialization
+        val navMode = state.mode
+        if (navMode == IDRNavigationEngine.NavMode.INITIALIZING ||
+            navMode == IDRNavigationEngine.NavMode.WAITING_FOR_FIX) return
+
+        // Gate 2: if stationary, do not add jitter points
+        if (state.isStationary) {
+            // Allow the very first track point even if stationary (establishes starting position)
+            if (hasLastTrackPoint) return
+        }
+
         synchronized(trackLock) {
+            val distFromLast = if (hasLastTrackPoint)
+                haversineM(lastTrackLat, lastTrackLon, lat, lon) else Double.MAX_VALUE
+
+            // Gate 3: minimum distance between track points
+            if (distFromLast < TRACK_MIN_DISTANCE_M && hasLastTrackPoint) return
+
             trackHistory.add(arrayOf(lat, lon))
             if (trackHistory.size > MAX_TRACK) trackHistory.removeAt(0)
+            lastTrackLat = lat
+            lastTrackLon = lon
+            hasLastTrackPoint = true
         }
     }
 
     fun clearTrack() {
-        synchronized(trackLock) { trackHistory.clear() }
+        synchronized(trackLock) {
+            trackHistory.clear()
+            lastTrackLat = 0.0
+            lastTrackLon = 0.0
+            hasLastTrackPoint = false
+        }
     }
+
+    // Haversine for track distance calculation
+    private fun haversineM(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val R = 6371000.0
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2)
+        return 2 * R * Math.asin(Math.sqrt(a))
+    }
+
 
     override fun serve(session: IHTTPSession): Response {
         val uri = session.uri.trimEnd('/')
@@ -298,11 +361,15 @@ class IDRLocalServer(
   "has_gnss_fix":$hasPosition,
   "accepted_imu":${state.imuCount},
   "accepted_gnss":${state.gnssCount},
-  "rejected_samples":0,
+  "rejected_samples":${state.rejectedSpeedOutlier + state.rejectedPositionJump},
+  "rejected_gnss_jitter":${state.rejectedGnssJitter},
+  "rejected_speed_outlier":${state.rejectedSpeedOutlier},
+  "rejected_pos_jump":${state.rejectedPositionJump},
+  "stationary_pos_held":${state.stationaryPositionHeld},
   "imu_status":"$imuStatus",
   "nhc_status":"${if (state.nhcEnabled) "ACTIVE" else "DISABLED"}",
   "nhc_enabled":${state.nhcEnabled},
-  "ai_model_status":"NOT LOADED",
+  "ai_model_status":"PYTHON EDGE PIPELINE",
   "map_status":"MAP DISPLAY ACTIVE",
   "filter_mode":"$filterLabel",
   "mounting_calibrated":${state.mountingCalibrated},

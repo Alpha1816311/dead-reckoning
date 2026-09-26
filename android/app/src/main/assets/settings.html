@@ -446,12 +446,12 @@ tailwind.config={darkMode:"class",theme:{extend:{colors:{"inverse-surface":"#dee
       updateText('settingsMapSize', '—');
       updateText('settingsModelSize', '—');
 
-      // Sensor status from imu_status
+      // Sensor status from imu_status and live state
       const imuActive = imuStatus === 'ACTIVE';
-      const gnssLocked = gnssStatus === 'LOCKED';
       updateText('sensorAccel', imuActive ? 'LIVE' : 'WAITING');
       updateText('sensorGyro', imuActive ? 'LIVE' : 'WAITING');
-      updateText('sensorMag', 'UNAVAILABLE');
+      // Magnetometer: reflect actual hardware availability from engine state
+      updateText('sensorMag', state.has_mag ? 'LIVE' : 'UNAVAILABLE');
       updateText('sensorGnss', gnssStatus !== '—' ? gnssStatus : 'SEARCHING');
 
       // Navigation engine section

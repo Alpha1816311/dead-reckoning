@@ -295,9 +295,8 @@ class MainActivity : Activity(), SensorEventListener, LocationListener {
         override fun run() {
             if (!navigationRunning) return
             val state = engine.getState()
-            if (state.latitude != 0.0 && state.longitude != 0.0) {
-                server.appendTrack(state.latitude, state.longitude)
-            }
+            // appendTrack now performs all stationary/jitter/distance validation internally
+            server.appendTrack(state.latitude, state.longitude, state)
             handler.postDelayed(this, 1000) // add a track point every second
         }
     }
